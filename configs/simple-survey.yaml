@@ -1,25 +1,41 @@
+schema_version: v2
 initialNodeId: intro
 
 nodes:
   - id: intro
-    text: |
+    text: >
       Welcome. Please complete this short survey.
     buttons:
-      - text: "Begin"
+      - id: begin
+        text: "Begin"
         action:
-          type: next
+          type: go_to
+          target: survey_1
+
   - id: survey_1
     text: "Pretend survey question"
     buttons:
-      - text: "Submit"
+      - id: submit
+        text: "Submit"
         action:
-          type: next
+          type: go_to
+          branches:
+            - when:
+                op: equals
+                left: "$event.payload.choice"
+                right: "follow_up"
+              target: survey_follow_up
+            - target: outro
+
+  - id: survey_follow_up
+    text: "Thanks for opting in to the follow-up."
+    buttons:
+      - id: follow_up_continue
+        text: "Continue"
+        action:
+          type: go_to
+          target: outro
+
   - id: outro
     end: true
     text: "Thanks!"
-
-flow:
-  - from: intro
-    to: survey_1
-  - from: survey_1
-    to: outro

@@ -15,8 +15,8 @@ The configuration is authored as YAML and compiled to a canonical JSON form at p
 ### Top-level structure
 
 - **schema_version**: string, semantic version of the config schema, e.g., `"1.0.0"`.
+- **initialNodeId**: string, required id of the node shown when the session starts.
 - **nodes**: array of node definitions. Each node defines one page/state.
-- **flow**: array of directed edges and event handlers between nodes.
 - **user_state**: declarative type schema for per-participant state.
 - **group_state**: declarative type schema for per-group state.
 - **queues**: array of queue definitions for matching.
@@ -47,45 +47,23 @@ Component instance shapes (canonical):
 
 Compilation note: at publish time the compiler normalizes top-level helpers into canonical `components` instances, validates component props against their schemas, and records resolved custom component versions for audit.
 
-### Flow
+### Routing and actions
 
-Flow is an ordered list of edges and event handlers that route between nodes (pages). Because nodes are composed of components, flow reacts to events emitted by those components as well as built-in runtime events. Edges express routing logic; handlers attached to edges respond to component or system events and may update `$.user_state` or other allowed fields before traversal.
+Routing is determined entirely by button actions declared on each node. Buttons must expose a stable `id` so the runtime can resolve the definition when a client sends an event.
 
-- **Edge**: `{ from: string, to: string, when?: Expr, on?: EventHandlers }`
-  - **from**: source node id.
-  - **to**: default destination node id if the edge is taken.
-  - **when**: boolean expression evaluated in the current context. Outgoing edges from a node are considered in config order; the first edge whose `when` evaluates to true is taken. If `when` is omitted, treat as `true`.
-  - **on**: event handlers that run when an event with the matching name is received while the run is at `from`. Handlers may also run before traversal to set state used by `when`.
+- `action.type` must currently be `"go_to"`.
+- `target` (string) is the destination node id when no conditional branch matches.
+- `branches` (array) contains ordered rules. Each branch provides a required `target` and an optional `when` condition. Branches are evaluated in config order; the first branch whose condition evaluates truthy is taken. A branch without `when` acts as the default.
 
-### Event handlers
+Conditions reuse the DSL expression language. They evaluate against the runtime context:
 
-Event handlers are per-edge reactions declared in `flow.on` that respond to component or system events while the run is at the edge’s `from` node. When an event arrives, handlers run in config order before edge selection; they may update `$.user_state` (server-originating events may also write `$.user_group.*`). During a handler, `$.event` exposes `{ name, payload }`. All assignments apply atomically and must pass type checks.
+- `$event.payload` reads the payload provided by the client for the triggering button press.
+- `$user_state` reads the authoritative participant state.
+- `$run` reads transient session data (e.g., `currentNodeId`).
 
-- Structure: `on: { <eventName>: Step[] }`, where `Step` is one of:
-  - `assign`: `{ assign: { "<lhs JSONPath>": <Expr> } }` Left-hand side must be under `$.user_state.*` or `$.user_group.*` where permitted.
-  - Future steps reserved: `function`, `emit`.
+Configs must supply either a `target` or at least one branch. If resolution fails at runtime the API rejects the event.
 
-Event validation: At runtime, incoming events for the current node are validated; unknown or malformed events are rejected and logged; handlers are not evaluated and traversal does not occur.
-
-Standard events:
-- **complete**: emitted by `survey` node upon successful submission.
-- **match**: emitted by `queue` node when a match is formed.
-- **timeout**: emitted by `queue` node when the participant waits longer than the configured timeout.
-- **backfilled**: emitted by `queue` node when a group is formed using ghost seats.
-- **abandoned**: emitted when a waiting participant leaves or cancels from a `queue` node.
-- **<custom>**: any custom event emitted by a mounted custom component (see Custom components). The runtime sets `$.event` for handler evaluation.
-
-### Actions
-
-Actions are structured objects on buttons for validation and tooling.
-
-Preferred object form:
-
-- `{ type: "next" }`: traverse the default outgoing edge from the current node.
-- `{ type: "end" }`: terminate the session.
-- `{ type: "return_to_prolific", code: string }`: server responds with a redirect to Prolific with the provided completion code.
-
-Unknown action `type` values are rejected at compile time.
+When the client activates a button it sends `{ event: { type: "go_to", payload: { buttonId, ... } } }`. Additional payload fields (e.g., form answers) are available to branch conditions via `$event.payload.*`.
 
 ### User state schema
 
@@ -117,7 +95,7 @@ Queues are server-managed waiting rooms that collect participants until enough a
 - `{ id: string, num_users: int, timeoutSeconds?: int }`
 - Matching policy: FIFO by arrival time, fill groups of `num_users`. Timeout policy is configurable per queue in the config; server defaults apply when omitted.
 - On match, the runtime emits `match` and writes `$.user_group.chat_group_id` and the `groupId`. On timeout, the runtime emits `timeout`.
- - Default timeout: 120 seconds when `timeoutSeconds` is not set. On timeout, the runtime emits `timeout` and the flow may route via a `timeout` handler or exit per config.
+- Default timeout: 120 seconds when `timeoutSeconds` is not set. On timeout, the runtime emits `timeout`; authors can branch by inspecting `$event.payload` or state in their button actions on the next node.
 
 ### Agents
 
@@ -192,7 +170,7 @@ Normative means the ordering below is required for compliance.
 
 ### JSON Schema coverage
 
-- Provide schemas for: `nodes`, `flow`, `user_state`, `group_state`, `queues`, `agents`.
+- Provide schemas for: `nodes`, `user_state`, `group_state`, `queues`, `agents`, and button `action` objects.
 - Pre-validate `assign` LHS paths against `user_state` schema.
  - Default `additionalProperties: false` across schemas unless explicitly opted-in to catch typos.
  - Allow `$ref` usage within schemas in-config (self-contained only; no external imports).
@@ -200,13 +178,11 @@ Normative means the ordering below is required for compliance.
 ### Lints
 
 - Unique ids across `nodes`, `queues`, `agents`.
-- All `flow.from` and `flow.to` must reference existing nodes.
-- At least one outgoing edge for each node unless terminal.
-- No unreachable nodes.
+- Button ids must be unique per node.
+- Every `go_to` action (including each branch target) must reference an existing node.
 - Types of `assign` RHS must match declared `user_state` target types.
 - Forbid assignments outside `$.user_state.*` from client events.
- - Unknown `action.type` values are errors.
- - Outgoing edges from `end: true` nodes are errors.
+- Unknown `action.type` values are errors.
 
 ## Storage and data model
 
@@ -274,18 +250,12 @@ The frontend application may maintain a `componentRegistry` mapping `id`→imple
 In a node with `component`, the runtime:
 - Validates `props` against `propsSchema` if provided.
 - Mounts the component and subscribes to its declared `events`.
-- When the component emits an event `name` with `payload`, the runtime validates the payload against `payloadSchema` and raises a flow event with the same name.
+- When the component emits an event `name` with `payload`, the runtime validates the payload against `payloadSchema` and surfaces it so the experiment can map the result into a `go_to` action or state update.
   - If the component emits an event that is not declared and `unknownEvents` is "error", the event is rejected and logged; "warn" logs and drops; "ignore" silently drops.
-
-#### Event integration
-
-Custom events can be handled in `flow.on` like built-in events:
-- Example: `on: { rating_submitted: [ { assign: { "$.user_state.rating": "$.event.payload.value" } } ] }`.
-- The runtime exposes `$.event` during an event handler with `{ name, payload }` for use in expressions.
 
 #### Actions to component (optional)
 
-The runtime may send simple actions to components via button `action` or timeouts. MVP omits a general action bus; components should be self-contained and emit events to drive flow.
+The runtime may send simple actions to components via button `action` or timeouts. MVP omits a general action bus; components should be self-contained and emit events to drive routing.
 
 #### Example (Custom component)
 
@@ -317,16 +287,14 @@ nodes:
       props:
         max: 5
       unknownEvents: error
+    buttons:
+      - id: rate-submit
+        text: "Submit rating"
+        action:
+          type: go_to
+          target: thanks
   - id: thanks
     end: true
-
-flow:
-  - from: rate
-    on:
-      rating_submitted:
-        - assign:
-          "$.user_state.rating": "$.event.payload.value"
-    to: thanks
 
 user_state:
   rating: int
@@ -354,42 +322,45 @@ nodes:
     text: |
       Welcome. Please complete this short survey.
     buttons:
-      - text: "Begin"
-        action: { type: next }
+      - id: intro-start
+        text: "Begin"
+        action:
+          type: go_to
+          target: survey_1
   - id: survey_1
-    survey:
-      - id: age
-        text: "What is your age?"
-        answer: numeric
-      - id: gender
-        text: "What is your gender?"
-        answer: multiple_choice
-        choices:
-          - Male
-          - Female
-          - Other
-          - Prefer not to say
-      - id: satisfaction
-        text: "How satisfied are you with our service?"
-        answer: likert5
+    text: "Pretend survey question"
+    buttons:
+      - id: survey-submit
+        text: "Submit"
+        action:
+          type: go_to
+          branches:
+            - when:
+                op: equals
+                left: "$event.payload.choice"
+                right: follow_up
+              target: survey_follow_up
+            - target: outro
+  - id: survey_follow_up
+    text: "Thanks for opting in to the follow-up."
+    buttons:
+      - id: follow_up_continue
+        text: "Continue"
+        action:
+          type: go_to
+          target: outro
   - id: outro
     end: true
 
-flow:
-  - from: intro
-    to: survey_1
-  - from: survey_1
-    to: outro
-
 user_state:
-  age: int
-  gender: string
-  satisfaction: int
+  choice: string
 ```
 
 ### Chat, Randomization, AI Agents
 
 Here is a more sophisticated example that randomly matches humans to chat with other humans or AI.
+
+> Legacy note: this example still references the deprecated `flow` DSL and will be updated once the routing rewrite adds equivalent capabilities.
 
 ```yaml
 nodes:
@@ -500,7 +471,7 @@ Note: The custom component example is provided in Appendix A.
 
 ## Compatibility and mapping notes
 
-- The earlier design draft using state machine pages and DAG edges maps directly to `nodes` and `flow` here.
+- The earlier design draft using state machine pages and DAG edges now maps to `nodes` with button-driven `go_to` actions.
 - WaitForGroup barriers are modeled with `queue` nodes plus `match` events.
 - The earlier `actions` map on activities maps to `buttons.action`.
 - Seeds and determinism follow the experiment→group→participant derivation path outlined previously.

@@ -1,4 +1,5 @@
 {
+  "schema_version": "v2",
   "initialNodeId": "intro",
   "nodes": [
     {
@@ -6,9 +7,11 @@
       "text": "Welcome. Please complete this short survey.\n",
       "buttons": [
         {
+          "id": "begin",
           "text": "Begin",
           "action": {
-            "type": "next"
+            "type": "go_to",
+            "target": "survey_1"
           }
         }
       ],
@@ -24,9 +27,11 @@
           "props": {
             "buttons": [
               {
+                "id": "begin",
                 "text": "Begin",
                 "action": {
-                  "type": "next"
+                  "type": "go_to",
+                  "target": "survey_1"
                 }
               }
             ]
@@ -39,9 +44,23 @@
       "text": "Pretend survey question",
       "buttons": [
         {
+          "id": "submit",
           "text": "Submit",
           "action": {
-            "type": "next"
+            "type": "go_to",
+            "branches": [
+              {
+                "when": {
+                  "op": "equals",
+                  "left": "$event.payload.choice",
+                  "right": "follow_up"
+                },
+                "target": "survey_follow_up"
+              },
+              {
+                "target": "outro"
+              }
+            ]
           }
         }
       ],
@@ -57,9 +76,60 @@
           "props": {
             "buttons": [
               {
+                "id": "submit",
                 "text": "Submit",
                 "action": {
-                  "type": "next"
+                  "type": "go_to",
+                  "branches": [
+                    {
+                      "when": {
+                        "op": "equals",
+                        "left": "$event.payload.choice",
+                        "right": "follow_up"
+                      },
+                      "target": "survey_follow_up"
+                    },
+                    {
+                      "target": "outro"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "survey_follow_up",
+      "text": "Thanks for opting in to the follow-up.",
+      "buttons": [
+        {
+          "id": "follow_up_continue",
+          "text": "Continue",
+          "action": {
+            "type": "go_to",
+            "target": "outro"
+          }
+        }
+      ],
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "Thanks for opting in to the follow-up."
+          }
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "follow_up_continue",
+                "text": "Continue",
+                "action": {
+                  "type": "go_to",
+                  "target": "outro"
                 }
               }
             ]
@@ -79,16 +149,6 @@
           }
         }
       ]
-    }
-  ],
-  "flow": [
-    {
-      "from": "intro",
-      "to": "survey_1"
-    },
-    {
-      "from": "survey_1",
-      "to": "outro"
     }
   ]
 }

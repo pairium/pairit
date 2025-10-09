@@ -29,6 +29,9 @@ importers:
 
   apps/functions:
     dependencies:
+      '@pairit/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@pairit/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
