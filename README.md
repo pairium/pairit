@@ -4,105 +4,26 @@ This repo hosts a minimal end-to-end slice of the Pairit stack: a pnpm monorepo 
 
 ## Prerequisites
 
-- Node.js 20 (Functions deploy target) or newer
+- Node.js 22 (Functions deploy target) or newer
 - pnpm 8+
 - Firebase CLI (`npm i -g firebase-tools`) if you want to run emulators
 
-## 1. Install dependencies
+## Repository Structure
 
-```zsh
-pnpm install
-```
+- `apps/functions`: Firebase Cloud Functions API built with Hono that exposes the session endpoints.
+- `apps/web`: Vite React demo client that calls the API and walks through the sample flow.
+- `packages/core`: Configuration compiler that validates YAML and emits canonical JSON.
+- `packages/runtime`: Runtime helpers for deterministic seeding and flow advancement.
+- `configs/`: Sample survey config and the publish script.
+- `specs.md`: Technical specification covering the end-to-end architecture.
 
-## 2. Build the workspaces
+## Quickstart
 
-```zsh
-pnpm build
-```
+1. Install dependencies: `pnpm install`.
+2. Build the workspaces: `pnpm build`.
+3. Compile the sample config: `pnpm publish:example` (writes `configs/simple-survey.json`).
+4. Start local services: open three terminals (A `pnpm emulators`, B `pnpm --filter functions dev`, C `pnpm --filter web dev`) then visit `http://localhost:5173`.
+5. Manual walkthrough: click **Start session** in the web client, watch the `POST /sessions/start` response with `sessionId` and node `intro`, click **Next** to advance to `survey_1` then `outro`, and confirm the session doc under `sessions/{sessionId}` in the Firestore emulator.
+6. API spot checks (optional): start a session with `curl -X POST http://localhost:5001/pairit-local/us-central1/api/sessions/start -H 'Content-Type: application/json' -d '{"publicId":"demo"}'`, advance it with `curl -X POST http://localhost:5001/pairit-local/us-central1/api/sessions/SESSION_ID/advance -H 'Content-Type: application/json' -d '{"event":{"type":"next"}}'`, and fetch state with `curl http://localhost:5001/pairit-local/us-central1/api/sessions/SESSION_ID`.
+7. Tests: `pnpm test` (runs the compiler unit test and checks other packages for pending tests).
 
-This compiles all packages and ensures TS typings are in sync.
-
-## 3. Compile the sample config
-
-```zsh
-pnpm publish:example
-```
-
-The command reads `configs/simple-survey.yaml` and writes the normalized JSON to `configs/simple-survey.json`. The generated config is what the backend currently uses to drive the hard-coded flow.
-
-## 4. Start local services
-
-Open three terminals.
-
-Terminal A – Firebase emulators (Functions + Firestore + RTDB):
-
-```zsh
-pnpm emulators
-```
-
-Terminal B – Functions type build (optional while developing):
-
-```zsh
-pnpm --filter functions dev
-```
-
-This keeps `apps/functions/dist` up-to-date while emulators are running.
-
-Terminal C – Web client:
-
-```zsh
-pnpm --filter web dev
-```
-
-Visit `http://localhost:5173`.
-
-## 5. Manual walkthrough
-
-1. On the web client, click **Start session**.
-2. The UI calls `POST /sessions/start` on the local Function and shows the returned `sessionId` and current node (`intro`).
-3. Click **Next** to advance; the backend transitions to `survey_1`, then `outro`.
-4. After reaching `outro`, the UI displays the thank-you state.
-
-Behind the scenes, session documents are created under the Firestore emulator at `sessions/{sessionId}`.
-
-## 6. API spot checks (optional)
-
-With the emulators running, you can hit the API directly:
-
-Start a session:
-
-```zsh
-curl -X POST \
-  http://localhost:5001/pairit-local/us-central1/api/sessions/start \
-  -H 'Content-Type: application/json' \
-  -d '{"publicId":"demo"}'
-```
-
-Advance the session (replace `SESSION_ID`):
-
-```zsh
-curl -X POST \
-  http://localhost:5001/pairit-local/us-central1/api/sessions/SESSION_ID/advance \
-  -H 'Content-Type: application/json' \
-  -d '{"event":{"type":"next"}}'
-```
-
-Fetch session state:
-
-```zsh
-curl http://localhost:5001/pairit-local/us-central1/api/sessions/SESSION_ID
-```
-
-## 7. Tests
-
-```zsh
-pnpm test
-```
-
-Currently this runs the compiler unit test and verifies other packages have no tests (pass quickly).
-
-## Notes
-
-- The API is intentionally minimal: it stores sessions in Firestore and advances through the baked-in intro → survey → outro flow.
-- Updating the flow requires editing `apps/functions/src/index.ts` until config loading is wired up.
-- When you change Functions code, rerun `pnpm --filter functions dev` (or rebuild once) so the emulator sees new output.

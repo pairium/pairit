@@ -34,6 +34,65 @@ type CanonicalConfig = {
   flow: FlowEdge[];
 };
 
+const buttonSchema: Schema = {
+  type: 'object',
+  properties: {
+    text: { type: 'string' },
+    action: {
+      type: 'object',
+      properties: {
+        type: { type: 'string' },
+      },
+      required: ['type'],
+      additionalProperties: true,
+    },
+  },
+  required: ['text', 'action'],
+  additionalProperties: false,
+};
+
+const textComponentSchema: Schema = {
+  type: 'object',
+  properties: {
+    type: { const: 'text' },
+    props: {
+      type: 'object',
+      properties: {
+        text: { type: 'string' },
+        markdown: { type: 'boolean', nullable: true },
+      },
+      required: ['text'],
+      additionalProperties: false,
+    },
+  },
+  required: ['type', 'props'],
+  additionalProperties: false,
+};
+
+const buttonsComponentSchema: Schema = {
+  type: 'object',
+  properties: {
+    type: { const: 'buttons' },
+    props: {
+      type: 'object',
+      properties: {
+        buttons: {
+          type: 'array',
+          items: buttonSchema,
+        },
+      },
+      required: ['buttons'],
+      additionalProperties: false,
+    },
+  },
+  required: ['type', 'props'],
+  additionalProperties: false,
+};
+
+const componentSchema: Schema = {
+  anyOf: [textComponentSchema, buttonsComponentSchema],
+};
+
 const nodeSchema: Schema = {
   type: 'object',
   properties: {
@@ -42,82 +101,13 @@ const nodeSchema: Schema = {
     components: {
       type: 'array',
       nullable: true,
-      items: {
-        anyOf: [
-          {
-            type: 'object',
-            properties: {
-              type: { const: 'text' },
-              props: {
-                type: 'object',
-                properties: {
-                  text: { type: 'string' },
-                  markdown: { type: 'boolean', nullable: true },
-                },
-                required: ['text'],
-                additionalProperties: false,
-              },
-            },
-            required: ['type', 'props'],
-            additionalProperties: false,
-          },
-          {
-            type: 'object',
-            properties: {
-              type: { const: 'buttons' },
-              props: {
-                type: 'object',
-                properties: {
-                  buttons: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        text: { type: 'string' },
-                        action: {
-                          type: 'object',
-                          properties: {
-                            type: { type: 'string' },
-                          },
-                          required: ['type'],
-                          additionalProperties: true,
-                        },
-                      },
-                      required: ['text', 'action'],
-                      additionalProperties: false,
-                    },
-                  },
-                },
-                required: ['buttons'],
-                additionalProperties: false,
-              },
-            },
-            required: ['type', 'props'],
-            additionalProperties: false,
-          },
-        ],
-      },
+      items: componentSchema,
     },
     text: { type: 'string', nullable: true },
     buttons: {
       type: 'array',
       nullable: true,
-      items: {
-        type: 'object',
-        properties: {
-          text: { type: 'string' },
-          action: {
-            type: 'object',
-            properties: {
-              type: { type: 'string' },
-            },
-            required: ['type'],
-            additionalProperties: true,
-          },
-        },
-        required: ['text', 'action'],
-        additionalProperties: false,
-      },
+      items: buttonSchema,
     },
   },
   required: ['id'],
