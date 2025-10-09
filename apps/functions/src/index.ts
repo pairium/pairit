@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { onRequest } from 'firebase-functions/v2/https';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { advance, type Event as RuntimeEvent, type RunState } from '@pairit/runtime';
 
 initializeApp();
 const db = getFirestore();
@@ -14,10 +15,7 @@ type SessionRequest = {
 };
 
 type AdvanceRequest = {
-  event: {
-    type: string;
-    payload?: unknown;
-  };
+  event: RuntimeEvent;
 };
 
 app.post('/sessions/start', async (c) => {
@@ -67,19 +65,21 @@ app.post('/sessions/:sessionId/advance', async (c) => {
   }
 
   const data = doc.data();
-
-  let nextNode = data?.currentNodeId;
-  if (body.event.type === 'next') {
-    nextNode = data?.currentNodeId === 'intro' ? 'survey_1' : 'outro';
+  const currentNodeId = data?.currentNodeId;
+  if (typeof currentNodeId !== 'string') {
+    return c.json({ error: 'invalid_state' }, 500);
   }
 
+  const runState: RunState = { currentNodeId };
+  const nextState = advance(runState, body.event);
+
   await sessionRef.update({
-    currentNodeId: nextNode,
+    currentNodeId: nextState.currentNodeId,
     lastEvent: body.event,
     updatedAt: Date.now(),
   });
 
-  return c.json({ newNode: nextNode });
+  return c.json({ newNode: nextState.currentNodeId });
 });
 
 export const api = onRequest({ region: 'us-central1' }, async (req, res) => {
