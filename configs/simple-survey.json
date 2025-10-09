@@ -1,0 +1,94 @@
+{
+  "initialNodeId": "intro",
+  "nodes": [
+    {
+      "id": "intro",
+      "text": "Welcome. Please complete this short survey.\n",
+      "buttons": [
+        {
+          "text": "Begin",
+          "action": {
+            "type": "next"
+          }
+        }
+      ],
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "Welcome. Please complete this short survey.\n"
+          }
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "text": "Begin",
+                "action": {
+                  "type": "next"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "survey_1",
+      "text": "Pretend survey question",
+      "buttons": [
+        {
+          "text": "Submit",
+          "action": {
+            "type": "next"
+          }
+        }
+      ],
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "Pretend survey question"
+          }
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "text": "Submit",
+                "action": {
+                  "type": "next"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "outro",
+      "end": true,
+      "text": "Thanks!",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "Thanks!"
+          }
+        }
+      ]
+    }
+  ],
+  "flow": [
+    {
+      "from": "intro",
+      "to": "survey_1"
+    },
+    {
+      "from": "survey_1",
+      "to": "outro"
+    }
+  ]
+}

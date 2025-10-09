@@ -1,0 +1,27 @@
+{
+  "name": "pairit-new",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "pnpm -r test",
+    "build": "pnpm -r build",
+    "dev": "pnpm -r --parallel dev",
+    "publish:example": "tsx configs/publish-example.ts",
+    "emulators": "pnpm --filter functions build && firebase emulators:start --only functions,firestore,database --project pairit-local"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.15.0",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/node": "^24.7.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.9"
+  }
+}
