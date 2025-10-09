@@ -1,14 +1,12 @@
-## Pairit Technical Spec
+# Pairit Technical Spec
 
-### Decision highlights
+## Overview
 
 - **Scope**: Full system spec (DSL + runtime semantics + architecture + APIs + data model).
-- **Expression language**: Use expr-eval with JSONPath-style roots (e.g., `$.user_state.*`) and a small standard library including a deterministic `rand()` seeded per experiment, group, and participant.
-
-## Goals and non-goals
-
 - **Goals**: Simple, auditable configuration-as-data for experiments; deterministic randomization; safe server-authoritative execution; reproducibility; portability across deployments; minimal frontend logic.
 - **Non-goals**: Arbitrary user-provided code execution; exposing AI keys to clients; complex UI editors in this spec.
+ - **Constraints**: Single-file config (no imports); distinct configs per environment; no localization in this spec.
+ - **Expression language**: Use expr-eval with JSONPath-style roots (e.g., `$.user_state.*`) and a small standard library including a deterministic `rand()` seeded per experiment, group, and participant.
 
 ## Configuration DSL
 
@@ -16,93 +14,78 @@ The configuration is authored as YAML and compiled to a canonical JSON form at p
 
 ### Top-level structure
 
-- **schemaVersion**: string, semantic version of the config schema, e.g., `"1.0.0"`.
+- **schema_version**: string, semantic version of the config schema, e.g., `"1.0.0"`.
 - **nodes**: array of node definitions. Each node defines one page/state.
 - **flow**: array of directed edges and event handlers between nodes.
 - **user_state**: declarative type schema for per-participant state.
+- **group_state**: declarative type schema for per-group state.
 - **queues**: array of queue definitions for matching.
 - **agents**: array of AI agent definitions available to chat nodes.
-- **components**: optional registry of custom UI components that can be referenced by nodes.
 
 ### Nodes
 
-Common fields across node types:
+Nodes are the primary page abstraction in a config. Each node represents one page/state in the study and is defined by the set of UI or interaction components that are mounted when the session enters that node. The node's main purpose is to declare which components appear on the page, their props, layout hints, conditional display rules, and the events those components may emit. Built-in components (first-class) include `text`, `buttons`, `survey`, `queue`, `chat`, `media`, and `form`. Custom components may also be mounted from the `components` registry (see Appendix A).
+
+Common fields on a node:
 - **id**: string, unique within the config.
-- Optional presentation helpers for simple pages:
-  - **text**: string, markdown supported.
-  - **buttons**: array of `{ text: string, action: Action }`.
+- **end?**: boolean, when true the node is terminal and ends the session upon entry. Outgoing edges from an `end` node are invalid.
+- **components?**: array of component instances shown on the page (preferred canonical form). Each instance is either a built-in component or a `component` reference to a registered custom component.
+- **layout?**: optional layout metadata or presentation hints for the client (non-normative; used by the frontend for spacing/columns/etc).
 
-Node-specific payloads (only one of these per node):
-- **survey**: array of survey questions shown as a single page.
-  - `{ id: string, text: string, answer: AnswerType, choices?: string[] }`
-  - **AnswerType**: `numeric | likert5 | likert7 | multiple_choice`
-- **queue**: string, references a queue id to enqueue the participant.
-- **chat**: object, opens a chat session.
-  - `agents?: string[]` list of agent ids to include. Omit for human-only chat.
-  - Future-compatible fields reserved: `tabs`, `permissions`.
-- **component**: object, mounts a custom component from the registry.
-  - `component: string` id from top-level `components` or from the application registry.
-  - `props?: object` validated against the component's declared `propsSchema`.
+For convenience, simple top-level helpers remain supported and are normalized at compile time into the `components` array:
+- **text**: string (markdown supported) -> normalized to a `text` component instance.
+- **buttons**: array of `{ text: string, action: Action }` -> normalized to a `buttons` component instance.
 
-### Custom components
+Component instance shapes (canonical):
+- **Built-in `text`**: `{ type: "text", props: { text: string, markdown?: bool } }`
+- **Built-in `buttons`**: `{ type: "buttons", props: { buttons: [ { text: string, action: Action } ] } }`
+- **Built-in `survey`**: `{ type: "survey", props: { questions: [ { id: string, text: string, answer: AnswerType, choices?: string[] } ] } }` (on submit, validates answers, writes to `$.user_state` by question `id`, emits `complete`)
+- **Built-in `queue`**: `{ type: "queue", props: { queueId: string } }` (enqueues the session into the named queue)
+- **Built-in `chat`**: `{ type: "chat", props: { agents?: string[] } }` (opens chat scoped to `$.user_group.chat_group_id`; if `agents` are provided the server joins them; traversal from chat occurs only when the UI issues `{ type: "next" }`; auto-advance by time is not supported in MVP)
+- **Built-in `media` / `form`**: component instances for common media or form elements; props are validated at compile time when applicable.
+- **Custom `component`**: `{ type: "component", props: { component: string, props: object, unknownEvents?: "error" | "warn" | "ignore" } }`
 
-Custom components allow experimenters to extend the UI without changing the runtime. The config remains routing, data, and UI wiring only.
-
-#### Component registry
-
-Top-level `components` entries declare contracts that the runtime validates at publish time:
-
-- `{ id: string, version?: string, propsSchema?: JSONSchema, events?: { name: string, payloadSchema?: JSONSchema }[], capabilities?: string[] }`
-- `propsSchema` and `events[*].payloadSchema` are JSON Schema subsets for validation. They document what the component expects and emits.
-- `capabilities` is an allowlist for built-in affordances (e.g., `clipboard`, `fileUpload`). Network or AI access is never granted via components directly.
-
-The frontend application maintains a `componentRegistry` mapping `id`→implementation. If an id exists in config but not in the app registry at runtime, the run errors with a missing component.
-
-#### Using a component in a node
-
-In a node with `component`, the runtime:
-- Validates `props` against `propsSchema` if provided.
-- Mounts the component and subscribes to its declared `events`.
-- When the component emits an event `name` with `payload`, the runtime validates the payload against `payloadSchema` and raises a flow event with the same name.
-
-#### Event integration
-
-Custom events can be handled in `flow.on` like built-in events:
-- Example: `on: { rating_submitted: [ { assign: { "$.user_state.rating": "$.event.payload.value" } } ] }`.
-- The runtime exposes `$.event` during an event handler with `{ name, payload }` for use in expressions.
-
-#### Actions to component (optional)
-
-The runtime may send simple actions to components via button `action` or timeouts. MVP omits a general action bus; components should be self-contained and emit events to drive flow.
+Compilation note: at publish time the compiler normalizes top-level helpers into canonical `components` instances, validates component props against their schemas, and records resolved custom component versions for audit.
 
 ### Flow
 
-An ordered list of edges and associated event handlers.
+Flow is an ordered list of edges and event handlers that route between nodes (pages). Because nodes are composed of components, flow reacts to events emitted by those components as well as built-in runtime events. Edges express routing logic; handlers attached to edges respond to component or system events and may update `$.user_state` or other allowed fields before traversal.
 
 - **Edge**: `{ from: string, to: string, when?: Expr, on?: EventHandlers }`
   - **from**: source node id.
   - **to**: default destination node id if the edge is taken.
-  - **when**: boolean expression; the first edge in order whose `when` evaluates to true is taken. If omitted on multiple edges from the same `from`, treat as `true` and preserve order.
-  - **on**: event handlers that run when a qualifying event occurs while at `from`. Handlers can also run before traversal if they set state needed by `when`.
+  - **when**: boolean expression evaluated in the current context. Outgoing edges from a node are considered in config order; the first edge whose `when` evaluates to true is taken. If `when` is omitted, treat as `true`.
+  - **on**: event handlers that run when an event with the matching name is received while the run is at `from`. Handlers may also run before traversal to set state used by `when`.
 
 ### Event handlers
+
+Event handlers are per-edge reactions declared in `flow.on` that respond to component or system events while the run is at the edge’s `from` node. When an event arrives, handlers run in config order before edge selection; they may update `$.user_state` (server-originating events may also write `$.user_group.*`). During a handler, `$.event` exposes `{ name, payload }`. All assignments apply atomically and must pass type checks.
 
 - Structure: `on: { <eventName>: Step[] }`, where `Step` is one of:
   - `assign`: `{ assign: { "<lhs JSONPath>": <Expr> } }` Left-hand side must be under `$.user_state.*` or `$.user_group.*` where permitted.
   - Future steps reserved: `function`, `emit`.
 
+Event validation: At runtime, incoming events for the current node are validated; unknown or malformed events are rejected and logged; handlers are not evaluated and traversal does not occur.
+
 Standard events:
 - **complete**: emitted by `survey` node upon successful submission.
 - **match**: emitted by `queue` node when a match is formed.
-- **button**: emitted by pages with `buttons` when a button is clicked; button `action` is processed immediately.
+- **timeout**: emitted by `queue` node when the participant waits longer than the configured timeout.
+- **backfilled**: emitted by `queue` node when a group is formed using ghost seats.
+- **abandoned**: emitted when a waiting participant leaves or cancels from a `queue` node.
 - **<custom>**: any custom event emitted by a mounted custom component (see Custom components). The runtime sets `$.event` for handler evaluation.
 
 ### Actions
 
-Actions are strings in buttons that cause standard transitions:
-- `next`: traverse the default outgoing edge from the current node.
-- `end`: terminate the run.
-- `return_to_prolific(CODE)`: server responds with a redirect to Prolific with the provided completion code.
+Actions are structured objects on buttons for validation and tooling.
+
+Preferred object form:
+
+- `{ type: "next" }`: traverse the default outgoing edge from the current node.
+- `{ type: "end" }`: terminate the session.
+- `{ type: "return_to_prolific", code: string }`: server responds with a redirect to Prolific with the provided completion code.
+
+Unknown action `type` values are rejected at compile time.
 
 ### User state schema
 
@@ -113,29 +96,53 @@ The `user_state` section defines the participant state types for validation and 
 
 Values written via `assign` must conform to the declared schema.
 
+Defaults: Each field may specify `default`. On session creation, `user_state` is initialized with these defaults; unspecified fields are omitted until first write.
+
+### Group state schema
+
+- The `group_state` section defines shared group-level state persisted on the group document and exposed to each member as `$.user_group`.
+- Creation and linkage:
+  - A new group is created on every successful `match`. The runtime links each member session to the created `groupId` and initializes `$.user_group` for those sessions.
+- Types: same as `user_state` — scalars (`int`, `bool`, `string`), arrays, and objects.
+- Defaults: Each field may specify `default`. On group creation, `$.user_group` is initialized from these defaults; unspecified fields are omitted until first write.
+- Write rules:
+  - Only server-originating events and system code may write `$.user_group.*` (e.g., `match`, `timeout`, backfill, timers). Client-originating events cannot write `$.user_group.*`; such assignments are rejected.
+- Visibility and usage: `$.user_group.*` is readable in expressions for all members and may be referenced in `when` conditions and component props.
+- Reserved fields: The runtime may set reserved fields (e.g., `chat_group_id`) required by built-in components. If declared in `group_state`, they must match the declared type; otherwise they remain runtime-managed and read-only.
+
 ### Queues
 
-- `{ id: string, num_users: int }`
-- Matching policy: FIFO by arrival time, fill groups of `num_users`. Timeout and backfill policies are server-configurable per queue (defaults documented below).
-- On match, the runtime emits `match` and writes `$.user_group.chat_group_id` and the `match_id`.
+Queues are server-managed waiting rooms that collect participants until enough are available to form a group. Entering a `queue` node enqueues the current session into the named queue. The runtime matches participants in FIFO order into groups of `num_users`. On a successful match it creates a `groupId`, initializes `$.user_group` for members (including `chat_group_id`), emits `match`, and continues traversal. If a participant waits beyond `timeoutSeconds` (or the server default), the runtime emits `timeout`. Optional backfill can create groups with ghost seats when enabled.
+
+- `{ id: string, num_users: int, timeoutSeconds?: int }`
+- Matching policy: FIFO by arrival time, fill groups of `num_users`. Timeout policy is configurable per queue in the config; server defaults apply when omitted.
+- On match, the runtime emits `match` and writes `$.user_group.chat_group_id` and the `groupId`. On timeout, the runtime emits `timeout`.
+ - Default timeout: 120 seconds when `timeoutSeconds` is not set. On timeout, the runtime emits `timeout` and the flow may route via a `timeout` handler or exit per config.
 
 ### Agents
 
-- `{ id: string, model: string, temperature?: number, maxTokens?: number, topP?: number, tools?: string[], resources?: object, promptTemplate?: string }`
+Agents are server-hosted AI participants that can be invited into `chat` nodes. Define agents once under `agents` and reference them by id in a chat node’s `agents` list. The server resolves the provider and credentials, runs the model, and streams its messages; clients never see provider keys. Basic generation controls like `temperature` and `maxTokens` are supported; advanced `tools` and `resources` are reserved for future use.
+
+- `{ id: string, model: string, temperature?: number, maxTokens?: number }`
 - Agents are resolved server-side only. Client never sees provider keys.
+  - In MVP, `tools` and `resources` are reserved and ignored.
 
 ## Expression language
 
-Use expr-eval with a constrained environment and deterministic RNG.
+Use `expr-eval` with a constrained environment and deterministic RNG.
 
 ### Roots
 
+Roots define the top-level namespaces available to the expression evaluator. They form the context used in `when` conditions, event handlers, and component props. `$.user_state` is participant-local and writable via `assign`; `$.user_group` is shared across members of a matched group and is server-managed (clients read only); `$.env` and `$.now` are read-only.
+
 - `$.user_state`: participant-local state, writeable via `assign`.
-- `$.user_group`: group-local fields exposed to each member. Writeable only by server events like `match`.
+- `$.user_group`: group-local fields exposed to each member. Writeable only by server events like `match`. Clients cannot write `$.user_group.*`; it is read-only in expressions.
 - `$.env`: read-only environment values (e.g., experiment id, config version).
 - `$.now`: read-only timestamp (server time) for evaluation; do not use for randomization.
 
 ### Functions
+
+Functions are the built-in helpers available inside expressions. Use them in `when` conditions and assignment right-hand sides for numeric, logical, string, and collection operations. `rand()` yields a deterministic value in [0,1) using the configured seed scope (experiment, group, or participant), suitable for controlled randomization.
 
 - Numeric: `min`, `max`, `abs`, `floor`, `ceil`, `round`.
 - Logical: `and`, `or`, `not`.
@@ -147,48 +154,33 @@ Use expr-eval with a constrained environment and deterministic RNG.
 ### Determinism and seeds
 
 - Seeds are derived as: `experimentSeed → groupSeed → participantSeed` using a stable KDF (e.g., HKDF-SHA256) with the public ids and role as salt/info.
-- Each run persists its seeds on `experiment`, `group`, and `participant` docs.
+- Each session persists its seeds on `experiment`, `group`, and `participant` docs.
 - `rand()` is deterministic per evaluator context:
   - In edges evaluated pre-match, use `participantSeed`.
   - In group-level logic and chat nodes, use `groupSeed`.
   - All uses are recorded for audit.
 
-### Assignments
-
-- Only `$.user_state.*` is assignable from expressions in client-originating events.
-- Server-originating events may write to `$.user_group.*` and system-managed fields.
-- Type checks happen before writes; invalid writes are rejected and logged.
-- During custom event handling, `$.event` is read-only and includes `{ name: string, payload: any }`.
-
 ## Runtime semantics
+
+This section defines the required behavior of the engine at run time: how a run is executed step by step.
 
 ### Lifecycle
 
 1) Load config by `publicId` → resolve `publishedConfigId` from registry.
 2) Validate and compile YAML to canonical JSON with defaults and normalized shapes.
-3) Create a participant run with seeds and initial `user_state` per schema defaults.
-4) Enter the first node (the first listed in `nodes`).
+3) Create a participant session with seeds and initial `user_state` per schema defaults.
+4) Enter the initial node: `initialNodeId` if provided, else the first listed in `nodes`.
 
-### Edge traversal
+### Event loop and edge selection (normative)
 
-- For the current node, collect all outgoing edges where `edge.from == current` in config order.
-- Evaluate `when` for each edge using the current evaluation context.
-- Take the first edge whose `when` is true. If no `when` specified, treat as true.
-- If no edge is valid, this is a config error; runtime logs and halts the run.
+Normative means the ordering below is required for compliance.
+1) Validate the incoming event for the current node; reject unknown or malformed events.
+2) Execute `on[event]` handlers attached to outgoing edges from the current node in config order. Apply `assign` atomically; reject on type mismatch.
+3) Recompute evaluation context.
+4) Evaluate `when` for outgoing edges in config order (missing means true); take the first true edge.
+5) Move to `edge.to`. If none match, halt with a config error.
 
-### Events and page behavior
-
-- **Survey node**: On submit, validate answers, write to `$.user_state` under their `id`, emit `complete`, then traverse.
-- **Queue node**: Enqueue participant into `queue.id`. When a group is formed of `num_users`, the server creates a `match_id`, writes `$.user_group.chat_group_id` for members, emits `match`, then traverses based on matching edges.
-- **Chat node**: Open a session scoped to `chat_group_id`. If `agents` provided, the server joins specified agents. Messages stream via RTDB. Traversal occurs when the UI issues a `next` or time-based rule triggers.
-- **Buttons**: On click, process `action`. `next` triggers traversal immediately; `end` completes run; `return_to_prolific(code)` issues a redirect.
-
-### Queue policies
-
-- Default timeout: 120 seconds. On timeout, the server may backfill with ghost AI seats or route to an alternate path if configured in flow.
-- Backfill is optional and server-controlled; when used, the server writes a flag indicating ghost seats were used.
-
-## Validation and canonicalization
+## Validation
 
 ### Compilation
 
@@ -200,9 +192,10 @@ Use expr-eval with a constrained environment and deterministic RNG.
 
 ### JSON Schema coverage
 
-- Provide schemas for: `nodes`, `flow`, `user_state`, `queues`, `agents`.
+- Provide schemas for: `nodes`, `flow`, `user_state`, `group_state`, `queues`, `agents`.
 - Pre-validate `assign` LHS paths against `user_state` schema.
-- Validate `components[*]` contracts and that `nodes[*].component` references a declared component id (or mark as external to be resolved by the app registry).
+ - Default `additionalProperties: false` across schemas unless explicitly opted-in to catch typos.
+ - Allow `$ref` usage within schemas in-config (self-contained only; no external imports).
 
 ### Lints
 
@@ -212,7 +205,8 @@ Use expr-eval with a constrained environment and deterministic RNG.
 - No unreachable nodes.
 - Types of `assign` RHS must match declared `user_state` target types.
 - Forbid assignments outside `$.user_state.*` from client events.
-- Component usage checks: missing `props` keys, extra keys not allowed by `propsSchema` (when `additionalProperties: false`), unknown custom events in `on` sections.
+ - Unknown `action.type` values are errors.
+ - Outgoing edges from `end: true` nodes are errors.
 
 ## Storage and data model
 
@@ -222,11 +216,11 @@ Use expr-eval with a constrained environment and deterministic RNG.
   - `experiments/{publicId}` → `{ publishedConfigId, owner, permissions, metadata }`.
   - `configs/{configId}` → immutable canonical JSON config, schemaVersion, createdAt, checksum.
 
-### Runs and groups
+### Sessions, groups, events
 
-- `runs/{runId}`: `{ publicId, configId, participantId, currentNodeId, user_state, seeds, startedAt, endedAt }`.
+- `sessions/{sessionId}`: `{ publicId, configId, participantId, currentNodeId, user_state, seeds, startedAt, endedAt }`.
 - `groups/{groupId}`: `{ queueId, numUsers, memberRunIds[], chat_group_id, seeds, arrivals, releaseToken }`.
-- `events/{eventId}` (subcollection under run): event-sourced log of transitions, chat, tool calls.
+- `events/{eventId}` (subcollection under session): event-sourced log of transitions, chat, tool calls.
 
 ### Live chat
 
@@ -234,43 +228,134 @@ Use expr-eval with a constrained environment and deterministic RNG.
 
 ## Minimal API surface (Hono)
 
-- `POST /runs/start` → body: `{ publicId }` → `{ runId, firstNode }`
-- `POST /runs/{runId}/advance` → body: `{ event: { type, payload } }` → `{ newNode }`
-- `POST /queues/{queueId}/enqueue` → `{ runId }` → `{ position }`
+- `POST /sessions/start` → body: `{ publicId, participantId? }` → `{ sessionId, firstNode, initialState? }`
+- `GET /sessions/{sessionId}` → `{ currentNodeId, user_state, user_group, endedAt? }`
+- `GET /sessions/{sessionId}/stream` → SSE stream of passive events (e.g., `match`, `timeout`, state updates)
+- `POST /sessions/{sessionId}/advance` → body: `{ event: { type, payload } }` → `{ newNode, updatedState? }`
+- `POST /queues/{queueId}/enqueue` → body: `{ sessionId }` → `{ position, estimatedWait? }`
+- `POST /chat/{groupId}/messages` → body: `{ text: string, role: "user" }` → 204 (response streams via SSE)
 - `GET /chat/{groupId}/stream` → SSE stream of messages for the group
-- `POST /agents/{agentId}/call` → server-side only invocation (no client keys)
+- `POST /agents/{agentId}/call` → server-side only invocation (body: `{ prompt, context }` → streamed response)
 
 ## Frontend and backend architecture
 
 - **Runtime**: Node.js. Package manager: pnpm.
 - **Frontend**: React, Vite, shadcn/ui, Tailwind CSS, TanStack Router/Query/Form, MDX for rich content.
-- **Backend**: Hono API, Google Cloud Functions (2nd gen) colocated with Firestore/RTDB.
-- **Storage**: Firestore (configs, runs, groups, events), Firebase RTDB (chat).
+- **Backend**: Hono API, Firebase Functions v2 colocated with Firestore/RTDB.
+- **Storage**: Firestore (configs, sessions, groups, events), Firebase RTDB (chat).
 - **Realtime**: RTDB for chat and collaboration signals.
 - **AI**: Provider abstraction (OpenRouter/OpenAI/etc), streaming, tool calling opt-in, server-only keys.
- - **Component registry**: Frontend exports `componentRegistry: Record<string, ReactComponent>`; config `components` must map to implementations present at build time (or loaded via a signed plugin mechanism in a future version). Props are validated client-side before mount.
 
 ## Security and observability
 
 - **Security**: Server-authored state transitions and timers; per-doc ACLs in Firestore/RTDB; rate limits and moderation hooks on chat; PII scrubbing on logs; cost caps on AI usage.
 - **Reproducibility**: Seeds persisted; randomization decisions logged with the used seed and callsite.
 - **Observability**: Structured logs, metrics per experiment, distributed traces, admin controls to pause/resume and force releases.
- - **Custom components security**: No direct network, filesystem, or AI access from components. All side effects occur via emitting events handled by server-authoritative flow transitions and API calls originating from the runtime.
+ - **Decision auditing**: Each `rand()` use and queue outcome (`match`, `timeout`, `abandoned`) is recorded as a structured event with seed scope, callsite, and inputs/outputs.
 
-## Examples
+## Appendices
+
+### Appendix A: Custom Components (optional)
+
+Custom components allow experimenters to extend the UI without changing the runtime. The config remains routing, data, and UI wiring only.
+
+#### Component registry
+
+Top-level `components` entries declare contracts that the runtime validates at publish time:
+
+- `{ id: string, version: string, propsSchema?: JSONSchema, events?: { name: string, payloadSchema?: JSONSchema }[], capabilities?: string[] }`
+- `propsSchema` and `events[*].payloadSchema` are JSON Schema subsets for validation. They document what the component expects and emits.
+- `capabilities` is an allowlist for built-in affordances (e.g., `clipboard`, `fileUpload`). Network or AI access is never granted via components directly.
+
+The frontend application may maintain a `componentRegistry` mapping `id`→implementation. If an id exists in config but not in the app registry at runtime, the run errors with a missing component. The runtime records the resolved implementation version alongside the run for audit.
+
+#### Using a component in a node
+
+In a node with `component`, the runtime:
+- Validates `props` against `propsSchema` if provided.
+- Mounts the component and subscribes to its declared `events`.
+- When the component emits an event `name` with `payload`, the runtime validates the payload against `payloadSchema` and raises a flow event with the same name.
+  - If the component emits an event that is not declared and `unknownEvents` is "error", the event is rejected and logged; "warn" logs and drops; "ignore" silently drops.
+
+#### Event integration
+
+Custom events can be handled in `flow.on` like built-in events:
+- Example: `on: { rating_submitted: [ { assign: { "$.user_state.rating": "$.event.payload.value" } } ] }`.
+- The runtime exposes `$.event` during an event handler with `{ name, payload }` for use in expressions.
+
+#### Actions to component (optional)
+
+The runtime may send simple actions to components via button `action` or timeouts. MVP omits a general action bus; components should be self-contained and emit events to drive flow.
+
+#### Example (Custom component)
+
+```yaml
+components:
+  - id: rating_widget
+    version: 1.0.0
+    propsSchema:
+      type: object
+      properties:
+        max:
+          type: integer
+          minimum: 3
+          maximum: 10
+      required: [max]
+      additionalProperties: false
+    events:
+      - name: rating_submitted
+        payloadSchema:
+          type: object
+          properties:
+            value: { type: integer, minimum: 1 }
+          required: [value]
+
+nodes:
+  - id: rate
+    component:
+      component: rating_widget
+      props:
+        max: 5
+      unknownEvents: error
+  - id: thanks
+    end: true
+
+flow:
+  - from: rate
+    on:
+      rating_submitted:
+        - assign:
+          "$.user_state.rating": "$.event.payload.value"
+    to: thanks
+
+user_state:
+  rating: int
+```
+
+### Appendix B: Queue Backfill (optional)
+
+Queues may optionally enable backfill to form groups using ghost seats when necessary.
+
+- Queue config extension: `{ backfill?: { enabled: bool, policy?: "fifo", ghostAgents?: { agentId: string }[] } }`
+- When backfill is used, the server writes a flag indicating ghost seats were used and emits `backfilled`.
+- Auditing records `backfilled` outcomes alongside other queue outcomes.
+
+### Appendix C: Examples
 
 ### Simple survey
 
 A minimal survey you can upload as `your_experiment.yaml` to run a short questionnaire.
 
 ```yaml
+initialNodeId: intro
+
 nodes:
   - id: intro
     text: |
       Welcome. Please complete this short survey.
     buttons:
       - text: "Begin"
-        action: next
+        action: { type: next }
   - id: survey_1
     survey:
       - id: age
@@ -288,10 +373,7 @@ nodes:
         text: "How satisfied are you with our service?"
         answer: likert5
   - id: outro
-    text: "Thank you for completing the survey."
-    buttons:
-      - text: "Finish"
-        action: end
+    end: true
 
 flow:
   - from: intro
@@ -317,7 +399,7 @@ nodes:
       Press "Start" to begin.
     buttons:
       - text: "Start"
-        action: next
+        action: { type: next }
   - id: start_survey
     survey:
       - id: question1
@@ -336,9 +418,9 @@ nodes:
         - default_agent
   - id: outro
     text: "Thank you for participating in our study."
-    button:
+    buttons:
       - text: "Return to Prolific"
-        action: "return_to_prolific(ENTER_COMPLETION_CODE)"
+        action: { type: return_to_prolific, code: "ENTER_COMPLETION_CODE" }
 
 flow:
   - from: intro
@@ -352,16 +434,12 @@ flow:
   - from: queue
     when: "$.user_state.treated == true"
     on:
-      match:
-        - assign:
-          "$.user_group.chat_group_id": "match_id"
+      match: []
     to: chat_treated
   - from: queue
     when: "$.user_state.treated == false"
     on:
-      match:
-        - assign:
-          "$.user_group.chat_group_id": "match_id"
+      match: []
     to: chat_control
   - from: chat_control
     to: outro
@@ -370,7 +448,6 @@ flow:
 
 user_state:
   treated: bool
-  chat_group_id: int
   chat_messages:
     type: array
     items:
@@ -383,63 +460,49 @@ user_state:
 queues:
   - id: default_queue
     num_users: 2
+    timeoutSeconds: 120
 
 agents:
   - id: default_agent
     model: "grok-4-fast-non-reasoning"
 ```
 
-### Custom component example
+#### Queue timeout example
 
 ```yaml
-components:
-  - id: rating_widget
-    propsSchema:
-      type: object
-      properties:
-        max:
-          type: integer
-          minimum: 3
-          maximum: 10
-      required: [max]
-      additionalProperties: false
-    events:
-      - name: rating_submitted
-        payloadSchema:
-          type: object
-          properties:
-            value: { type: integer, minimum: 1 }
-          required: [value]
-
 nodes:
-  - id: rate
-    component:
-      component: rating_widget
-      props:
-        max: 5
-  - id: thanks
-    text: "Thanks for your rating!"
+  - id: queue
+    queue: default_queue
+  - id: fallback
+    text: "Sorry, we could not find a partner right now."
     buttons:
       - text: "Finish"
-        action: end
+        action: { type: end }
 
 flow:
-  - from: rate
+  - from: queue
     on:
-      rating_submitted:
+      timeout:
         - assign:
-          "$.user_state.rating": "$.event.payload.value"
-    to: thanks
+          "$.user_state.timed_out": true
+    to: fallback
 
 user_state:
-  rating: int
+  timed_out: bool
+
+queues:
+  - id: default_queue
+    num_users: 2
+    timeoutSeconds: 60
 ```
+
+Note: The custom component example is provided in Appendix A.
 
 ## Compatibility and mapping notes
 
 - The earlier design draft using state machine pages and DAG edges maps directly to `nodes` and `flow` here.
 - WaitForGroup barriers are modeled with `queue` nodes plus `match` events.
-- The earlier `actions` map on activities maps to `buttons.action` and `on: { button }` where needed.
+- The earlier `actions` map on activities maps to `buttons.action`.
 - Seeds and determinism follow the experiment→group→participant derivation path outlined previously.
 
 
