@@ -18,6 +18,7 @@
 - **Frontend**: React, Vite, shadcn, Tailwind CSS, TanStack Router/Query/Form, MDX.
 - **Backend**: Hono API, Firebase Functions 0.0.1 near Firestore/RTDB.
 - **Parser**: Node.js. Package manager: pnpm.
+- **Experiment manager**: Node.js utility that turns parser output into Firestore updates.
 - **Storage**: Firestore (configs, sessions, groups, events), RTDB (chat).
 - **Realtime**: RTDB for chat/collab signals.
 - **AI**: Provider abstraction (server-only keys), streaming, optional tools.
@@ -214,6 +215,14 @@ Used to evaluate branch conditions (`when`) and computed assignment right-hand s
 4) Recompute evaluation context.
 5) Evaluate `action.branches` in order. The first truthy `when` wins. A branch without `when` is the default and SHOULD be last.
 6) If no branch matches and no default exists, the runtime MUST error; otherwise set `currentPageId` to the selected target. Missing targets are config errors and MUST halt the run.
+
+## Experiment manager
+
+- **Role**: consume the parser output and push canonical configs into Firestore so the runtime can fetch immutable builds.
+- **Firestore layout**: store configs inside the existing `tools` collection at `tools/{toolId}/experiments/{configId}` with the same canonical JSON format used by `configs/{configId}`.
+- **Operations**: expose `uploadConfig` that accepts YAML, invokes the parser to produce canonical JSON, writes metadata plus checksum, and return the Firestore document id. Expose `deleteConfig(configId)` that removes the experiment document from the same path and leaves published runs untouched.
+- **Auth**: skip authentication for the MVP. Access control will follow once tooling hardens and workflows land.
+- **Failure handling**: bubble parser validation errors as structured responses and treat Firestore write failures as retryable errors surfaced to the caller.
 
 ## Configuration DSL
 
