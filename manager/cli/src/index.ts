@@ -226,10 +226,11 @@ async function buildUploadPayload(
 ): Promise<{ payload: UploadPayload; checksum: string }> {
   const compiledPath = await compileConfig(configPath);
   const compiledContent = await readFile(compiledPath, "utf8");
-  const checksum = createHash("sha256").update(compiledContent).digest("hex");
+  const hashBuffer = createHash("sha256").update(compiledContent).digest();
+  const checksum = hashBuffer.toString("hex");
   const parsed = JSON.parse(compiledContent) as unknown;
 
-  const configId = options.configId ?? checksum;
+  const configId = options.configId ?? toBase64Url(hashBuffer.subarray(0, 12));
 
   const metadata = options.metadata
     ? (JSON.parse(options.metadata) as Record<string, unknown>)
@@ -245,6 +246,14 @@ async function buildUploadPayload(
     },
     checksum,
   };
+}
+
+function toBase64Url(buffer: Buffer): string {
+  return buffer
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
 }
 
 async function loadConfig(configPath: string): Promise<ExperimentConfig> {
