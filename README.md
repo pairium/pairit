@@ -26,7 +26,7 @@ This repo hosts a minimal end-to-end slice of the Pairit stack: a pnpm monorepo 
 3. Compile the sample config: `pnpm publish:example` (writes `configs/simple-survey.json`).
 4. Start local services: open three terminals (A `pnpm emulators`, B `pnpm --filter functions dev`, C `pnpm --filter web dev`) then visit `http://localhost:5173`.
 5. Manual walkthrough: click **Start session** in the web client, watch the `POST /sessions/start` response with `sessionId` and node `intro`, click **Next** to advance to `survey_1` then `outro`, and confirm the session doc under `sessions/{sessionId}` in the Firestore emulator.
-6. API spot checks (optional): start a session with `curl -X POST http://localhost:5001/pairit-local/us-central1/api/sessions/start -H 'Content-Type: application/json' -d '{"publicId":"demo"}'`, advance it with `curl -X POST http://localhost:5001/pairit-local/us-central1/api/sessions/SESSION_ID/advance -H 'Content-Type: application/json' -d '{"event":{"type":"next"}}'`, and fetch state with `curl http://localhost:5001/pairit-local/us-central1/api/sessions/SESSION_ID`.
+6. API spot checks (optional): start a session with `curl -X POST http://localhost:5001/pairit-local/us-east4/api/sessions/start -H 'Content-Type: application/json' -d '{"publicId":"demo"}'`, advance it with `curl -X POST http://localhost:5001/pairit-local/us-east4/api/sessions/SESSION_ID/advance -H 'Content-Type: application/json' -d '{"event":{"type":"next"}}'`, and fetch state with `curl http://localhost:5001/pairit-local/us-east4/api/sessions/SESSION_ID`.
 7. Tests: `pnpm test` (runs the compiler unit test and checks other packages for pending tests).
 
 ## Firebase Functions & CLI Deployment
@@ -57,7 +57,7 @@ pnpm --filter pairit-manager-functions run build
 firebase emulators:start --only functions:lab,functions:manager,firestore --project pairit-local
 
 # In another shell, point the CLI at the emulator if needed
-export PAIRIT_FUNCTIONS_BASE_URL=http://127.0.0.1:5001/pairit-local/us-central1/api
+export PAIRIT_FUNCTIONS_BASE_URL=http://127.0.0.1:5001/pairit-local/us-east4/api
 ```
 
 If you only want the manager API when iterating on the CLI, drop `functions:lab` from the `--only` flag.
@@ -70,21 +70,70 @@ firebase login
 firebase use <your-project-id>
 
 # Build the codebase you plan to deploy
-pnpm --filter lab-functions run build         # participant runtime (optional)
-pnpm --filter pairit-manager-functions run build  # manager API
+pnpm --filter pairit-lab-functions run build # participant runtime (optional)
+pnpm --filter pairit-manager-functions run build # manager API
 
 # Deploy both codebases
 firebase deploy --only functions
 
 # Deploy just the manager API
 firebase deploy --only functions:manager
+
+# Or just the lab API
+firebase deploy --only functions:lab
 ```
 
 After deploying the manager API, update the CLI target:
 
 ```zsh
-export PAIRIT_FUNCTIONS_BASE_URL=https://us-central1-<your-project-id>.cloudfunctions.net/api
+export PAIRIT_FUNCTIONS_BASE_URL=https://api-abcd.a.run.app # or for now, update the hard coded url
+```
+
+After deploying the lab API, update `lab/app/.env.local` and `lab/app/.env.prod`:
+```zsh
+VITE_API_URL=https://api-abcd.a.run.app
 ```
 
 The CLI defaults to the emulator URL (`http://127.0.0.1:5001/...`) when `PAIRIT_FUNCTIONS_BASE_URL` is unset and `FIREBASE_CONFIG`/`GCLOUD_PROJECT` resolve to `pairit-local`.
+
+
+### Deploying the lab web app
+
+Use Firebase Hosting (not App Hosting) for the `lab/app` frontend. The build artifact is a static bundle, so Hosting gives you the global CDN + SPA rewrites you need without managing an SSR runtime.
+
+1. Build the app:
+
+    ```zsh
+    pnpm --filter pairit-lab-app build
+    ```
+
+2. Point Hosting at the generated bundle. Extend `firebase.json` with a hosting entry (keep the existing `functions` block):
+
+    ```jsonc
+    {
+      "hosting": [
+        {
+          "target": "lab-app",
+          "public": "lab/app/dist",
+          "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+          "rewrites": [{ "source": "**", "destination": "/index.html" }]
+        }
+      ],
+      "functions": [
+        { "codebase": "lab", "source": "lab/functions" },
+        { "codebase": "manager", "source": "manager/functions" }
+      ]
+    }
+    ```
+
+    If you use Firebase targets, bind the target once: `firebase target:apply hosting lab-app <your-site-id>`.
+
+3. Deploy (once your project is selected with `firebase use`):
+
+    ```zsh
+    firebase deploy --only hosting:lab-app
+    ```
+
+    The SPA rewrite means every unknown path falls back to `index.html`; API calls should still use the Cloud Functions URL configured in `VITE_API_URL`.
+
 

@@ -45,13 +45,13 @@ pairit delete 2f3c4d5e...
 
 ```zsh
 # Using the Firebase emulator (requires `firebase emulators:start --only functions,firestore`)
-export PAIRIT_FUNCTIONS_BASE_URL=http://127.0.0.1:5001/pairit-local/us-central1/api
+export PAIRIT_FUNCTIONS_BASE_URL=http://127.0.0.1:5001/pairit-local/us-east4/api
 node manager/cli/dist/index.js upload configs/simple-survey-basic.yaml --owner you@example.com
 node manager/cli/dist/index.js list
 node manager/cli/dist/index.js delete 2f3c4d5e... --force
 ```
 
-`compile` writes `configs/simple-survey-basic.json` next to the source YAML. `upload` now defaults the config id to a 16-character base64url string derived from the SHA-256 hash of the compiled JSON (unless `--config-id` overrides it), which prevents duplicate uploads while keeping ids short. The hosted commands require the manager Firebase Function to be running (local emulator or deployed environment). Set `PAIRIT_FUNCTIONS_BASE_URL` to point to the desired target. When unset, the CLI falls back to `http://127.0.0.1:5001/<project>/us-central1/api`, where `<project>` is read from `FIREBASE_CONFIG.projectId` or `GCLOUD_PROJECT`.
+`compile` writes `configs/simple-survey-basic.json` next to the source YAML. `upload` now defaults the config id to a 16-character base64url string derived from the SHA-256 hash of the compiled JSON (unless `--config-id` overrides it), which prevents duplicate uploads while keeping ids short. The hosted commands require the manager Firebase Function to be running (local emulator or deployed environment). Set `PAIRIT_FUNCTIONS_BASE_URL` to point to the desired target. When unset, the CLI falls back to `http://127.0.0.1:5001/<project>/us-east4/api`, where `<project>` is read from `FIREBASE_CONFIG.projectId` or `GCLOUD_PROJECT`.
 
 ## Development
 
