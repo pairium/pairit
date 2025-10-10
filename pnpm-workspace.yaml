@@ -3,4 +3,5 @@ packages:
   - lab/*
 
 onlyBuiltDependencies:
+  - '@tailwindcss/oxide'
   - protobufjs

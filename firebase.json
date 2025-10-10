@@ -1,7 +1,8 @@
 {
-  "functions": {
-    "source": "lab/functions"
-  },
+  "functions": [
+    { "codebase": "lab", "source": "lab/functions" },
+    { "codebase": "manager", "source": "manager/functions" }
+  ],
   "emulators": {
     "functions": {
       "port": 5001

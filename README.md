@@ -29,3 +29,62 @@ This repo hosts a minimal end-to-end slice of the Pairit stack: a pnpm monorepo 
 6. API spot checks (optional): start a session with `curl -X POST http://localhost:5001/pairit-local/us-central1/api/sessions/start -H 'Content-Type: application/json' -d '{"publicId":"demo"}'`, advance it with `curl -X POST http://localhost:5001/pairit-local/us-central1/api/sessions/SESSION_ID/advance -H 'Content-Type: application/json' -d '{"event":{"type":"next"}}'`, and fetch state with `curl http://localhost:5001/pairit-local/us-central1/api/sessions/SESSION_ID`.
 7. Tests: `pnpm test` (runs the compiler unit test and checks other packages for pending tests).
 
+## Firebase Functions & CLI Deployment
+
+We manage two Cloud Functions codebases: `lab` (participant runtime) and `manager` (experiment management CLI API). Use the Firebase CLI (v13+) with the `codebases` feature:
+
+```jsonc
+// firebase.json (functions excerpt)
+{
+  "functions": [
+    { "codebase": "lab", "source": "lab/functions" },
+    { "codebase": "manager", "source": "manager/functions" }
+  ],
+}
+```
+
+### Local emulators
+
+```zsh
+# Install dependencies
+pnpm install
+
+# Build the function bundles once (re-run after changes)
+pnpm --filter lab-functions run build
+pnpm --filter pairit-manager-functions run build
+
+# Start the emulators for Firestore + both function codebases
+firebase emulators:start --only functions:lab,functions:manager,firestore --project pairit-local
+
+# In another shell, point the CLI at the emulator if needed
+export PAIRIT_FUNCTIONS_BASE_URL=http://127.0.0.1:5001/pairit-local/us-central1/api
+```
+
+If you only want the manager API when iterating on the CLI, drop `functions:lab` from the `--only` flag.
+
+### Deploying to Firebase
+
+```zsh
+# Authenticate and select project
+firebase login
+firebase use <your-project-id>
+
+# Build the codebase you plan to deploy
+pnpm --filter lab-functions run build         # participant runtime (optional)
+pnpm --filter pairit-manager-functions run build  # manager API
+
+# Deploy both codebases
+firebase deploy --only functions
+
+# Deploy just the manager API
+firebase deploy --only functions:manager
+```
+
+After deploying the manager API, update the CLI target:
+
+```zsh
+export PAIRIT_FUNCTIONS_BASE_URL=https://us-central1-<your-project-id>.cloudfunctions.net/api
+```
+
+The CLI defaults to the emulator URL (`http://127.0.0.1:5001/...`) when `PAIRIT_FUNCTIONS_BASE_URL` is unset and `FIREBASE_CONFIG`/`GCLOUD_PROJECT` resolve to `pairit-local`.
+

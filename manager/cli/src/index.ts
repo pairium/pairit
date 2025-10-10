@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
+import { createHash } from "node:crypto";
 import { readFile, writeFile, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import fetch, { RequestInit } from "node-fetch";
 import YAML from "yaml";
 
 type ExperimentPage = {
@@ -61,10 +63,102 @@ program
     }
   });
 
+program
+  .command("upload")
+  .argument("<config>", "Path to YAML config")
+  .requiredOption("--owner <owner>", "Owner email or id")
+  .option("--config-id <configId>", "Config id (defaults to filename)")
+  .option("--metadata <json>", "Optional metadata JSON string")
+  .description("Compile and upload config via Pairit Functions")
+  .action(async (configPath: string, options: UploadOptions) => {
+    try {
+      const { payload, checksum } = await buildUploadPayload(configPath, options);
+      const response = await callFunctions("/configs/upload", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      console.log(`✓ Uploaded ${payload.configId} (${checksum})`);
+      console.log(JSON.stringify(response, null, 2));
+    } catch (error) {
+      reportCliError("Upload failed", error);
+    }
+  });
+
+program
+  .command("list")
+  .option("--owner <owner>", "Filter by owner")
+  .description("List configs from Pairit Functions")
+  .action(async (options: ListOptions) => {
+    try {
+      const params = options.owner ? `?owner=${encodeURIComponent(options.owner)}` : "";
+      const response = await callFunctions(`/configs${params}`, { method: "GET" });
+
+      const configs = Array.isArray(response.configs) ? response.configs : [];
+      if (!configs.length) {
+        console.log("No configs found");
+        return;
+      }
+
+      configs.forEach((config: ConfigListEntry) => {
+        console.log(
+          `${config.configId} | owner=${config.owner} | checksum=${config.checksum} | updated=${config.updatedAt ?? "n/a"}`
+        );
+      });
+    } catch (error) {
+      reportCliError("List failed", error);
+    }
+  });
+
+program
+  .command("delete")
+  .argument("<configId>", "Config id to delete")
+  .option("--force", "Skip confirmation")
+  .description("Delete config via Pairit Functions")
+  .action(async (configId: string, options: DeleteOptions) => {
+    try {
+      if (!options.force) {
+        const confirmed = await promptConfirm(`Delete config ${configId}? (y/N)`);
+        if (!confirmed) {
+          console.log("Deletion aborted");
+          return;
+        }
+      }
+
+      await callFunctions(`/configs/${encodeURIComponent(configId)}`, { method: "DELETE" });
+      console.log(`✓ Deleted ${configId}`);
+    } catch (error) {
+      reportCliError("Delete failed", error);
+    }
+  });
+
 program.parseAsync(process.argv).catch((err) => {
   console.error(err);
   process.exit(1);
 });
+
+type UploadOptions = {
+  owner: string;
+  configId?: string;
+  metadata?: string;
+};
+
+type ListOptions = {
+  owner?: string;
+};
+
+type DeleteOptions = {
+  force?: boolean;
+};
+
+type ConfigListEntry = {
+  configId: string;
+  owner: string;
+  checksum: string;
+  updatedAt?: string | null;
+  metadata?: unknown;
+};
 
 async function lintConfig(configPath: string): Promise<void> {
   const config = await loadConfig(configPath);
@@ -118,6 +212,42 @@ async function compileConfig(configPath: string): Promise<string> {
   return outPath;
 }
 
+type UploadPayload = {
+  configId: string;
+  owner: string;
+  checksum: string;
+  metadata?: Record<string, unknown> | null;
+  config: unknown;
+};
+
+async function buildUploadPayload(
+  configPath: string,
+  options: UploadOptions
+): Promise<{ payload: UploadPayload; checksum: string }> {
+  const compiledPath = await compileConfig(configPath);
+  const compiledContent = await readFile(compiledPath, "utf8");
+  const checksum = createHash("sha256").update(compiledContent).digest("hex");
+  const parsed = JSON.parse(compiledContent) as unknown;
+
+  const resolved = await resolvePath(configPath);
+  const inferredId = path.basename(resolved, path.extname(resolved));
+
+  const metadata = options.metadata
+    ? (JSON.parse(options.metadata) as Record<string, unknown>)
+    : undefined;
+
+  return {
+    payload: {
+      configId: options.configId ?? inferredId,
+      owner: options.owner,
+      checksum,
+      metadata: metadata ?? null,
+      config: parsed,
+    },
+    checksum,
+  };
+}
+
 async function loadConfig(configPath: string): Promise<ExperimentConfig> {
   const resolvedPath = await resolvePath(configPath);
   const content = await readFile(resolvedPath, "utf8");
@@ -136,6 +266,59 @@ async function resolvePath(configPath: string): Promise<string> {
 
   await stat(absolute);
   return absolute;
+}
+
+async function callFunctions(pathname: string, init: RequestInit): Promise<any> {
+  const baseUrl = getFunctionsBaseUrl();
+  const url = new URL(pathname, baseUrl).toString();
+  const response = await fetch(url, init);
+
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${text}`);
+  }
+
+  if (!text) return undefined;
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new Error(`Invalid JSON response: ${text}`);
+  }
+}
+
+function getFunctionsBaseUrl(): string {
+  // const envUrl = process.env.PAIRIT_FUNCTIONS_BASE_URL;
+  const envUrl = "https://api-pdxzcarxcq-uk.a.run.app";
+  if (envUrl) return envUrl;
+
+  const project = process.env.FIREBASE_CONFIG
+    ? JSON.parse(process.env.FIREBASE_CONFIG).projectId
+    : process.env.GCLOUD_PROJECT;
+
+  const projectId = project ?? "pairit-local";
+  return `http://127.0.0.1:5001/${projectId}/us-central1/api`;
+}
+
+async function promptConfirm(prompt: string): Promise<boolean> {
+  process.stdout.write(`${prompt} `);
+  const chunks: Buffer[] = [];
+  return new Promise((resolve) => {
+    process.stdin.setEncoding("utf8");
+    process.stdin.once("data", (data) => {
+      chunks.push(Buffer.from(data));
+      const input = Buffer.concat(chunks).toString("utf8").trim().toLowerCase();
+      resolve(input === "y" || input === "yes");
+    });
+  });
+}
+
+function reportCliError(prefix: string, error: unknown) {
+  if (error instanceof Error) {
+    console.error(`${prefix}: ${error.message}`);
+  } else {
+    console.error(`${prefix}: unknown error`);
+  }
+  process.exitCode = 1;
 }
 
 export const __filename = fileURLToPath(import.meta.url);
