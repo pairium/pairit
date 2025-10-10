@@ -10,12 +10,14 @@ This repo hosts a minimal end-to-end slice of the Pairit stack: a pnpm monorepo 
 
 ## Repository Structure
 
-- `apps/functions`: Firebase Cloud Functions API built with Hono that exposes the session endpoints.
-- `apps/web`: Vite React demo client that calls the API and walks through the sample flow.
-- `packages/core`: Configuration compiler that validates YAML and emits canonical JSON.
-- `packages/runtime`: Runtime helpers for deterministic seeding and flow advancement.
-- `configs/`: Sample survey config and the publish script.
-- `specs.md`: Technical specification covering the end-to-end architecture.
+- `lab/functions`: Participant-facing app
+    - `lab/functions`: Firebase Cloud Functions API built with Hono
+    - `lab/web`: Vite React Tanstack frontend
+- `manager`: Experimenter-facing tools and app
+    - `manager/cli`
+    - `manager/functions`
+    - `manager/web`
+- `configs/`: example configs
 
 ## Quickstart
 
