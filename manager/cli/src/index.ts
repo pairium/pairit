@@ -296,7 +296,7 @@ async function callFunctions(pathname: string, init: RequestInit): Promise<any> 
 
 function getFunctionsBaseUrl(): string {
   // const envUrl = process.env.PAIRIT_FUNCTIONS_BASE_URL;
-  const envUrl = "https://api-pdxzcarxcq-uk.a.run.app";
+  const envUrl = "https://manager-pdxzcarxcq-uk.a.run.app";
   if (envUrl) return envUrl;
 
   const project = process.env.FIREBASE_CONFIG
