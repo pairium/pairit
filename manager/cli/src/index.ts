@@ -301,13 +301,13 @@ function getFunctionsBaseUrl(): string {
 
 async function promptConfirm(prompt: string): Promise<boolean> {
   process.stdout.write(`${prompt} `);
-  const chunks: Buffer[] = [];
   return new Promise((resolve) => {
     process.stdin.setEncoding("utf8");
+    process.stdin.resume();
     process.stdin.once("data", (data) => {
-      chunks.push(Buffer.from(data));
-      const input = Buffer.concat(chunks).toString("utf8").trim().toLowerCase();
+      const input = data.toString().trim().toLowerCase();
       resolve(input === "y" || input === "yes");
+      process.stdin.pause();
     });
   });
 }
