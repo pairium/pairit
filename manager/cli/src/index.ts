@@ -229,8 +229,7 @@ async function buildUploadPayload(
   const checksum = createHash("sha256").update(compiledContent).digest("hex");
   const parsed = JSON.parse(compiledContent) as unknown;
 
-  const resolved = await resolvePath(configPath);
-  const inferredId = path.basename(resolved, path.extname(resolved));
+  const configId = options.configId ?? checksum;
 
   const metadata = options.metadata
     ? (JSON.parse(options.metadata) as Record<string, unknown>)
@@ -238,7 +237,7 @@ async function buildUploadPayload(
 
   return {
     payload: {
-      configId: options.configId ?? inferredId,
+      configId,
       owner: options.owner,
       checksum,
       metadata: metadata ?? null,
