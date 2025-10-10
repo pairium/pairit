@@ -14,10 +14,11 @@ You can upload your config file to our service or deploy your own service. When 
 
 1. **[Runtime](#runtime)**: YAML file for runtime configuration.
 2. **[CLI](#cli)**: Node.js utility that lints, parses, uploads, and deletes experiment configurations on Firestore. It alse lets you download the data after you finish.
-3. **[Frontend](#frontend)**: React, Vite, shadcn, Tailwind CSS, TanStack Router/Query/Form, MDX.
-4. **[Backend](#backend)**: Hono API, Firebase Functions v2 near Firestore/RTDB, `expr-eval` subset.
+3. **[Lab](#lab)**:
+    - **[Frontend](#frontend)**: React, Vite, shadcn, Tailwind CSS, TanStack Router/Query/Form, MDX.
+    - **[Backend](#backend)**: Hono API, Firebase Functions v2 near Firestore/RTDB, `expr-eval` subset.
+    - **[Realtime](#realtime)**: RTDB for real-time chat and collaboration.
 5. **[Storage](#storage)**: Firestore (configs, sessions, groups, events), RTDB (chat).
-6. **[Realtime](#realtime)**: RTDB for real-time chat and collaboration.
 7. **[AI](#ai)**: Provider abstraction (server-only keys), streaming, optional tools.
 
 ## <a href="#runtime">Runtime</a>
@@ -337,11 +338,13 @@ The experiment configuration files are stored on Firestore:
 - Forbid assignments outside `$.user_state.*` from client events.
 - Unknown `action.type` values are errors.
 
-## <a href="#frontend">Frontend</a>
+## <a href="#lab">Lab</a>
+
+### <a href="#frontend">Frontend</a>
 
 
 
-## <a href="#backend">Backend</a>
+### <a href="#backend">Backend</a>
 
 - `POST /sessions/start` → `{ publicId, participantId? }` → `{ sessionId, firstNode, initialState? }`
 - `GET /sessions/{sessionId}` → `{ currentPageId, user_state, user_group, endedAt? }`
@@ -352,12 +355,9 @@ The experiment configuration files are stored on Firestore:
 - `GET /chat/{groupId}/stream` → SSE stream of messages for the group
 - `POST /agents/{agentId}/call` → server-side only invocation (streamed)
 
-## <a href="#storage">Storage</a>
+### <a href="#realtime">Realtime</a>
 
-
-## <a href="#realtime">Realtime</a>
-
-### Match-making
+#### Match-making
 
 Queues are server-managed waiting rooms that collect participants until enough are available to form a group. Entering a `queue` page enqueues the current session into the named queue. The runtime matches participants FIFO into groups of `num_users`. On match it creates a `groupId`, initializes `$.user_group` (including `chat_group_id`), emits `match`, and continues. If waiting exceeds `timeoutSeconds` (or default), the runtime emits `timeout`. Optional backfill may create groups with ghost seats when enabled.
 
@@ -369,7 +369,7 @@ Queues are server-managed waiting rooms that collect participants until enough a
 
 See Data store ("Group-level shared state") for `group_state` schema and write rules. Queue outcomes drive Routing via emitted `match`/`timeout` events and initialize Chat via `chat_group_id`.
 
-### Chat
+#### Chat
 
 Chat sessions are scoped to a matched group and surfaced via the built-in `chat` component.
 
@@ -378,6 +378,8 @@ Chat sessions are scoped to a matched group and surfaced via the built-in `chat`
 - API: `POST /chat/{groupId}/messages` to send, `GET /chat/{groupId}/stream` for SSE.
 - Agents: when a chat page lists `agents`, the server joins them to the group chat and streams their messages.
 - Moderation: server-side hooks can filter/redact messages before fan-out; clients never see provider keys.
+
+## <a href="#storage">Storage</a>
 
 ## <a href="ai">AI Agents</a>
 

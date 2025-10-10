@@ -1,6 +1,6 @@
 packages:
-  - apps/*
-  - packages/*
+  - manager/*
+  - lab/*
 
 onlyBuiltDependencies:
   - protobufjs

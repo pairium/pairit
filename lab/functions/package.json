@@ -12,7 +12,6 @@
     "node": "22"
   },
   "dependencies": {
-    "@pairit/runtime": "workspace:*",
     "firebase-admin": "^12.6.0",
     "firebase-functions": "^5.0.1",
     "hono": "^4.5.11"

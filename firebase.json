@@ -1,6 +1,6 @@
 {
   "functions": {
-    "source": "apps/functions"
+    "source": "lab/functions"
   },
   "emulators": {
     "functions": {
