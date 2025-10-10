@@ -12,11 +12,11 @@ This repo hosts a minimal end-to-end slice of the Pairit stack: a pnpm monorepo 
 
 - `lab/functions`: Participant-facing app
     - `lab/functions`: Firebase Cloud Functions API built with Hono
-    - `lab/web`: Vite React Tanstack frontend
+    - `lab/app`: Vite React Tanstack frontend
 - `manager`: Experimenter-facing tools and app
     - `manager/cli`
     - `manager/functions`
-    - `manager/web`
+    - `manager/app`
 - `configs/`: example configs
 
 ## Quickstart
