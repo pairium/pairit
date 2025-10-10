@@ -1,36 +1,45 @@
-## Pairit Runtime Spec
+## Pairit
 
 ### Overview
 
-- **Purpose**: A lightweight layer that connects flexible YAML configuration to a React app. Everything centers on three small primitives:
-  - UI runtime glue (component registry + renderer)
-  - Data store (authoritative `user_state`)
-  - Routing (button-driven navigation and branching)
-- Special capabilities (built on the three primitives): queues (matching), chat (group-scoped RTDB), agents (server-hosted participants)
-- **Scope**: DSL + runtime semantics + minimal APIs + data model.
-- **Goals**: Keep the glue tiny and auditable; deterministic randomization; server-authoritative state; portability; minimal frontend logic.
-- **Non-goals**: Arbitrary client code execution; exposing AI keys; complex visual editors.
-- **Constraints**: Single-file config (no imports); distinct configs per environment.
-- **Expression language**: `expr-eval` with JSONPath-style roots (e.g., `$.user_state.*`) and a small standard library including deterministic `rand()` seeded per experiment, group, and participant.
+- Purpose: A minimal runtime that connects a single-file YAML config to a React UI using three primitives:
+  1) UI runtime glue (component registry + renderer)
+  2) Authoritative data store (`user_state`)
+  3) Routing (button-driven navigation)
+- Special capabilities: queues (matching), chat (group-scoped RTDB), agents (server-hosted participants)
+- Scope: DSL + runtime semantics + minimal APIs + data model
+- Goals: tiny and auditable glue; deterministic randomization; server-authoritative state; portability; minimal frontend logic
+- Non-goals: arbitrary client code execution; exposing AI keys; complex visual editors
+- Constraints: single-file config per environment; no imports
+- Expression language: `expr-eval`-style with JSONPath roots (e.g., `$.user_state.*`) and a small standard library including deterministic `rand()` seeded per experiment, group, and participant
 
-## Lightweight Runtime (centerpiece)
+## Architecture
 
-The runtime layer is intentionally small. It exposes three primitives that connect the compiled config to React:
+- **Frontend**: React, Vite, shadcn, Tailwind CSS, TanStack Router/Query/Form, MDX.
+- **Backend**: Hono API, Firebase Functions 0.0.1 near Firestore/RTDB.
+- **Parser**: Node.js. Package manager: pnpm.
+- **Storage**: Firestore (configs, sessions, groups, events), RTDB (chat).
+- **Realtime**: RTDB for chat/collab signals.
+- **AI**: Provider abstraction (server-only keys), streaming, optional tools.
 
-1) UI runtime glue (component registry + renderer)
-2) Data store (authoritative `user_state`)
-3) Routing (button-driven navigation)
+## Runtime
 
-### 1) UI runtime glue
+The lightweight runtime layer exposes three primitives that connect the compiled config to React:
 
-Purpose: map a config node to a registered React component and wire button descriptors to runtime actions.
+1) UI renderer
+2) Data store
+3) Routing
+
+### 1) UI Renderer
+
+Purpose: map a config page to a registered React component and wire button descriptors to runtime actions.
 
 ```tsx
 import { componentRegistry } from './registry';
 
-export function renderNode(node, context) {
-  const Component = componentRegistry[node.componentType] ?? componentRegistry.default;
-  const props = enrichWithActions(node.props, node.buttons, context);
+export function renderPage(page, context) {
+  const Component = componentRegistry[page.componentType] ?? componentRegistry.default;
+  const props = enrichWithActions(page.props, page.buttons, context);
   return <Component {...props} />;
 }
 ```
@@ -51,25 +60,33 @@ export const componentRegistry = {
 };
 ```
 
-Button wiring helper keeps components declarative:
+Example of the yaml config:
 
-```ts
-function enrichWithActions(props = {}, buttons = [], context) {
-  const { advance } = context.routing;
-  return {
-    ...props,
-    buttons: (buttons || []).map(b => ({
-      ...b,
-      onClick: async (extraPayload = {}) => {
-        const payload = { buttonId: b.id, ...extraPayload };
-        await advance({ type: b.action.type, payload, __action: b.action });
-      }
-    }))
-  };
-}
+```yaml
+page:
+  title: "Signup"
+  sections:
+    - component: "TextBlock"
+      props:
+        text: "Welcome!"
+    - component: "EmailInput"
+      props:
+        placeholder: "Enter your email"
+    - component: "ButtonBar"
+      props:
+        buttons:
+          - id: "continue"
+            label: "Continue"
+            action:
+              type: "PROCEED"
+              payload: { step: 2 }
+          - id: "back"
+            label: "Back"
+            action:
+              type: "NAVIGATE_BACK"
 ```
 
-### 2) Data store (authoritative `user_state`)
+### 2) Data store
 
 Principle: all study data lives in `user_state` as declared in YAML. The client exposes a tiny context with read/write helpers; the server validates and persists.
 
@@ -110,13 +127,13 @@ Server validates `assign` against this schema and rejects mismatches. Right-hand
 
 #### Group-level shared state (`group_state`)
 
-- Defines shared group-local fields persisted on the group document and exposed to sessions as `$.user_group`.
-- Lifecycle: created on a successful `match` from a `queue`. The runtime links each member session to the `groupId` and initializes `$.user_group` for those sessions.
-- Types: same shapes as `user_state` — scalars (`int`, `bool`, `string`), arrays, and objects.
-- Defaults: on group creation, initialize `$.user_group` from declared defaults; unspecified fields are omitted until first write.
-- Write rules: only server-originating events and system code may write `$.user_group.*` (e.g., `match`, `timeout`, backfill, timers). Client-originating events are rejected.
+- Shared fields persisted on the group document; exposed to sessions as `$.user_group`.
+- Lifecycle: created after a successful `match` from a `queue`. Runtime links each member session to `groupId` and initializes `$.user_group`.
+- Types: same as `user_state` (scalars: `int`, `bool`, `string`); includes arrays and objects.
+- Defaults: initialize `$.user_group` from declared defaults; unspecified fields are omitted until first write.
+- Write rules: only server-originating events and system code may write `$.user_group.*` (e.g., `match`, `timeout`, backfill, timers); client writes are rejected.
 - Visibility: `$.user_group.*` is readable in expressions and may be referenced in `when` and component props.
-- Reserved fields: the runtime may set reserved fields (e.g., `chat_group_id`) required by built-in components. If declared in `group_state`, they must match the declared type; otherwise they remain runtime-managed and read-only.
+- Reserved fields: runtime may set reserved fields (e.g., `chat_group_id`) required by built-in components. If declared in `group_state`, they must match the declared type; otherwise they are runtime-managed and read-only.
 
 #### Persistence and data model
 
@@ -124,19 +141,19 @@ Server validates `assign` against this schema and rejects mismatches. Right-hand
   - `experiments/{publicId}` → `{ publishedConfigId, owner, permissions, metadata }`.
   - `configs/{configId}` → immutable canonical JSON config, schemaVersion, createdAt, checksum.
 - Sessions and groups (Firestore):
-  - `sessions/{sessionId}`: `{ publicId, configId, participantId, currentNodeId, user_state, seeds, startedAt, endedAt }`.
+  - `sessions/{sessionId}`: `{ publicId, configId, participantId, currentPageId, user_state, seeds, startedAt, endedAt }`.
   - `groups/{groupId}`: `{ queueId, numUsers, memberRunIds[], chat_group_id, seeds, arrivals, releaseToken }`.
   - `events/{eventId}` (subcollection under session): event-sourced log of transitions, chat, tool calls.
 
-### 3) Routing (button-driven navigation)
+### 3) Routing
 
-Principle: keep one `currentNodeId` and a single `advance(event)` that resolves branches with the expression evaluator against `{ $event, $user_state, $run }`. See "Expression evaluation (routing)".
+Principle: keep one `currentPageId` and a single `advance(event)` that resolves branches with the expression evaluator against `{ $event, $user_state, $run }`. See "Expression evaluation (routing)".
 
 Minimal routing context:
 
 ```ts
 const RoutingContext = React.createContext({
-  currentNodeId: null,
+  currentPageId: null,
   advance: async (event: { type: string; payload?: any }) => {},
 });
 
@@ -144,14 +161,14 @@ export function useRouting() {
   return React.useContext(RoutingContext);
 }
 
-function resolveBranch(action, ctx) {
-  if (!action.branches) return action.target;
+function resolveBranch(action, context) {
+  if (!action.branches || action.branches.length === 0) return action.target;
   for (const b of action.branches) {
-    if (!b.when) return b.target;
-    const truthy = evaluate(b.when, ctx); // ctx: { $event, $user_state, $run }
+    if (!b.when) return b.target; // default branch
+    const truthy = evaluate(b.when, context); // context: { $event, $user_state, $run }
     if (truthy) return b.target;
   }
-  throw new Error('No branch matched');
+  throw new Error('No branch matched and no default provided');
 }
 ```
 
@@ -168,34 +185,35 @@ buttons:
       target: outro
 ```
 
-#### Expression evaluation (routing)
+#### Expression evaluation
 
-Used to evaluate branch conditions (`when`) and computed assignment right-hand sides.
+Used to evaluate branch conditions (`when`) and computed assignment right-hand sides. Format: string expressions only. Object-style expressions are not supported.
 
 - Context roots:
   - `$event` (typically `$event.payload.*` from the triggering button)
   - `$.user_state` (participant-local, writable via `assign`)
   - `$.user_group` (group-local, server-managed; read-only to clients)
   - `$.env`, `$.now` (read-only; `$.now` is not for randomness)
-  - `$.run` (transient session data such as `currentNodeId`)
+  - `$.run` (transient session data such as `currentPageId`)
 - Functions (whitelisted): numeric (`min`, `max`, `abs`, `floor`, `ceil`, `round`), logical (`and`, `or`, `not`), nullish (`coalesce`), collections (`len`, `includes`), strings (`lower`, `upper`, `trim`), and `rand()` ∈ [0,1) only.
 - Determinism and seeds: experimentSeed → groupSeed → participantSeed (e.g., HKDF). Pre-match uses participantSeed; group contexts use groupSeed. All uses are auditable.
+- Types: DSL uses `int`, `bool`, `string`. JSON Schema for custom components uses `integer`, `boolean`, `string`.
 
-#### Session start (lifecycle)
+#### Session lifecycle
 
 1) Load config by `publicId` → resolve `publishedConfigId` from registry.
 2) Validate and compile YAML to canonical JSON with defaults and normalized shapes.
 3) Create a participant session with seeds and initial `user_state` per schema defaults.
 4) Enter the initial node: `initialNodeId` if provided, else the first listed in `nodes`.
 
-#### Event handling semantics (normative)
+#### Event handling semantics
 
-1) Validate the incoming event for the current node; reject unknown or malformed events.
-2) Resolve the triggering button by `payload.buttonId` and load its `action`.
-3) Apply `action.assign` atomically to `$.user_state` (server-side); reject on schema/type mismatch.
+1) Validate the incoming event for the current node. Unknown or malformed events MUST be rejected.
+2) Resolve the triggering button by `payload.buttonId`. Missing or unknown `buttonId` MUST be rejected.
+3) Apply `action.assign` atomically to `$.user_state` (server-side). Schema/type mismatches MUST be rejected.
 4) Recompute evaluation context.
-5) Evaluate `action.branches` in order (missing `when` means true); select the first matching branch; if none provided, use `action.target`.
-6) Set `currentNodeId` to the selected target. If resolution fails, halt with a config error.
+5) Evaluate `action.branches` in order. The first truthy `when` wins. A branch without `when` is the default and SHOULD be last.
+6) If no branch matches and no default exists, the runtime MUST error; otherwise set `currentPageId` to the selected target. Missing targets are config errors and MUST halt the run.
 
 ## Configuration DSL
 
@@ -203,13 +221,18 @@ The configuration is authored as YAML and compiled to canonical JSON at publish 
 
 ### Top-level structure
 
-- **schema_version**: string (e.g., `"v2"`).
+- **schema_version**: string (e.g., `"0.0.1"`).
 - **initialNodeId**: string, first node id.
 - **nodes**: array of node definitions (one page/state each).
 - **user_state**: declarative type schema for per-participant state (centerpiece data store).
 - **group_state**: optional shared state schema (server-managed).
 - **queues**: optional queue definitions for matching.
 - **agents**: optional AI agent definitions for chat.
+
+### Versioning
+
+- `schema_version`: string (e.g., "0.0.1"). The compiler MUST reject unknown versions.
+- Published configs are immutable. New edits create new `configId`s.
 
 ### Nodes
 
@@ -250,16 +273,16 @@ Conditions reuse the expression language. They evaluate against the runtime cont
 
 - `$event.payload` reads the payload provided by the client for the triggering button press.
 - `$user_state` reads the authoritative participant state.
-- `$run` reads transient session data (e.g., `currentNodeId`).
+- `$run` reads transient session data (e.g., `currentPageId`).
 
-Configs must supply either a `target` or at least one branch. If resolution fails at runtime the API rejects the event.
+Configs MUST supply either a `target` or at least one branch. If branches exist and none match and no default is provided, the runtime MUST error. Client events for `type: "go_to"` MUST include `payload.buttonId` referencing a declared button id on the current node.
 
 When the client activates a button it sends `{ event: { type: "go_to", payload: { buttonId, ... } } }`. Additional payload (e.g., answers) is available in `$event.payload.*`.
 
 Minimal YAML example (components form):
 
 ```yaml
-schema_version: v2
+schema_version: 0.0.1
 initialNodeId: q1
 
 nodes:
@@ -303,7 +326,7 @@ user_state:
 Single-component shorthand example with `assign` on the button action:
 
 ```yaml
-schema_version: v2
+schema_version: 0.0.1
 initialNodeId: consent
 
 nodes:
@@ -337,12 +360,13 @@ user_state:
 
 ### Queues
 
-Queues are server-managed waiting rooms that collect participants until enough are available to form a group. Entering a `queue` node enqueues the current session into the named queue. The runtime matches participants in FIFO order into groups of `num_users`. On a successful match it creates a `groupId`, initializes `$.user_group` for members (including `chat_group_id`), emits `match`, and continues traversal. If a participant waits beyond `timeoutSeconds` (or the server default), the runtime emits `timeout`. Optional backfill can create groups with ghost seats when enabled.
+Queues are server-managed waiting rooms that collect participants until enough are available to form a group. Entering a `queue` node enqueues the current session into the named queue. The runtime matches participants FIFO into groups of `num_users`. On match it creates a `groupId`, initializes `$.user_group` (including `chat_group_id`), emits `match`, and continues. If waiting exceeds `timeoutSeconds` (or default), the runtime emits `timeout`. Optional backfill may create groups with ghost seats when enabled.
 
 - `{ id: string, num_users: int, timeoutSeconds?: int }`
 - Matching policy: FIFO by arrival time, fill groups of `num_users`. Timeout policy is configurable per queue in the config; server defaults apply when omitted.
-- On match, the runtime emits `match` and writes `$.user_group.chat_group_id` and the `groupId`. On timeout, the runtime emits `timeout`.
-- Default timeout: 120 seconds when `timeoutSeconds` is not set. On timeout, the runtime emits `timeout`; authors can branch by inspecting `$event.payload` or state in their button actions on the next node.
+- On match: emit `match`, write `$.user_group.chat_group_id` and `groupId`.
+- On timeout: emit `timeout`.
+- Default `timeoutSeconds`: 120 when unset. Authors branch on outcomes via the next node’s button action conditions.
 
 See Data store ("Group-level shared state") for `group_state` schema and write rules. Queue outcomes drive Routing via emitted `match`/`timeout` events and initialize Chat via `chat_group_id`.
 
@@ -393,7 +417,7 @@ Agents are server-hosted AI participants that can be invited into `chat` nodes. 
 ## Minimal API surface (Hono)
 
 - `POST /sessions/start` → `{ publicId, participantId? }` → `{ sessionId, firstNode, initialState? }`
-- `GET /sessions/{sessionId}` → `{ currentNodeId, user_state, user_group, endedAt? }`
+- `GET /sessions/{sessionId}` → `{ currentPageId, user_state, user_group, endedAt? }`
 - `POST /sessions/{sessionId}/advance` → `{ event: { type, payload } }` → `{ newNode, updatedState? }`
 - `GET /sessions/{sessionId}/stream` → SSE stream of passive events (e.g., `match`, `timeout`, state updates)
 - `POST /queues/{queueId}/enqueue` → `{ sessionId }` → `{ position, estimatedWait? }`
@@ -401,14 +425,10 @@ Agents are server-hosted AI participants that can be invited into `chat` nodes. 
 - `GET /chat/{groupId}/stream` → SSE stream of messages for the group
 - `POST /agents/{agentId}/call` → server-side only invocation (streamed)
 
-## Frontend and backend architecture
+### Error model
 
-- **Runtime**: Node.js. Package manager: pnpm.
-- **Frontend**: React, Vite, shadcn/ui, Tailwind CSS, TanStack Router/Query/Form, MDX.
-- **Backend**: Hono API, Firebase Functions v2 near Firestore/RTDB.
-- **Storage**: Firestore (configs, sessions, groups, events), RTDB (chat).
-- **Realtime**: RTDB for chat/collab signals.
-- **AI**: Provider abstraction (server-only keys), streaming, optional tools.
+- Errors return `4xx` or `5xx` with JSON: `{ code: string, message: string, details?: object }`.
+- Example codes: `invalid_event`, `unknown_button`, `schema_mismatch`, `unknown_node`, `forbidden_write`, `not_found`, `internal`.
 
 ## Appendices
 
@@ -424,7 +444,7 @@ Top-level `components` entries declare contracts that the runtime validates at p
 - `propsSchema` and `events[*].payloadSchema` are JSON Schema subsets for validation. They document what the component expects and emits.
 - `capabilities` is an allowlist for built-in affordances (e.g., `clipboard`, `fileUpload`). Network or AI access is never granted via components directly.
 
-The frontend application may maintain a `componentRegistry` mapping `id`→implementation. If an id exists in config but not in the app registry at runtime, the run errors with a missing component. The runtime records the resolved implementation version alongside the run for audit.
+The frontend application may maintain a `componentRegistry` mapping `id`→implementation. If an id exists in config but not in the app registry at runtime, the run MUST error with `missing_component`. The runtime records the resolved implementation version alongside the run for audit. Unless specified, `unknownEvents` defaults to `error`.
 
 #### Using a component in a node
 
@@ -516,10 +536,7 @@ nodes:
         action:
           type: go_to
           branches:
-            - when:
-                op: equals
-                left: "$event.payload.choice"
-                right: follow_up
+            - when: "$event.payload.choice == 'follow_up'"
               target: survey_follow_up
             - target: outro
   - id: survey_follow_up
