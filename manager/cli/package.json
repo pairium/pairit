@@ -1,0 +1,24 @@
+{
+  "name": "pairit-cli",
+  "version": "0.1.0",
+  "description": "Pairit experiment configuration CLI",
+  "type": "module",
+  "bin": {
+    "pairit": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --platform node --dts",
+    "dev": "tsup src/index.ts --format esm --platform node --watch",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "yaml": "^2.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.11",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3"
+  }
+}
+
