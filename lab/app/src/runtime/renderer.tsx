@@ -1,41 +1,57 @@
-import type { Page, ComponentInstance, Button } from './types';
+import type { ComponentInstance, Page } from './types'
 
-export function PageRenderer({
-  page,
-  onAction,
-}: {
-  page: Page;
-  onAction: (a: Button['action']) => void;
-}) {
-  if (!page?.components?.length) return <div className="p-6">Empty page</div>;
-  return (
-    <div className="max-w-2xl mx-auto p-6 space-y-4">
-      {page.components.map((c, i) => (
-        <Component key={i} c={c} onAction={onAction} />
-      ))}
-    </div>
-  );
+import { Button } from '../components/ui/button'
+import { Card, CardContent } from '../components/ui/card'
+
+type ButtonAction = Extract<ComponentInstance, { type: 'buttons' }>['props']['buttons'][number]['action']
+
+interface PageRendererProps {
+  page: Page
+  onAction: (action: ButtonAction) => void
 }
 
-function Component({ c, onAction }: { c: ComponentInstance; onAction: (a: Button['action']) => void }) {
-  switch (c.type) {
-    case 'text':
-      return <p className="text-lg">{c.props.text}</p>;
-    case 'buttons':
+export function PageRenderer({ page, onAction }: PageRendererProps) {
+  return (
+    <div className="flex justify-center">
+      <Card className="w-full max-w-3xl">
+        <CardContent className="space-y-8">
+          {page?.components?.length ? (
+            page.components.map((component, index) => (
+              <Component key={`${component.type}-${index}`} component={component} onAction={onAction} />
+            ))
+          ) : (
+            <div className="text-center text-sm text-slate-500">No components provided for this page.</div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function Component({
+  component,
+  onAction,
+}: {
+  component: ComponentInstance
+  onAction: (action: ButtonAction) => void
+}) {
+  switch (component.type) {
+    case 'text': {
+      return <p className="text-lg leading-relaxed text-slate-800">{component.props.text}</p>
+    }
+    case 'buttons': {
       return (
-        <div className="flex gap-3">
-          {c.props.buttons.map((b) => (
-            <button
-              key={b.id}
-              className="px-4 py-2 rounded bg-black text-white hover:opacity-90"
-              onClick={() => onAction(b.action)}
-            >
-              {b.text}
-            </button>
+        <div className="flex flex-wrap gap-3">
+          {component.props.buttons.map((button) => (
+            <Button key={button.id} onClick={() => onAction(button.action)}>
+              {button.text}
+            </Button>
           ))}
         </div>
-      );
-    default:
-      return <div>Unknown component: {String((c as any).type)}</div>;
+      )
+    }
+    default: {
+      return <div className="text-sm text-red-600">Unknown component: {String((component as { type?: unknown }).type)}</div>
+    }
   }
 }

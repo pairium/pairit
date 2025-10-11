@@ -1,7 +1,9 @@
+import type { Page } from '../runtime/types'
+
 const baseUrl = import.meta.env.VITE_API_URL;
 
-type StartResponse = { sessionId: string; configId: string; currentPageId: string; page: any };
-type GetResponse = { sessionId: string; currentPageId: string; page: any; endedAt: string | null };
+type StartResponse = { sessionId: string; configId: string; currentPageId: string; page: Page };
+type GetResponse = { sessionId: string; currentPageId: string; page: Page; endedAt: string | null };
 type AdvanceResponse = GetResponse;
 
 export async function startSession(configId: string): Promise<StartResponse> {
