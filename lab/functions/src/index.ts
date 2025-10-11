@@ -60,16 +60,43 @@ function isPage(value: unknown): value is Page {
 
 function coerceConfig(raw: unknown): Config | null {
   if (!raw || typeof raw !== 'object') return null;
-  const config = raw as Partial<Config>;
-  if (typeof config.initialPageId !== 'string') return null;
-  if (!config.pages || typeof config.pages !== 'object') return null;
-  const pages: Record<string, Page> = {};
-  for (const [key, value] of Object.entries(config.pages)) {
-    if (!isPage(value)) return null;
-    pages[key] = value;
+  const config = raw as Partial<Config> & {
+    initialNodeId?: unknown;
+    nodes?: unknown;
+  };
+
+  const initialPageId =
+    typeof config.initialPageId === 'string'
+      ? config.initialPageId
+      : typeof config.initialNodeId === 'string'
+        ? config.initialNodeId
+        : null;
+
+  if (!initialPageId) return null;
+
+  const pagesInput: unknown = config.pages ?? config.nodes;
+
+  if (!pagesInput || (typeof pagesInput !== 'object' && !Array.isArray(pagesInput))) {
+    return null;
   }
-  if (!pages[config.initialPageId]) return null;
-  return { initialPageId: config.initialPageId, pages };
+
+  const pages: Record<string, Page> = {};
+
+  if (Array.isArray(pagesInput)) {
+    for (const entry of pagesInput) {
+      if (!isPage(entry)) return null;
+      pages[entry.id] = entry;
+    }
+  } else {
+    for (const [key, value] of Object.entries(pagesInput)) {
+      if (!isPage(value)) return null;
+      pages[key] = value;
+    }
+  }
+
+  if (!pages[initialPageId]) return null;
+
+  return { initialPageId, pages };
 }
 
 async function loadConfig(configId: string): Promise<{ config: Config; doc: ConfigDocument } | null> {
