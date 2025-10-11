@@ -31,17 +31,7 @@ This repo hosts a minimal end-to-end slice of the Pairit stack: a pnpm monorepo 
 
 ## Firebase Functions & CLI Deployment
 
-We manage two Cloud Functions codebases: `lab` (participant runtime) and `manager` (experiment management CLI API). Use the Firebase CLI (v13+) with the `codebases` feature:
-
-```jsonc
-// firebase.json (functions excerpt)
-{
-  "functions": [
-    { "codebase": "lab", "source": "lab/functions" },
-    { "codebase": "manager", "source": "manager/functions" }
-  ],
-}
-```
+We manage two Cloud Functions codebases: `lab` (participant runtime) and `manager` (experiment management CLI API). See firebase.json.
 
 ### Local emulators
 
@@ -86,54 +76,28 @@ firebase deploy --only functions:lab
 After deploying the manager API, update the CLI target:
 
 ```zsh
-export PAIRIT_FUNCTIONS_BASE_URL=https://api-abcd.a.run.app # or for now, update the hard coded url
+export PAIRIT_FUNCTIONS_BASE_URL=https://manager-abcd.a.run.app # or for now, update the hard coded url
 ```
 
 After deploying the lab API, update `lab/app/.env.local` and `lab/app/.env.prod`:
 ```zsh
-VITE_API_URL=https://api-abcd.a.run.app
+VITE_API_URL=https://lab-abcd.a.run.app
 ```
 
 The CLI defaults to the emulator URL (`http://127.0.0.1:5001/...`) when `PAIRIT_FUNCTIONS_BASE_URL` is unset and `FIREBASE_CONFIG`/`GCLOUD_PROJECT` resolve to `pairit-local`.
-
 
 ### Deploying the lab web app
 
 Use Firebase Hosting (not App Hosting) for the `lab/app` frontend. The build artifact is a static bundle, so Hosting gives you the global CDN + SPA rewrites you need without managing an SSR runtime.
 
-1. Build the app:
+```zsh
+# Build the app
+pnpm --filter pairit-lab-app build
+```
 
-    ```zsh
-    pnpm --filter pairit-lab-app build
-    ```
+If you use Firebase targets, bind the target once: `firebase target:apply hosting lab-app <your-site-id>` or `firebase hosting:sites:create pairit-lab`.
 
-2. Point Hosting at the generated bundle. Extend `firebase.json` with a hosting entry (keep the existing `functions` block):
-
-    ```jsonc
-    {
-      "hosting": [
-        {
-          "target": "lab-app",
-          "public": "lab/app/dist",
-          "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-          "rewrites": [{ "source": "**", "destination": "/index.html" }]
-        }
-      ],
-      "functions": [
-        { "codebase": "lab", "source": "lab/functions" },
-        { "codebase": "manager", "source": "manager/functions" }
-      ]
-    }
-    ```
-
-    If you use Firebase targets, bind the target once: `firebase target:apply hosting lab-app <your-site-id>`.
-
-3. Deploy (once your project is selected with `firebase use`):
-
-    ```zsh
-    firebase deploy --only hosting:lab-app
-    ```
-
-    The SPA rewrite means every unknown path falls back to `index.html`; API calls should still use the Cloud Functions URL configured in `VITE_API_URL`.
-
-
+```zsh
+# Deploy (once your project is selected with `firebase use`)
+firebase deploy --only hosting:lab-app
+```

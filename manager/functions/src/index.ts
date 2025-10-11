@@ -117,7 +117,7 @@ app.delete('/configs/:configId', async (c) => {
   }
 });
 
-export const api = onRequest({ region: 'us-east4' }, async (req, res) => {
+export const manager = onRequest({ region: 'us-east4' }, async (req, res) => {
   const url = `https://${req.hostname}${req.originalUrl}`;
 
   const headers: Record<string, string> = {};
