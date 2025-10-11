@@ -14,9 +14,6 @@ export function Landing() {
       <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4">
           <div className="text-lg font-semibold tracking-tight">Pairit Lab</div>
-          <Link to="/$experimentId" params={{ experimentId: 'demo-experiment' }} className={ghostButton}>
-            <FlaskConical className="h-4 w-4" /> Enter experiment
-          </Link>
         </div>
       </header>
 
