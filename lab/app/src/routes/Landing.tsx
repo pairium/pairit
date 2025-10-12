@@ -68,10 +68,10 @@ export function Landing() {
               <div className="flex gap-3">
                 <Link
                   to="/$experimentId"
-                  params={{ experimentId: 'demo-experiment' }}
+                  params={{ experimentId: 'survey-showcase' }}
                   className={buttonBase}
                 >
-                  <FlaskConical className="h-4 w-4" /> Demo
+                  <FlaskConical className="h-4 w-4" /> Survey showcase
                 </Link>
                 <a
                   href="https://console.firebase.google.com/project/pairit-local/overview"
