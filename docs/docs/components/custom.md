@@ -46,4 +46,15 @@ Unknown events policy
 - warn: log and drop
 - ignore: drop silently
 
+Additional contract fields
+- `capabilities`: allowlisted runtime affordances (e.g., `clipboard`, `fileUpload`). Network access is never granted through this field.
+- `version`: resolved at publish time and recorded with the run for audit.
+- `propsSchema`: JSON Schema subset enforced during compilation and mount.
+- `events[*].payloadSchema`: validates event payloads emitted by the component.
+
+Runtime behavior
+- When the component emits an event, the runtime validates it against the declared schema before routing or assignments run.
+- Undeclared events follow the `unknownEvents` policy; use `warn` during development to log unexpected usage without aborting the session.
+- If the registry does not have an implementation for a declared component id, the runtime throws `missing_component` and blocks the run until the implementation ships.
+
 

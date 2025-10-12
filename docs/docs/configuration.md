@@ -129,4 +129,42 @@ pages:
         props: { text: "We're sorry to hear that. Can you tell us what woke you up?" }
 ```
 
+## Data store
+
+Declare a `user_state` schema to describe the participant-scoped fields your run uses. The compiler validates assignments against this schema and wires default values into the initial session state.
+
+```yaml
+user_state:
+  age: int
+  consent: bool
+  sleep_hours:
+    type: int
+    default: 8
+  survey_answers:
+    type: object
+    properties:
+      q1: { type: string }
+      q2: { type: integer }
+    additionalProperties: true
+```
+
+Guidelines:
+- Primitive aliases (`int`, `bool`, `string`) map to JSON Schema types; expand to objects when you need nested data.
+- Use `default` to seed initial values.
+- Set `additionalProperties: false` on objects unless you expect dynamic keys.
+
+At runtime access the store through the `UserStoreContext` helpers:
+
+```ts
+const { state, assign, bulkAssign } = useUserStore();
+
+await assign('sleep_hours', 6);
+await bulkAssign({
+  consent: true,
+  survey_answers: { q1: 'text response' },
+});
+```
+
+Assignments outside `$.user_state.*` are rejected during validation. Surveys automatically write answers into the store using their question ids, so follow-up expressions can branch on the captured values.
+
 
