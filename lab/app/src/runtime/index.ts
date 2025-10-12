@@ -3,6 +3,9 @@ import type { CompiledConfig } from './config'
 import { getConfig, registerConfig } from './config'
 import { normalizeConfig } from './normalizer'
 
+export { registerComponent, unregisterComponent, setFallbackComponent } from './registry'
+export type { RuntimeComponentContext, RuntimeComponentRenderer } from './registry'
+
 export async function loadConfig(configId: string): Promise<CompiledConfig | null> {
   const cached = getConfig(configId)
   if (cached) return cached

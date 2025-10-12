@@ -3,7 +3,10 @@ import type { Button, ButtonsComponent, ComponentInstance, Page, TextComponent }
 type RawButton = Partial<Button> & { text?: unknown; action?: unknown }
 
 type RawComponent =
-  | { type?: unknown; props?: unknown; buttons?: unknown; text?: unknown; component?: unknown }
+  | string
+  | unknown[]
+  | (Record<string, unknown> & { type?: unknown; props?: unknown; buttons?: unknown; text?: unknown })
+  | null
   | undefined
 
 type RawPage = Partial<Page> & {
@@ -16,6 +19,10 @@ type RawPage = Partial<Page> & {
 
 interface NormalizationOptions {
   pageId: string
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function normalizeButton(raw: unknown, options: NormalizationOptions): Button | null {
@@ -35,37 +42,84 @@ function normalizeButton(raw: unknown, options: NormalizationOptions): Button | 
 }
 
 function normalizeButtonsComponent(raw: RawComponent, options: NormalizationOptions): ButtonsComponent | null {
-  if (!raw) return null
-  const props = (raw.props ?? raw) as { buttons?: unknown }
-  const buttonsInput = props.buttons
-  const buttonsArray = Array.isArray(buttonsInput) ? buttonsInput : Array.isArray(raw) ? raw : null
-  if (!buttonsArray) return null
-  const buttons = buttonsArray
+  if (raw == null) return null
+
+  const record = isRecord(raw) ? (raw as Record<string, unknown>) : null
+  const props = record && isRecord(record.props) ? (record.props as Record<string, unknown>) : record
+
+  const buttonsInput = Array.isArray(props?.buttons)
+    ? (props?.buttons as unknown[])
+    : Array.isArray(raw)
+      ? raw
+      : null
+
+  if (!buttonsInput) return null
+
+  const buttons = buttonsInput
     .map((button) => normalizeButton(button, options))
     .filter((entry): entry is Button => Boolean(entry))
+
   if (!buttons.length) return null
+
   return { type: 'buttons', props: { buttons } }
 }
 
 function normalizeTextComponent(raw: RawComponent): TextComponent | null {
-  if (!raw) return null
-  const props = raw.props ?? raw
-  const text = typeof (props as { text?: unknown }).text === 'string' ? (props as { text: string }).text : null
-  if (!text && typeof raw.text === 'string') {
-    return { type: 'text', props: { text: raw.text } }
+  if (raw == null) return null
+
+  const record = isRecord(raw) ? (raw as Record<string, unknown>) : null
+  const props = record && isRecord(record.props) ? (record.props as Record<string, unknown>) : record
+
+  const textCandidate = typeof props?.text === 'string' ? props.text : typeof record?.text === 'string' ? record.text : null
+  if (!textCandidate) return null
+
+  const text = textCandidate.trim()
+  if (!text.length) return null
+
+  const markdown = typeof props?.markdown === 'boolean' ? props.markdown : undefined
+
+  return {
+    type: 'text',
+    props: markdown === undefined ? { text } : { text, markdown },
   }
-  if (!text) return null
-  return { type: 'text', props: { text } }
 }
 
 function normalizeComponent(raw: RawComponent, options: NormalizationOptions): ComponentInstance | null {
-  if (!raw) return null
-  const type = typeof raw.type === 'string' ? raw.type : undefined
-  if (type === 'text') return normalizeTextComponent(raw)
-  if (type === 'buttons') return normalizeButtonsComponent(raw, options)
-  if (!type && typeof raw.text === 'string') return normalizeTextComponent({ ...raw, type: 'text' })
-  if (!type && Array.isArray(raw)) return normalizeButtonsComponent({ type: 'buttons', props: { buttons: raw } }, options)
-  return null
+  if (raw == null) return null
+
+  if (typeof raw === 'string') {
+    const text = raw.trim()
+    return text.length ? { type: 'text', props: { text } } : null
+  }
+
+  if (Array.isArray(raw)) {
+    return normalizeButtonsComponent(raw, options)
+  }
+
+  if (!isRecord(raw)) return null
+
+  const record = raw as Record<string, unknown>
+  const type = typeof record.type === 'string' ? (record.type as string).trim() : undefined
+
+  if (type === 'text' || (!type && typeof record.text === 'string')) {
+    return normalizeTextComponent(record)
+  }
+
+  const hasButtonsArray =
+    type === 'buttons' || (!type && Array.isArray((record as { buttons?: unknown }).buttons))
+
+  if (hasButtonsArray) {
+    return normalizeButtonsComponent(record, options)
+  }
+
+  if (!type) return null
+
+  const props = isRecord(record.props) ? { ...(record.props as Record<string, unknown>) } : {}
+
+  return {
+    type,
+    props,
+  }
 }
 
 export function normalizePage(raw: RawPage): Page | null {
@@ -89,17 +143,21 @@ export function normalizePage(raw: RawPage): Page | null {
     }
   }
 
-  const componentsInput = Array.isArray(raw.components)
-    ? (raw.components as unknown[])
-    : Array.isArray(raw.componentType)
-      ? (raw.componentType as unknown[])
-      : undefined
+  const componentsInput: unknown[] = []
 
-  if (componentsInput) {
-    for (const entry of componentsInput) {
-      const component = normalizeComponent(entry, { pageId: id })
-      if (component) components.push(component)
-    }
+  if (Array.isArray(raw.components)) {
+    componentsInput.push(...raw.components)
+  }
+
+  if (typeof raw.componentType === 'string') {
+    componentsInput.push({ type: raw.componentType, props: raw.props })
+  } else if (Array.isArray(raw.componentType)) {
+    componentsInput.push(...raw.componentType)
+  }
+
+  for (const entry of componentsInput) {
+    const component = normalizeComponent(entry as RawComponent, { pageId: id })
+    if (component) components.push(component)
   }
 
   if (!components.length) {
@@ -139,7 +197,7 @@ export function normalizeConfig(config: unknown): { initialPageId: string; pages
     ? (pagesInput as unknown[]).map((value) => [typeof value === 'object' && value && 'id' in value ? String((value as { id: unknown }).id) : '', value])
     : Object.entries(pagesInput as Record<string, unknown>)
 
-  for (const [key, value] of entries) {
+  for (const [, value] of entries) {
     const page = normalizePage(value as RawPage)
     if (!page) continue
     pages[page.id] = page

@@ -12,7 +12,7 @@ export default function App() {
   const { experimentId } = useParams({ from: '/$experimentId' });
   const [mode, setMode] = useState<'local' | 'remote' | null>(null);
   const [compiledConfig, setCompiledConfig] = useState<CompiledConfig | null>(null);
-  const [currentPageId, setCurrentPageId] = useState<string | null>(null);
+  const [, setCurrentPageId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [page, setPage] = useState<Page | null>(null);
   const [endedAt, setEndedAt] = useState<string | null>(null);
@@ -104,8 +104,8 @@ export default function App() {
       const r = await advance(sessionId, a.target);
       setPage(r.page);
       setEndedAt(r.endedAt);
-    } catch (e: any) {
-      setError(e?.message ?? 'Failed to advance');
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Failed to advance');
     } finally {
       setLoading(false);
     }
