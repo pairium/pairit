@@ -240,7 +240,8 @@
     {
       "id": "outro",
       "text": "You're all set! We'll tailor your session based on these inputs.\nLook for a message from the research team soon.\n",
-      "end": true
+      "end": true,
+      "endRedirectUrl": "https://www.google.com"
     }
   ]
 }

@@ -16,5 +16,6 @@ export type AnyComponentInstance = ComponentInstance<string, Record<string, unkn
 export type Page = {
   id: string
   end?: boolean
+  endRedirectUrl?: string
   components?: ComponentInstance[]
 }

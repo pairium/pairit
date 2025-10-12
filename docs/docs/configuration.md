@@ -10,6 +10,7 @@ Common page fields:
 
 - `id`: string, unique within the config
 - `end?`: boolean; when true, entering the page ends the session
+- `endRedirectUrl?`: string; optional URL exposed as a "Continue" button on end pages. Participants can follow it to finish in an external system instead of restarting.
 - `components?`: array of component instances shown on the page (canonical)
 - `layout?`: optional presentation hints for the client
 
@@ -42,6 +43,7 @@ pages:
 
   - id: outro
     end: true
+    endRedirectUrl: "https://app.prolific.com/submissions/complete?cc=ABCD1234"
 ```
 
 ## Routing & Actions

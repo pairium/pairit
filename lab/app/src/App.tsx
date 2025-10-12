@@ -16,6 +16,7 @@ export default function App() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [page, setPage] = useState<Page | null>(null);
   const [endedAt, setEndedAt] = useState<string | null>(null);
+  const [endRedirectUrl, setEndRedirectUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +31,7 @@ export default function App() {
         setSessionId(null);
         setPage(null);
         setEndedAt(null);
+        setEndRedirectUrl(null);
         return;
       }
       setMode(null);
@@ -38,6 +40,7 @@ export default function App() {
       setSessionId(null);
       setPage(null);
       setEndedAt(null);
+      setEndRedirectUrl(null);
       setLoading(true);
       setError(null);
 
@@ -52,6 +55,7 @@ export default function App() {
           setCurrentPageId(initialPageId);
           setSessionId(null);
           setPage(initialPage);
+          setEndRedirectUrl(initialPage?.endRedirectUrl ?? null);
           setEndedAt(initialPage?.end ? new Date().toISOString() : null);
           setLoading(false);
           return;
@@ -69,6 +73,7 @@ export default function App() {
         setCurrentPageId(r.currentPageId);
         setSessionId(r.sessionId);
         setPage(r.page);
+        setEndRedirectUrl(r.page?.endRedirectUrl ?? null);
         setEndedAt(null);
       } catch (e: unknown) {
         if (canceled) return;
@@ -93,6 +98,7 @@ export default function App() {
       setError(null);
       setCurrentPageId(a.target);
       setPage(nextPage);
+      setEndRedirectUrl(nextPage.endRedirectUrl ?? null);
       setEndedAt(nextPage.end ? new Date().toISOString() : null);
       return;
     }
@@ -103,6 +109,7 @@ export default function App() {
     try {
       const r = await advance(sessionId, a.target);
       setPage(r.page);
+      setEndRedirectUrl(r.page?.endRedirectUrl ?? null);
       setEndedAt(r.endedAt);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'Failed to advance');
@@ -139,51 +146,27 @@ export default function App() {
 
         {!loading && endedAt && (
           <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-8 text-center">
-            <div className="text-lg font-medium">Session complete.</div>
-            <div className="text-sm text-slate-500">
-              {mode === 'remote'
-                ? 'You can restart below to create a new session.'
-                : 'You can revisit the survey from the beginning.'}
-            </div>
-            <div className="flex justify-center">
-              <Button
-                onClick={async () => {
-                  if (!experimentId) return;
-                  setError(null);
-
-                  if (mode === 'local' && compiledConfig) {
-                    const initialPageId = compiledConfig.initialPageId;
-                    const initialPage = compiledConfig.pages[initialPageId] ?? null;
-                    setCurrentPageId(initialPageId);
-                    setPage(initialPage);
-                    setEndedAt(initialPage?.end ? new Date().toISOString() : null);
-                    return;
-                  }
-
-                  if (!sessionId) {
-                    setEndedAt(null);
-                    setPage(null);
-                  }
-
-                  setLoading(true);
-                  try {
-                    const r = await startSession(experimentId);
-                    setMode('remote');
-                    setCompiledConfig(null);
-                    setCurrentPageId(r.currentPageId);
-                    setSessionId(r.sessionId);
-                    setPage(r.page);
-                    setEndedAt(null);
-                  } catch (e: unknown) {
-                    setError(e instanceof Error ? e.message : 'Failed to start');
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-              >
-                Restart
-              </Button>
-            </div>
+            {endRedirectUrl ? (
+              <>
+                <div className="text-lg font-medium">Thanks, that's it.</div>
+                <div className="text-sm text-slate-500">Continue to the next step below.</div>
+                <div className="flex justify-center">
+                  <Button
+                    onClick={() => {
+                      if (!endRedirectUrl) return;
+                      window.location.assign(endRedirectUrl);
+                    }}
+                  >
+                    Continue
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-lg font-medium">Thanks, that's it.</div>
+                <div className="text-sm text-slate-500">You can close this window.</div>
+              </>
+            )}
           </div>
         )}
       </main>

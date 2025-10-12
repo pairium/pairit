@@ -173,10 +173,16 @@ export function normalizePage(raw: RawPage): Page | null {
     if (component) components.push(component)
   }
 
+  const endRedirectUrl =
+    typeof (raw as { endRedirectUrl?: unknown }).endRedirectUrl === 'string'
+      ? (raw as { endRedirectUrl?: string }).endRedirectUrl
+      : undefined
+
   if (!components.length) {
     return {
       id,
       end: Boolean(raw.end),
+      endRedirectUrl,
       components: [],
     }
   }
@@ -184,6 +190,7 @@ export function normalizePage(raw: RawPage): Page | null {
   return {
     id,
     end: Boolean(raw.end),
+    endRedirectUrl,
     components,
   }
 }
