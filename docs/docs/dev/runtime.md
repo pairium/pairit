@@ -72,3 +72,35 @@ export const UserStoreContext = React.createContext({
 
 The compiler validates assignment targets against the schema declared in the config. At runtime `assign` and `bulkAssign` are the only safe mutation APIs exposed to components. The store implementation persists changes to Firestore and feeds expression evaluation so routing decisions can depend on updated answers or matchmaking outcomes.
 
+
+## Local vs remote config loading
+
+The client can run in two modes for a given `/:experimentId` route:
+
+- Local mode: load a static JSON config from the app host
+- Remote mode: start a server session and stream state from the API
+
+Flow:
+
+1) The client attempts to fetch `/configs/{experimentId}.json`.
+   - If the file exists and validates, the app enters local mode and renders directly from that config.
+
+2) If the local fetch fails, the client calls `${VITE_API_URL}/sessions/start` with `{ configId: experimentId }`.
+   - On success, the app enters remote mode, holds a `sessionId`, and uses the API for `get` and `advance` operations.
+
+Environment:
+
+- Set `VITE_API_URL` in `lab/app/.env.local` (dev) or `.env.prod` (prod) to point at your lab Functions base URL.
+  - Example (emulator): `VITE_API_URL=http://127.0.0.1:5001/pairit-local/us-east4/lab`
+  - Example (deployed): `VITE_API_URL=https://<your-lab-function-host>`
+
+Local files:
+
+- Vite serves files from `lab/app/public`. Place configs under `lab/app/public/configs/` so they resolve at `/configs/{id}.json`.
+  - Example: `lab/app/public/configs/survey-showcase.json` → `/:experimentId=survey-showcase` loads in local mode.
+
+Troubleshooting:
+
+- If local mode is not picked up, confirm the file path and that the JSON validates against the runtime normalizer.
+- If remote mode fails to start, check `VITE_API_URL` and the network response from `POST /sessions/start`.
+- Remote mode requires the config to be uploaded to the server store with a `configId` that matches the URL segment.
