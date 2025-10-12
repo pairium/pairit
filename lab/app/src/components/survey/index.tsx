@@ -5,7 +5,6 @@ import type { ReactElement } from 'react'
 import { useForm, type AnyFieldApi } from '@tanstack/react-form'
 import { z } from 'zod'
 
-import { Button } from '@components/ui/button'
 import { Checkbox } from '@components/ui/checkbox'
 import {
   Field,
@@ -161,12 +160,6 @@ export function Survey(props: SurveyProps): ReactElement | null {
           ))}
         </FieldGroup>
 
-        <div className="flex flex-wrap gap-3">
-          <Button type="submit">Submit</Button>
-          <Button type="button" variant="ghost" onClick={() => form.reset()}>
-            Reset
-          </Button>
-        </div>
       </form>
     </div>
   )
