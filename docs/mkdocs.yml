@@ -26,6 +26,7 @@ nav:
       - Realtime: dev/realtime.md
       - Storage: dev/storage.md
       - Validation: dev/validation.md
+      - Survey: dev/survey.md
       - Component Registry: dev/registry.md
       - Matchmaking: dev/matchmaking.md
 theme:
