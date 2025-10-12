@@ -1,57 +1,18 @@
----
-title: Overview
----
+# Overview
 
-Pairit is a platform for running human-AI experiments.
+Pairit is a platform for running human‑AI experiments. Author a single YAML file, publish, and collect data. Use built‑in components or add your own.
 
-As an experimenter, you can create a single-file YAML config that configures your entire experiment and deploy it to run on Prolific. You can create a simple survey or complex randomizations with live chat and AI agents.
+### Key features
 
-If you don't find a UI component that you need, you can create custom components that meet your needs.
+1. Simple, declarative configs
+2. Rich components (survey, matchmaking, chat, live workspace, custom)
+3. Human–human and human–AI setups
+4. Real‑time collaboration and chat
+5. Server‑hosted AI agents (keys stay on the server)
 
-### Key Features
+### Get started
 
-1. flexible, easy experiment design
-2. many human-AI configurations (human-AI, human-human, N humans M AI, etc)
-3. real-time chat
-4. AI agents
-5. collaborative, real-time workspace
+- Start here: [Quickstart](quickstart.md)
+- Configure pages and routing: [Configuration](configuration.md)
+- Browse building blocks: [Components](components.md)
 
-### Quickstart
-
-Configure an experiment in minutes. Here is a quick survey study:
-
-```yaml
-
-nodes:
-  - id: intro
-    text: |
-      Welcome to a short survey. Press "Begin" to continue.
-    buttons:
-      - text: "Begin"
-        action: next
-  - id: survey_1
-    survey:
-      - id: age
-        text: "How old are you?"
-        answer: numeric
-      - id: satisfaction
-        text: "How satisfied are you with our service?"
-        answer: likert5
-  - id: outro
-    text: "Thanks for participating."
-    buttons:
-      - text: "Finish"
-        action: end
-
-flow:
-  - from: intro
-    to: survey_1
-  - from: survey_1
-    to: outro
-
-user_state:
-  age: int
-  satisfaction: int
-```
-
-Then, upload `your_experiment.yaml` to the [experiment registry]().

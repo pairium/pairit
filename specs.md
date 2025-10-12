@@ -29,6 +29,10 @@ The lightweight runtime layer exposes three primitives that connect the compiled
 2) [Routing](#routing)
 3) [Data store](#data-store)
 
+### Component-first model
+
+Pages are collections of components. YAML simply declares components and props; components may internally compose other components. Special features like matchmaking, chat, live collaboration, and AI agents are just components. Survey is a component-group that manages its own questions, paging, and validation. Buttons remain simple components; a future button row may group buttons without changing YAML.
+
 ### UI Renderer
 <a href="#ui-renderer"></a>
 
@@ -71,11 +75,11 @@ export const componentRegistry = {
   buttons: ButtonsRow,
   button: Button,
   survey: SurveyForm,
-  queue: QueuePanel,
+  matchmaking: MatchmakingPanel,
   chat: ChatView,
   media: MediaBlock,
   form: GenericForm,
-  custom_component: YourCustomComponentHost,
+  component: YourCustomComponentHost,
   default: FallbackComponent,
 };
 ```
@@ -124,7 +128,7 @@ pages:
 
 #### Pages
 
-Pages declare which components appear on a page and which buttons can be activated to move to the next page. Built-in components include `text`, `buttons`, `survey`, `queue`, `chat`, `media`, and `form`. Custom components are mounted via the component registry (Appendix A).
+Pages declare which components appear on a page and which buttons can be activated to move to the next page. Built-in components include `text`, `buttons`, `survey`, `matchmaking`, `chat`, `media`, and `form`. Custom components are mounted via the component registry (Appendix A).
 
 Common fields on a page:
 - **id**: string, unique within the config.
@@ -141,7 +145,7 @@ Component instance shapes (canonical):
 - **Built-in `text`**: `{ type: "text", props: { text: string, markdown?: bool } }`
 - **Built-in `buttons`**: `{ type: "buttons", props: { buttons: [ { text: string, action: Action } ] } }`
 - **Built-in `survey`**: `{ type: "survey", props: { questions: [ { id: string, text: string, answer: AnswerType, choices?: string[] } ] } }` (on submit, validates answers, writes to `$.user_state` keyed by question `id`)
-- **Built-in `queue`**: `{ type: "queue", props: { queueId: string } }` (enqueues the session into the named queue)
+- **Built-in `matchmaking`**: `{ type: "matchmaking", props: { poolId: string } }` (enqueues the session into the named pool)
 - **Built-in `chat`**: `{ type: "chat", props: { agents?: string[] } }` (opens chat scoped to `$.user_group.chat_group_id`; if `agents` are provided the server joins them; traversal from chat occurs only when the UI issues `{ type: "next" }`; auto-advance by time is not supported in MVP)
 - **Built-in `media` / `form`**: component instances for common media or form elements; props are validated at compile time when applicable.
 - **Custom `component`**: `{ type: "component", props: { component: string, props: object, unknownEvents?: "error" | "warn" | "ignore" } }`
@@ -324,14 +328,14 @@ The experiment configuration files are stored on Firestore:
 
 #### JSON Schema coverage
 
-- Provide schemas for: `pages`, `user_state`, `group_state`, `queues`, `agents`, and button `action` objects.
+- Provide schemas for: `pages`, `user_state`, `group_state`, `matchmaking`, `agents`, and button `action` objects.
 - Pre-validate `assign` LHS paths against `user_state` schema.
  - Default `additionalProperties: false` across schemas unless explicitly opted-in to catch typos.
  - Allow `$ref` usage within schemas in-config (self-contained only; no external imports).
 
 #### Lints
 
-- Unique ids across `pages`, `queues`, `agents`.
+- Unique ids across `pages`, `matchmaking`, `agents`.
 - Button ids must be unique per page.
 - Every `go_to` action (including each branch target) must reference an existing page.
 - Types of `assign` RHS must match declared `user_state` target types.
@@ -350,33 +354,33 @@ The experiment configuration files are stored on Firestore:
 - `GET /sessions/{sessionId}` → `{ currentPageId, user_state, user_group, endedAt? }`
 - `POST /sessions/{sessionId}/advance` → `{ event: { type, payload } }` → `{ newNode, updatedState? }`
 - `GET /sessions/{sessionId}/stream` → SSE stream of passive events (e.g., `match`, `timeout`, state updates)
-- `POST /queues/{queueId}/enqueue` → `{ sessionId }` → `{ position, estimatedWait? }`
+- `POST /matchmaking/{poolId}/enqueue` → `{ sessionId }` → `{ position, estimatedWait? }`
 - `POST /chat/{groupId}/messages` → `{ text: string, role: "user" }` → 204 (response streams via SSE)
 - `GET /chat/{groupId}/stream` → SSE stream of messages for the group
 - `POST /agents/{agentId}/call` → server-side only invocation (streamed)
 
 ### <a href="#realtime">Realtime</a>
 
-#### Match-making
+#### Matchmaking
 
-Queues are server-managed waiting rooms that collect participants until enough are available to form a group. Entering a `queue` page enqueues the current session into the named queue. The runtime matches participants FIFO into groups of `num_users`. On match it creates a `groupId`, initializes `$.user_group` (including `chat_group_id`), emits `match`, and continues. If waiting exceeds `timeoutSeconds` (or default), the runtime emits `timeout`. Optional backfill may create groups with ghost seats when enabled.
+Matchmaking pools are server-managed waiting rooms that collect participants until enough are available to form a group. Entering a `matchmaking` page enqueues the current session into the named pool. The runtime matches participants FIFO into groups of `num_users`. On match it creates a `groupId`, initializes `$.user_group` (including `chat_group_id`), emits `match`, and continues. If waiting exceeds `timeoutSeconds` (or default), the runtime emits `timeout`. Optional backfill may create groups with ghost seats when enabled.
 
 - `{ id: string, num_users: int, timeoutSeconds?: int }`
-- Matching policy: FIFO by arrival time, fill groups of `num_users`. Timeout policy is configurable per queue in the config; server defaults apply when omitted.
+- Matching policy: FIFO by arrival time, fill groups of `num_users`. Timeout policy is configurable per pool in the config; server defaults apply when omitted.
 - On match: emit `match`, write `$.user_group.chat_group_id` and `groupId`.
 - On timeout: emit `timeout`.
 - Default `timeoutSeconds`: 120 when unset. Authors branch on outcomes via the next page’s button action conditions.
 
-See Data store ("Group-level shared state") for `group_state` schema and write rules. Queue outcomes drive Routing via emitted `match`/`timeout` events and initialize Chat via `chat_group_id`.
+See Data store ("Group-level shared state") for `group_state` schema and write rules. Matchmaking outcomes drive Routing via emitted `match`/`timeout` events and initialize Chat via `chat_group_id`.
 
 #### Chat
 
-Chat sessions are scoped to a matched group and surfaced via the built-in `chat` component.
+Chat sessions are surfaced via the built-in `chat` component and can include matched people and/or AI agents.
 
-- Scope: each group has a `chat_group_id` written to `$.user_group.chat_group_id` on match.
+- Scope: when using matchmaking, each group has a `chat_group_id` written to `$.user_group.chat_group_id` on match. If no group exists, chat may run as a solo room.
 - Transport: RTDB channel `chats/{chat_group_id}` for message streams; server enforces ACLs by group membership.
 - API: `POST /chat/{groupId}/messages` to send, `GET /chat/{groupId}/stream` for SSE.
-- Agents: when a chat page lists `agents`, the server joins them to the group chat and streams their messages.
+- Agents: when a chat page lists `agents`, the server joins them to the chat and streams their messages. Chat works with people only, agents only, or both.
 - Moderation: server-side hooks can filter/redact messages before fan-out; clients never see provider keys.
 
 ## <a href="#storage">Storage</a>
@@ -460,13 +464,13 @@ user_state:
   rating: int
 ```
 
-### Appendix B: Queue Backfill (optional)
+### Appendix B: Matchmaking Backfill (optional)
 
-Queues may optionally enable backfill to form groups using ghost seats when necessary.
+Matchmaking pools may optionally enable backfill to form groups using ghost seats when necessary.
 
-- Queue config extension: `{ backfill?: { enabled: bool, policy?: "fifo", ghostAgents?: { agentId: string }[] } }`
+- Matchmaking config extension: `{ backfill?: { enabled: bool, policy?: "fifo", ghostAgents?: { agentId: string }[] } }`
 - When backfill is used, the server writes a flag indicating ghost seats were used and emits `backfilled`.
-- Auditing records `backfilled` outcomes alongside other queue outcomes.
+- Auditing records `backfilled` outcomes alongside other matchmaking outcomes.
 
 ### Appendix C: Examples
 
@@ -536,8 +540,8 @@ pages:
       - id: question2
         text: "You like apples."
         answer: likert7
-  - id: queue
-    queue: default_queue
+  - id: matchmaking
+    matchmaking: default_pool
   - id: chat_control
     chat:
   - id: chat_treated
@@ -558,13 +562,13 @@ flow:
       complete:
         - assign:
           "$.user_state.treated": "rand() < 0.5"
-    to: queue
-  - from: queue
+    to: matchmaking
+  - from: matchmaking
     when: "$.user_state.treated == true"
     on:
       match: []
     to: chat_treated
-  - from: queue
+  - from: matchmaking
     when: "$.user_state.treated == false"
     on:
       match: []
@@ -585,8 +589,8 @@ user_state:
         text: {type: string}
         type: {type: string, const: "chat_message"}
 
-queues:
-  - id: default_queue
+matchmaking:
+  - id: default_pool
     num_users: 2
     timeoutSeconds: 120
 
@@ -595,12 +599,12 @@ agents:
     model: "grok-4-fast-non-reasoning"
 ```
 
-#### Queue timeout example
+#### Matchmaking timeout example
 
 ```yaml
 pages:
-  - id: queue
-    queue: default_queue
+  - id: matchmaking
+    matchmaking: default_pool
   - id: fallback
     text: "Sorry, we could not find a partner right now."
     buttons:
@@ -608,7 +612,7 @@ pages:
         action: { type: end }
 
 flow:
-  - from: queue
+  - from: matchmaking
     on:
       timeout:
         - assign:
@@ -618,8 +622,8 @@ flow:
 user_state:
   timed_out: bool
 
-queues:
-  - id: default_queue
+matchmaking:
+  - id: default_pool
     num_users: 2
     timeoutSeconds: 60
 ```

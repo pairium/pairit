@@ -1,17 +1,19 @@
 # Examples
 
-### Simple survey
-
-A minimal survey you can upload as `your_experiment.yaml` to run a short questionnaire.
+## Simple Survey
 
 ```yaml
-nodes:
+initialPageId: intro
+
+pages:
   - id: intro
     text: |
       Welcome. Please complete this short survey.
     buttons:
-      - text: "Begin"
-        action: next
+      - id: begin
+        text: "Begin"
+        action: { type: go_to, target: survey_1 }
+
   - id: survey_1
     survey:
       - id: age
@@ -20,25 +22,17 @@ nodes:
       - id: gender
         text: "What is your gender?"
         answer: multiple_choice
-        choices:
-          - Male
-          - Female
-          - Other
-          - Prefer not to say
+        choices: [Male, Female, Other, Prefer not to say]
       - id: satisfaction
         text: "How satisfied are you with our service?"
         answer: likert5
-  - id: outro
-    text: "Thank you for completing the survey."
     buttons:
-      - text: "Finish"
-        action: end
+      - id: finish
+        text: "Finish"
+        action: { type: go_to, target: outro }
 
-flow:
-  - from: intro
-    to: survey_1
-  - from: survey_1
-    to: outro
+  - id: outro
+    end: true
 
 user_state:
   age: int
@@ -46,84 +40,72 @@ user_state:
   satisfaction: int
 ```
 
-## Chat, Randomization, AI Agents
-
-Here is a more sophisticated example that randomly matches humans to chat with other humans or AI.
+## Matchmaking + Chat (+ optional agents)
 
 ```yaml
-nodes:
+initialPageId: intro
+
+pages:
   - id: intro
     text: |
       Welcome to the experiment!
       Press "Start" to begin.
     buttons:
-      - text: "Start"
-        action: next
+      - id: start
+        text: "Start"
+        action: { type: go_to, target: start_survey }
+
   - id: start_survey
     survey:
-      - id: question1
+      - id: age
         text: "How old are you?"
         answer: numeric
-      - id: question2
-        text: "You like apples."
-        answer: likert7
-  - id: queue
-    queue: default_queue
+    buttons:
+      - id: proceed
+        text: "Proceed"
+        action: { type: go_to, target: matchmaking }
+
+  - id: matchmaking
+    matchmaking: default_pool
+    buttons:
+      - id: on_match
+        text: "Continue"
+        action:
+          type: go_to
+          branches:
+            - when: "$.user_state.treated == true"
+              target: chat_treated
+            - target: chat_control
+
   - id: chat_control
     chat:
+    buttons:
+      - id: to_outro_control
+        text: "Finish"
+        action: { type: go_to, target: outro }
+
   - id: chat_treated
     chat:
-      agents:
-        - default_agent
+      agents: [default_agent]
+    buttons:
+      - id: to_outro_treated
+        text: "Finish"
+        action: { type: go_to, target: outro }
+
   - id: outro
     text: "Thank you for participating in our study."
-    button:
-      - text: "Return to Prolific"
-        action: "return_to_prolific(ENTER_COMPLETION_CODE)"
-
-flow:
-  - from: intro
-    to: start_survey
-  - from: start_survey
-    on:
-      complete:
-        - assign:
-          "$.user_state.treated": "rand() < 0.5"
-    to: queue
-  - from: queue
-    when: "$.user_state.treated == true"
-    on:
-      match:
-        - assign:
-          "$.user_group.chat_group_id": "match_id"
-    to: chat_treated
-  - from: queue
-    when: "$.user_state.treated == false"
-    on:
-      match:
-        - assign:
-          "$.user_group.chat_group_id": "match_id"
-    to: chat_control
-  - from: chat_control
-    to: outro
-  - from: chat_treated
-    to: outro
+    buttons:
+      - id: return
+        text: "Return to Prolific"
+        action: { type: end }
 
 user_state:
   treated: bool
-  chat_group_id: int
-  chat_messages:
-    type: array
-    items:
-      type: object
-      properties:
-        from: {type: string}
-        text: {type: string}
-        type: {type: string, const: "chat_message"}
 
-queues:
-  - id: default_queue
+matchmaking:
+  - id: default_pool
     num_users: 2
+    timeoutSeconds: 120
 
 agents:
   - id: default_agent
