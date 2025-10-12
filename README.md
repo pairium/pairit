@@ -93,11 +93,24 @@ Use Firebase Hosting (not App Hosting) for the `lab/app` frontend. The build art
 ```zsh
 # Build the app
 pnpm --filter pairit-lab-app build
-```
 
-If you use Firebase targets, bind the target once: `firebase target:apply hosting lab-app <your-site-id>` or `firebase hosting:sites:create pairit-lab`.
+firebase hosting:sites:create pairit-lab-docs --project pairit-lab # run once to register the secondary site
+firebase target:apply hosting lab-app your-site-id # If you use Firebase targets, bind the target once
+firebase hosting:sites:create pairit-lab # or this
 
-```zsh
 # Deploy (once your project is selected with `firebase use`)
 firebase deploy --only hosting:lab-app
+```
+
+### Deploying the docs
+
+```zsh
+cd docs
+uv sync
+source .venv/bin/activate
+mkdocs build
+cd ..
+firebase hosting:sites:create pairit-lab-docs --project pairit-lab # run once to register the secondary site
+firebase target:apply hosting docs pairit-lab-docs # run once to link the target to the site name
+firebase deploy --only hosting:docs
 ```

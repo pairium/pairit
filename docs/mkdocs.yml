@@ -1,0 +1,18 @@
+site_name: "Pairit Docs"
+nav:
+  - Overview: index.md
+  - Concepts: concepts.md
+  - Components: components.md
+  - Agents: agents.md
+  - Examples: examples.md
+theme:
+  name: shadcn
+  show_title: true
+  show_stargazers: false
+  pygments_style:
+    light: shadcn-light
+    dark: github-dark
+  icon: heroicons:rocket-launch
+  topbar_sections: false
+markdown_extensions:
+  - codehilite

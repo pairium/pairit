@@ -7,6 +7,9 @@
       "hosting": {
         "lab-app": [
           "pairit-lab"
+        ],
+        "docs": [
+          "pairit-lab-docs"
         ]
       }
     }
