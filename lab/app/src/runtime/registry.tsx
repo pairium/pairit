@@ -3,6 +3,7 @@ import type { ReactElement } from 'react'
 import type { ButtonAction, ButtonsComponent, ComponentInstance, TextComponent } from './types'
 
 import { Button } from '../components/ui/button'
+import { Survey, type SurveyProps } from '@components/survey'
 
 export interface RuntimeComponentContext {
   onAction: (action: ButtonAction) => void
@@ -51,11 +52,20 @@ const ButtonsRenderer: RuntimeComponentRenderer<ButtonsComponent> = ({ component
   )
 }
 
+const SurveyRenderer: RuntimeComponentRenderer = ({ component }) => {
+  const props = (component.props ?? {}) as SurveyProps
+  return <Survey {...props} />
+}
+
 if (!registry.has('text')) {
-  registerComponent('text', TextRenderer)
+  registerComponent('text', TextRenderer as RuntimeComponentRenderer)
 }
 
 if (!registry.has('buttons')) {
-  registerComponent('buttons', ButtonsRenderer)
+  registerComponent('buttons', ButtonsRenderer as RuntimeComponentRenderer)
+}
+
+if (!registry.has('survey')) {
+  registerComponent('survey', SurveyRenderer)
 }
 

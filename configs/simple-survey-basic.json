@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1.0",
-  "initialNodeId": "intro",
+  "initialPageId": "intro",
   "nodes": [
     {
       "id": "intro",

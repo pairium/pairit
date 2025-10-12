@@ -2,7 +2,7 @@
 
 A lightweight command line utility for working with Pairit experiment configuration files. It exposes:
 
-- `lint` — run minimal validation (schema_version, initialNodeId, pages)
+- `lint` — run minimal validation (schema_version, initialPageId, pages)
 - `compile` — normalize a YAML config and emit sibling canonical JSON
 - `upload` — compile and upload a config through the manager Firebase Function
 - `list` — list configs stored via the manager Firebase Function

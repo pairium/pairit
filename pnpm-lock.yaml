@@ -35,6 +35,9 @@ importers:
       '@tanstack/react-devtools':
         specifier: ^0.7.0
         version: 0.7.6(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(csstype@3.1.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(solid-js@1.9.9)
+      '@tanstack/react-form':
+        specifier: ^1.23.7
+        version: 1.23.7(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@tanstack/react-router':
         specifier: ^1.132.0
         version: 1.132.47(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -53,6 +56,9 @@ importers:
       tailwindcss:
         specifier: ^4.0.6
         version: 4.1.14
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
     devDependencies:
       '@biomejs/biome':
         specifier: 2.2.4
@@ -112,70 +118,6 @@ importers:
       typescript:
         specifier: ^5.6.2
         version: 5.9.3
-
-  manager/app:
-    dependencies:
-      '@tailwindcss/vite':
-        specifier: ^4.0.6
-        version: 4.1.14(vite@7.1.9(@types/node@22.18.8)(jiti@2.6.1)(lightningcss@1.30.1)(tsx@4.20.6)(yaml@2.8.1))
-      '@tanstack/react-devtools':
-        specifier: ^0.7.0
-        version: 0.7.6(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(csstype@3.1.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(solid-js@1.9.9)
-      '@tanstack/react-router':
-        specifier: ^1.132.0
-        version: 1.132.47(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      '@tanstack/react-router-devtools':
-        specifier: ^1.132.0
-        version: 1.132.51(@tanstack/react-router@1.132.47(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(@tanstack/router-core@1.132.47)(@types/node@22.18.8)(csstype@3.1.3)(jiti@2.6.1)(lightningcss@1.30.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(solid-js@1.9.9)(tiny-invariant@1.3.3)(tsx@4.20.6)(yaml@2.8.1)
-      lucide-react:
-        specifier: ^0.545.0
-        version: 0.545.0(react@19.2.0)
-      react:
-        specifier: ^19.0.0
-        version: 19.2.0
-      react-dom:
-        specifier: ^19.0.0
-        version: 19.2.0(react@19.2.0)
-      tailwindcss:
-        specifier: ^4.0.6
-        version: 4.1.14
-    devDependencies:
-      '@biomejs/biome':
-        specifier: 2.2.4
-        version: 2.2.4
-      '@testing-library/dom':
-        specifier: ^10.4.0
-        version: 10.4.1
-      '@testing-library/react':
-        specifier: ^16.2.0
-        version: 16.3.0(@testing-library/dom@10.4.1)(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      '@types/node':
-        specifier: ^22.10.2
-        version: 22.18.8
-      '@types/react':
-        specifier: ^19.0.8
-        version: 19.2.2
-      '@types/react-dom':
-        specifier: ^19.0.3
-        version: 19.2.1(@types/react@19.2.2)
-      '@vitejs/plugin-react':
-        specifier: ^5.0.4
-        version: 5.0.4(vite@7.1.9(@types/node@22.18.8)(jiti@2.6.1)(lightningcss@1.30.1)(tsx@4.20.6)(yaml@2.8.1))
-      jsdom:
-        specifier: ^27.0.0
-        version: 27.0.0(postcss@8.5.6)
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.3
-      vite:
-        specifier: ^7.1.7
-        version: 7.1.9(@types/node@22.18.8)(jiti@2.6.1)(lightningcss@1.30.1)(tsx@4.20.6)(yaml@2.8.1)
-      vitest:
-        specifier: ^3.0.5
-        version: 3.2.4(@types/node@22.18.8)(jiti@2.6.1)(jsdom@27.0.0(postcss@8.5.6))(lightningcss@1.30.1)(tsx@4.20.6)(yaml@2.8.1)
-      web-vitals:
-        specifier: ^5.1.0
-        version: 5.1.0
 
   manager/cli:
     dependencies:
@@ -1053,6 +995,10 @@ packages:
     resolution: {integrity: sha512-yJT2As/drc+Epu0nsqCsJaKaLcaNGufiNxSlp/+/oeTD0jsBxF9/PJBfh66XVpYXkKr97b8689mSu7QMef0Rrw==}
     engines: {node: '>=18'}
 
+  '@tanstack/devtools-event-client@0.3.3':
+    resolution: {integrity: sha512-RfV+OPV/M3CGryYqTue684u10jUt55PEqeBOnOtCe6tAmHI9Iqyc8nHeDhWPEV9715gShuauFVaMc9RiUVNdwg==}
+    engines: {node: '>=18'}
+
   '@tanstack/devtools-ui@0.4.2':
     resolution: {integrity: sha512-xvALRLeD+TYjaLx9f9OrRBBZITAYPIk7RH8LRiESUQHw7lZO/sBU1ggrcSePh7TwKWXl9zLmtUi+7xVIS+j/dQ==}
     engines: {node: '>=18'}
@@ -1064,6 +1010,9 @@ packages:
     engines: {node: '>=18'}
     peerDependencies:
       solid-js: '>=1.9.7'
+
+  '@tanstack/form-core@1.24.3':
+    resolution: {integrity: sha512-e+HzSD49NWr4aIqJWtPPzmi+/phBJAP3nSPN8dvxwmJWqAxuB/cH138EcmCFf3+oA7j3BXvwvTY0I+8UweGPjQ==}
 
   '@tanstack/history@1.132.31':
     resolution: {integrity: sha512-UCHM2uS0t/uSszqPEo+SBSSoQVeQ+LlOWAVBl5SA7+AedeAbKafIPjFn8huZCXNLAYb0WKV2+wETr7lDK9uz7g==}
@@ -1077,6 +1026,15 @@ packages:
       '@types/react-dom': '>=16.8'
       react: '>=16.8'
       react-dom: '>=16.8'
+
+  '@tanstack/react-form@1.23.7':
+    resolution: {integrity: sha512-p/j9Gi2+s135sOjj48RjM+6xZQr1FVpliQlETLYBEGmmmxWHgYYs2b62mTDSnuv7AqtuZhpQ+t0CRFVfbQLsFA==}
+    peerDependencies:
+      '@tanstack/react-start': ^1.130.10
+      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      '@tanstack/react-start':
+        optional: true
 
   '@tanstack/react-router-devtools@1.132.51':
     resolution: {integrity: sha512-09gHGUE9BVE6O+7u4ICnKigdPP0vZAYI70dKNqGp8bEy9jaMmHGlUxVV6pKqBLVgcPmwT9YMRAeJ5+QrcznXGA==}
@@ -1544,6 +1502,9 @@ packages:
   decimal.js@10.6.0:
     resolution: {integrity: sha512-YpgQiITW3JXGntzdUmyUR1V812Hn8T1YVXhCu+wO3OpS4eU9l4YdD3qjyiKdV6mvV29zapkMeD390UVEf2lkUg==}
 
+  decode-formdata@0.9.0:
+    resolution: {integrity: sha512-q5uwOjR3Um5YD+ZWPOF/1sGHVW9A5rCrRwITQChRXlmPkxDFBqCm4jNTIVdGHNH9OnR+V9MoZVgRhsFb+ARbUw==}
+
   deep-eql@5.0.2:
     resolution: {integrity: sha512-h5k/5U50IJJFpzfL6nO9jaaumfjO/f2NjK/oYB2Djzm4p9L+3T9qWpZqZ2hAbLPuuYq9wrU08WQyBTL5GbPk5Q==}
     engines: {node: '>=6'}
@@ -1567,6 +1528,9 @@ packages:
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
+
+  devalue@5.3.2:
+    resolution: {integrity: sha512-UDsjUbpQn9kvm68slnrs+mfxwFkIflOhkanmyabZ8zOYk8SMEIbJ3TK+88g70hSIeytu4y18f0z/hYHMTrXIWw==}
 
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
@@ -2927,6 +2891,9 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
 snapshots:
 
   '@asamuzakjp/css-color@4.0.5':
@@ -3611,6 +3578,8 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
+  '@tanstack/devtools-event-client@0.3.3': {}
+
   '@tanstack/devtools-ui@0.4.2(csstype@3.1.3)(solid-js@1.9.9)':
     dependencies:
       clsx: 2.1.1
@@ -3632,6 +3601,11 @@ snapshots:
       - csstype
       - utf-8-validate
 
+  '@tanstack/form-core@1.24.3':
+    dependencies:
+      '@tanstack/devtools-event-client': 0.3.3
+      '@tanstack/store': 0.7.7
+
   '@tanstack/history@1.132.31': {}
 
   '@tanstack/react-devtools@0.7.6(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(csstype@3.1.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(solid-js@1.9.9)':
@@ -3646,6 +3620,16 @@ snapshots:
       - csstype
       - solid-js
       - utf-8-validate
+
+  '@tanstack/react-form@1.23.7(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
+    dependencies:
+      '@tanstack/form-core': 1.24.3
+      '@tanstack/react-store': 0.7.7(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      decode-formdata: 0.9.0
+      devalue: 5.3.2
+      react: 19.2.0
+    transitivePeerDependencies:
+      - react-dom
 
   '@tanstack/react-router-devtools@1.132.51(@tanstack/react-router@1.132.47(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(@tanstack/router-core@1.132.47)(@types/node@22.18.8)(csstype@3.1.3)(jiti@2.6.1)(lightningcss@1.30.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(solid-js@1.9.9)(tiny-invariant@1.3.3)(tsx@4.20.6)(yaml@2.8.1)':
     dependencies:
@@ -4213,6 +4197,8 @@ snapshots:
 
   decimal.js@10.6.0: {}
 
+  decode-formdata@0.9.0: {}
+
   deep-eql@5.0.2: {}
 
   delayed-stream@1.0.0:
@@ -4225,6 +4211,8 @@ snapshots:
   destroy@1.2.0: {}
 
   detect-libc@2.1.2: {}
+
+  devalue@5.3.2: {}
 
   dom-accessibility-api@0.5.16: {}
 
@@ -5739,3 +5727,5 @@ snapshots:
 
   yocto-queue@0.1.0:
     optional: true
+
+  zod@3.25.76: {}

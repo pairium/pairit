@@ -61,15 +61,15 @@ function isPage(value: unknown): value is Page {
 function coerceConfig(raw: unknown): Config | null {
   if (!raw || typeof raw !== 'object') return null;
   const config = raw as Partial<Config> & {
-    initialNodeId?: unknown;
+    initialPageId?: unknown;
     nodes?: unknown;
   };
 
   const initialPageId =
     typeof config.initialPageId === 'string'
       ? config.initialPageId
-      : typeof config.initialNodeId === 'string'
-        ? config.initialNodeId
+      : typeof config.initialPageId === 'string'
+        ? config.initialPageId
         : null;
 
   if (!initialPageId) return null;

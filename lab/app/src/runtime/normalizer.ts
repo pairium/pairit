@@ -84,6 +84,8 @@ function normalizeTextComponent(raw: RawComponent): TextComponent | null {
   }
 }
 
+// survey component performs its own normalization; the runtime only passes through definitions
+
 function normalizeComponent(raw: RawComponent, options: NormalizationOptions): ComponentInstance | null {
   if (raw == null) return null
 
@@ -134,6 +136,17 @@ export function normalizePage(raw: RawPage): Page | null {
     components.push({ type: 'text', props: { text: raw.text } })
   }
 
+  if ((raw as { survey?: unknown }).survey !== undefined) {
+    const surveyDefinition = (raw as { survey?: unknown }).survey
+    components.push({ type: 'survey', props: { definition: surveyDefinition, source: 'survey' } })
+  } else if ((raw as { survey_items?: unknown }).survey_items !== undefined) {
+    const surveyItemsDefinition = (raw as { survey_items?: unknown }).survey_items
+    components.push({ type: 'survey', props: { definition: surveyItemsDefinition, source: 'survey_items' } })
+  } else if ((raw as { surveyItems?: unknown }).surveyItems !== undefined) {
+    const surveyItemsDefinition = (raw as { surveyItems?: unknown }).surveyItems
+    components.push({ type: 'survey', props: { definition: surveyItemsDefinition, source: 'survey_items' } })
+  }
+
   if (Array.isArray(raw.buttons)) {
     const buttons = raw.buttons
       .map((button) => normalizeButton(button, { pageId: id }))
@@ -177,13 +190,13 @@ export function normalizePage(raw: RawPage): Page | null {
 
 export function normalizeConfig(config: unknown): { initialPageId: string; pages: Record<string, Page> } | null {
   if (!config || typeof config !== 'object') return null
-  const parsed = config as { initialPageId?: unknown; initialNodeId?: unknown; pages?: unknown; nodes?: unknown }
+  const parsed = config as { initialPageId?: unknown; initialPageId?: unknown; pages?: unknown; nodes?: unknown }
 
   const initialPageId =
     typeof parsed.initialPageId === 'string'
       ? parsed.initialPageId
-      : typeof parsed.initialNodeId === 'string'
-        ? parsed.initialNodeId
+      : typeof parsed.initialPageId === 'string'
+        ? parsed.initialPageId
         : null
   if (!initialPageId) return null
 

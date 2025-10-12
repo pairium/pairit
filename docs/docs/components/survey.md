@@ -18,7 +18,7 @@ Survey groups manage a sequence of questions with validation and paging. On subm
 
 ## Answer types
 
-- `free_text`: accepts arbitrary text input.
+- `text`: accepts arbitrary text input.
 - `numeric`: accepts numbers with optional min, max, and step.
 - `multiple_choice`: accepts a list of options and renders radio buttons (single select).
 - `multi_select`: accepts a list of options and renders checkboxes (multi select).

@@ -16,7 +16,7 @@ type ExperimentPage = {
 
 type ExperimentConfig = {
   schema_version?: string;
-  initialNodeId?: string;
+  initialPageId?: string;
   pages?: ExperimentPage[];
 };
 
@@ -167,8 +167,8 @@ async function lintConfig(configPath: string): Promise<void> {
   if (!config.schema_version) {
     errors.push("missing schema_version");
   }
-  if (!config.initialNodeId) {
-    errors.push("missing initialNodeId");
+  if (!config.initialPageId) {
+    errors.push("missing initialPageId");
   }
   if (!Array.isArray(config.pages) || config.pages.length === 0) {
     errors.push("pages must be a non-empty array");
@@ -199,7 +199,7 @@ async function compileConfig(configPath: string): Promise<string> {
 
   const output = {
     schema_version: config.schema_version ?? "v2",
-    initialNodeId: config.initialNodeId ?? nodes[0]?.id ?? "intro",
+    initialPageId: config.initialPageId ?? nodes[0]?.id ?? "intro",
     nodes,
   };
 

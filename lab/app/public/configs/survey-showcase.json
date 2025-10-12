@@ -1,0 +1,246 @@
+{
+  "schema_version": "0.1.0",
+  "initialPageId": "intro",
+  "nodes": [
+    {
+      "id": "intro",
+      "text": "Welcome to the survey showcase configuration.\nThis run highlights every built-in survey answer type along with descriptions, media, and branching.\n",
+      "buttons": [
+        {
+          "id": "start",
+          "text": "Begin survey",
+          "action": {
+            "type": "go_to",
+            "target": "profile_basics"
+          }
+        }
+      ]
+    },
+    {
+      "id": "profile_basics",
+      "text": "Let's start with the essentials.",
+      "survey": [
+        {
+          "id": "display_name",
+          "text": "What should we call you?",
+          "description": "This name appears on your participant dashboard.",
+          "answer": "text",
+          "placeholder": "Alex Doe"
+        },
+        {
+          "id": "bio",
+          "text": "Share a short bio",
+          "description": "Give us a sentence or two about yourself.",
+          "answer": "free_text",
+          "placeholder": "Product designer exploring AI-assisted workflows."
+        },
+        {
+          "id": "participant_age",
+          "text": "How old are you?",
+          "description": "You must be 18 or older to participate.",
+          "answer": {
+            "numeric": {
+              "min": 18,
+              "max": 120,
+              "step": 1
+            }
+          }
+        }
+      ],
+      "buttons": [
+        {
+          "id": "basics_continue",
+          "text": "Continue",
+          "action": {
+            "type": "go_to",
+            "target": "collaboration_style"
+          }
+        }
+      ]
+    },
+    {
+      "id": "collaboration_style",
+      "text": "Help us tailor the experience to your collaboration style.",
+      "survey": [
+        {
+          "id": "work_mode",
+          "text": "Which work style describes you best?",
+          "answer": {
+            "multiple_choice": {
+              "choices": [
+                {
+                  "value": "async",
+                  "label": "Async first"
+                },
+                {
+                  "value": "hybrid",
+                  "label": "Hybrid schedule"
+                },
+                {
+                  "value": "sync",
+                  "label": "Mostly synchronous"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "tools_in_use",
+          "text": "Which tools do you rely on weekly?",
+          "description": "Select all that apply.",
+          "answer": {
+            "multi_select": {
+              "choices": [
+                "Notion",
+                "Slack",
+                "Jira",
+                "Linear",
+                "Figma",
+                "Google Meet"
+              ]
+            }
+          }
+        },
+        {
+          "id": "feedback_frequency",
+          "text": "How satisfied are you with the feedback loops on your current team?",
+          "answer": "likert5"
+        },
+        {
+          "id": "async_confidence",
+          "text": "Rate your confidence working without real-time check-ins.",
+          "description": "Higher scores mean you feel comfortable with long async stretches.",
+          "answer": "likert7"
+        }
+      ],
+      "buttons": [
+        {
+          "id": "style_next",
+          "text": "Next",
+          "action": {
+            "type": "go_to",
+            "target": "media_experience"
+          }
+        }
+      ]
+    },
+    {
+      "id": "media_experience",
+      "text": "Preview an interactive module before your session.",
+      "survey_items": [
+        {
+          "id": "onboarding_clip",
+          "text": "Watch the quick onboarding walkthrough.",
+          "description": "Captions are required for accessibility—feel free to download the clip if playback fails.",
+          "media": {
+            "type": "video",
+            "src": "https://cdn.example.com/onboarding/clip.mp4",
+            "captions": "https://cdn.example.com/onboarding/clip.vtt",
+            "label": "Onboarding walkthrough"
+          },
+          "answer": "free_text",
+          "placeholder": "Summarize what stood out to you from the video."
+        },
+        {
+          "id": "visual_identity",
+          "text": "Pick the art direction that resonates with your team.",
+          "media": {
+            "type": "image",
+            "src": "https://cdn.example.com/onboarding/moodboard.png"
+          },
+          "answer": {
+            "multiple_choice": {
+              "choices": [
+                "Minimal & monochrome",
+                "Bold & high contrast",
+                "Playful & colorful"
+              ]
+            }
+          },
+          "next": {
+            "Bold & high contrast": "wrap_up",
+            "default": "wrap_up"
+          }
+        }
+      ],
+      "buttons": [
+        {
+          "id": "media_continue",
+          "text": "Go to wrap up",
+          "action": {
+            "type": "go_to",
+            "target": "wrap_up"
+          }
+        }
+      ]
+    },
+    {
+      "id": "wrap_up",
+      "survey": [
+        {
+          "id": "final_thoughts",
+          "text": "Anything else you'd like us to know before we begin?",
+          "answer": "free_text"
+        },
+        {
+          "id": "follow_up_channel",
+          "text": "Where should we send updates?",
+          "description": "Choose the channel you'll actually check.",
+          "answer": {
+            "multiple_choice": {
+              "choices": [
+                {
+                  "value": "email",
+                  "label": "Email"
+                },
+                {
+                  "value": "slack",
+                  "label": "Slack DM"
+                },
+                {
+                  "value": "text",
+                  "label": "SMS"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "topic_preferences",
+          "text": "Select the topics you want prioritized in the session.",
+          "answer": {
+            "multi_select": {
+              "choices": [
+                "Onboarding flows",
+                "Collaboration rituals",
+                "AI tooling",
+                "Experiment analysis",
+                "Culture & rituals"
+              ]
+            }
+          }
+        }
+      ],
+      "buttons": [
+        {
+          "id": "finish",
+          "text": "Finish",
+          "action": {
+            "type": "go_to",
+            "target": "outro"
+          }
+        }
+      ]
+    },
+    {
+      "id": "disqualified",
+      "text": "Thanks for your interest. You must be 18 or older to participate.",
+      "end": true
+    },
+    {
+      "id": "outro",
+      "text": "You're all set! We'll tailor your session based on these inputs.\nLook for a message from the research team soon.\n",
+      "end": true
+    }
+  ]
+}

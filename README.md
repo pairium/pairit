@@ -41,7 +41,7 @@ pnpm install
 
 # Build the function bundles once (re-run after changes)
 pnpm --filter lab-functions run build
-pnpm --filter pairit-manager-functions run build
+pnpm --filter manager-functions run build
 
 # Start the emulators for Firestore + both function codebases
 firebase emulators:start --only functions:lab,functions:manager,firestore --project pairit-local
@@ -60,8 +60,8 @@ firebase login
 firebase use <your-project-id>
 
 # Build the codebase you plan to deploy
-pnpm --filter pairit-lab-functions run build # participant runtime (optional)
-pnpm --filter pairit-manager-functions run build # manager API
+pnpm --filter lab-functions run build # participant runtime (optional)
+pnpm --filter manager-functions run build # manager API
 
 # Deploy both codebases
 firebase deploy --only functions
@@ -92,9 +92,9 @@ Use Firebase Hosting (not App Hosting) for the `lab/app` frontend. The build art
 
 ```zsh
 # Build the app
-pnpm --filter pairit-lab-app build
+pnpm --filter lab-app build
 
-firebase hosting:sites:create pairit-lab-docs --project pairit-lab # run once to register the secondary site
+firebase hosting:sites:create lab-docs --project pairit-lab # run once to register the secondary site
 firebase target:apply hosting lab-app your-site-id # If you use Firebase targets, bind the target once
 firebase hosting:sites:create pairit-lab # or this
 
@@ -110,7 +110,7 @@ uv sync
 source .venv/bin/activate
 mkdocs build
 cd ..
-firebase hosting:sites:create pairit-lab-docs --project pairit-lab # run once to register the secondary site
-firebase target:apply hosting docs pairit-lab-docs # run once to link the target to the site name
+firebase hosting:sites:create lab-docs --project pairit-lab # run once to register the secondary site
+firebase target:apply hosting docs lab-docs # run once to link the target to the site name
 firebase deploy --only hosting:docs
 ```
