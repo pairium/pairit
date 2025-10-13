@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from 'react'
 import { Link } from '@tanstack/react-router'
-import { CircuitBoard, FlaskConical, Mail, Undo2 } from 'lucide-react'
+import { Bird, CircuitBoard, FlaskConical, Mail, Undo2 } from 'lucide-react'
 
 const buttonBase =
   'inline-flex items-center gap-2 rounded-lg border border-transparent bg-black px-4 py-2 text-sm font-medium text-white shadow transition-colors hover:bg-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900'
@@ -13,7 +13,10 @@ export function Landing() {
     <div className="flex min-h-screen flex-col bg-slate-50 text-gray-900">
       <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4">
-          <div className="text-lg font-semibold tracking-tight">Pairit Lab</div>
+          <div className="flex items-center gap-2">
+            <Bird size={24} />
+            <div className="text-lg font-semibold tracking-tight">Pairit Lab</div>
+          </div>
         </div>
       </header>
 
