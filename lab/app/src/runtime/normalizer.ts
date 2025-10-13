@@ -197,7 +197,7 @@ export function normalizePage(raw: RawPage): Page | null {
 
 export function normalizeConfig(config: unknown): { initialPageId: string; pages: Record<string, Page> } | null {
   if (!config || typeof config !== 'object') return null
-  const parsed = config as { initialPageId?: unknown; initialPageId?: unknown; pages?: unknown; nodes?: unknown }
+  const parsed = config as { initialPageId?: unknown; pages?: unknown; nodes?: unknown }
 
   const initialPageId =
     typeof parsed.initialPageId === 'string'
