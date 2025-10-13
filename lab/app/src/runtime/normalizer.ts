@@ -33,11 +33,22 @@ function normalizeButton(raw: unknown, options: NormalizationOptions): Button | 
   if (!text || !action || typeof action !== 'object') return null
   const goTo = action as { type?: unknown; target?: unknown }
   if (goTo.type !== 'go_to' || typeof goTo.target !== 'string') return null
+  const skipValidationCandidate =
+    typeof (button as { skipValidation?: unknown }).skipValidation === 'boolean'
+      ? (button as { skipValidation?: boolean }).skipValidation
+      : typeof (button as { skip_validation?: unknown }).skip_validation === 'boolean'
+        ? (button as { skip_validation?: boolean }).skip_validation
+        : typeof (goTo as { skipValidation?: unknown }).skipValidation === 'boolean'
+          ? (goTo as { skipValidation?: boolean }).skipValidation
+          : typeof (goTo as { skip_validation?: unknown }).skip_validation === 'boolean'
+            ? (goTo as { skip_validation?: boolean }).skip_validation
+            : undefined
+  const skipValidation = skipValidationCandidate === true
   const id = typeof button.id === 'string' && button.id.trim().length > 0 ? button.id.trim() : `${options.pageId}_${text}`
   return {
     id,
     text,
-    action: { type: 'go_to', target: goTo.target },
+    action: skipValidation ? { type: 'go_to', target: goTo.target, skipValidation: true } : { type: 'go_to', target: goTo.target },
   }
 }
 

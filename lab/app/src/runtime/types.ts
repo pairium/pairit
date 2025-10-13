@@ -1,4 +1,4 @@
-export type ButtonAction = { type: 'go_to'; target: string }
+export type ButtonAction = { type: 'go_to'; target: string; skipValidation?: boolean }
 
 export type Button = { id: string; text: string; action: ButtonAction }
 

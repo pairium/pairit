@@ -35,6 +35,12 @@ pages:
             max: 120
             step: 1
     buttons:
+      - id: basics_back
+        text: "Back"
+        action:
+          type: go_to
+          target: intro
+          skip_validation: true
       - id: basics_continue
         text: "Continue"
         action:
@@ -75,6 +81,12 @@ pages:
         description: "Higher scores mean you feel comfortable with long async stretches."
         answer: likert7
     buttons:
+      - id: style_back
+        text: "Back"
+        action:
+          type: go_to
+          target: profile_basics
+          skip_validation: true
       - id: style_next
         text: "Next"
         action:
@@ -109,6 +121,12 @@ pages:
           "Bold & high contrast": wrap_up
           default: wrap_up
     buttons:
+      - id: media_back
+        text: "Back"
+        action:
+          type: go_to
+          target: collaboration_style
+          skip_validation: true
       - id: media_continue
         text: "Go to wrap up"
         action:
@@ -143,6 +161,12 @@ pages:
               - Experiment analysis
               - Culture & rituals
     buttons:
+      - id: wrap_back
+        text: "Back"
+        action:
+          type: go_to
+          target: media_experience
+          skip_validation: true
       - id: finish
         text: "Finish"
         action:

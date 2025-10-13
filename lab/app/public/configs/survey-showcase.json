@@ -49,6 +49,15 @@
       ],
       "buttons": [
         {
+          "id": "basics_back",
+          "text": "Back",
+          "action": {
+            "type": "go_to",
+            "target": "intro",
+            "skip_validation": true
+          }
+        },
+        {
           "id": "basics_continue",
           "text": "Continue",
           "action": {
@@ -115,6 +124,15 @@
       ],
       "buttons": [
         {
+          "id": "style_back",
+          "text": "Back",
+          "action": {
+            "type": "go_to",
+            "target": "profile_basics",
+            "skip_validation": true
+          }
+        },
+        {
           "id": "style_next",
           "text": "Next",
           "action": {
@@ -164,6 +182,15 @@
         }
       ],
       "buttons": [
+        {
+          "id": "media_back",
+          "text": "Back",
+          "action": {
+            "type": "go_to",
+            "target": "collaboration_style",
+            "skip_validation": true
+          }
+        },
         {
           "id": "media_continue",
           "text": "Go to wrap up",
@@ -223,6 +250,15 @@
       ],
       "buttons": [
         {
+          "id": "wrap_back",
+          "text": "Back",
+          "action": {
+            "type": "go_to",
+            "target": "media_experience",
+            "skip_validation": true
+          }
+        },
+        {
           "id": "finish",
           "text": "Finish",
           "action": {
@@ -240,8 +276,7 @@
     {
       "id": "outro",
       "text": "You're all set! We'll tailor your session based on these inputs.\nLook for a message from the research team soon.\n",
-      "end": true,
-      "endRedirectUrl": "https://www.google.com"
+      "end": true
     }
   ]
 }

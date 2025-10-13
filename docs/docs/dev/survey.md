@@ -8,7 +8,7 @@ Refer to `Components → Survey` for authoring guidance. This page captures runt
 - Treat each answer type as a field factory that provides validation rules and serialization into `$.user_state` by survey item `id`.
 - Model `multi_select` answers as checkbox groups that persist an ordered array of selected values.
 - Keep field registration stable across page transitions so restoring prior answers does not trigger unnecessary revalidation.
-- When a survey page exposes required items, the runtime registers a navigation guard for the page-level button actions. The guard calls `form.handleSubmit()`, mirrors the normal submit flow (touching required fields, running schema validation), and only resolves once `form.state.isSubmitSuccessful` flips to true. Until then, the button advance is aborted and the inline field errors stay visible.
+- When a survey page exposes required items, the runtime registers a navigation guard for the page-level button actions. The guard calls `form.handleSubmit()`, mirrors the normal submit flow (touching required fields, running schema validation), and only resolves once `form.state.isSubmitSuccessful` flips to true. Until then, the button advance is aborted and the inline field errors stay visible. Buttons can opt out by setting `skip_validation: true` on the action in the config (useful for back/cancel routes that should not block navigation).
 
 ## Pagination
 

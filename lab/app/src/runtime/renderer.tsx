@@ -25,11 +25,15 @@ export function PageRenderer({ page, onAction }: PageRendererProps) {
 
   const guardedAction = useCallback(
     async (action: ButtonAction) => {
+      if (action.skipValidation) {
+        await onAction(action)
+        return
+      }
       const guards = Array.from(guardsRef.current)
       if (guards.length) {
         for (const guard of guards) {
           try {
-            const result = await guard()
+            const result = await guard(action)
             if (result === false) {
               return
             }

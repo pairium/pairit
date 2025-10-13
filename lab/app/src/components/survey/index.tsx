@@ -22,6 +22,8 @@ import { Textarea } from '@components/ui/textarea'
 
 import { cn } from '@app/lib/utils'
 
+import type { ButtonAction } from '../../runtime/types'
+
 export interface SurveyItemChoice {
   value: string
   label: string
@@ -78,7 +80,7 @@ export interface SurveyProps {
   intro?: string
   layout?: Record<string, unknown>
   onSubmitValues?: (values: Record<string, unknown>) => void | Promise<void>
-  registerNavigationGuard?: (guard: () => boolean | undefined | Promise<boolean | undefined>) => () => void
+  registerNavigationGuard?: (guard: (action: ButtonAction) => boolean | undefined | Promise<boolean | undefined>) => () => void
 }
 
 type FormDefaultValues = Record<string, unknown>
@@ -125,7 +127,7 @@ export function Survey(props: SurveyProps): ReactElement | null {
     },
   })
 
-  const runNavigationValidation = useCallback(async () => {
+  const runNavigationValidation = useCallback(async (_action: ButtonAction) => {
     const previousAttempts = form.state.submissionAttempts
 
     await form.handleSubmit()
