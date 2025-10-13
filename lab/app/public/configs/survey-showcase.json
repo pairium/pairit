@@ -152,7 +152,7 @@
           "description": "Captions are required for accessibility—feel free to download the clip if playback fails.",
           "media": {
             "type": "video",
-            "src": "https://cdn.example.com/onboarding/clip.mp4",
+            "src": "https://storage.googleapis.com/pairit-lab.firebasestorage.app/mountains.mp4",
             "captions": "https://cdn.example.com/onboarding/clip.vtt",
             "label": "Onboarding walkthrough"
           },
@@ -164,7 +164,7 @@
           "text": "Pick the art direction that resonates with your team.",
           "media": {
             "type": "image",
-            "src": "https://cdn.example.com/onboarding/moodboard.png"
+            "src": "https://storage.googleapis.com/pairit-lab.firebasestorage.app/cat.png"
           },
           "answer": {
             "multiple_choice": {
