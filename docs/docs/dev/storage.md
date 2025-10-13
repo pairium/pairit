@@ -16,4 +16,20 @@ Notes
 - Group documents track shared fields (e.g., `chat_group_id`) that match the schema declared in `group_state`.
 - Chat rooms stream message objects `{ id, text, role, senderId?, agentId?, timestamp }` for low-latency updates.
 
+## Media
 
+Using Firebase Storage. The manager service reads `PAIRIT_MEDIA_BUCKET` (defaults to `pairit-lab`) to decide which bucket to touch.
+
+The bucket `gs://pairit-lab` is public so media uploaded from the CLI is immediately accessible:
+
+```zsh
+gcloud storage buckets add-iam-policy-binding gs://pairit-lab --member=allUsers --role=roles/storage.objectViewer
+```
+
+Manager endpoints (backed by Cloud Storage):
+
+- `POST /media/upload` — accepts `{ bucket?, object, data (base64), contentType?, metadata?, public? }`. Files are made public by default; pass `"public": false` to keep private.
+- `GET /media?bucket=&prefix=` — returns media objects (name, size, updatedAt, metadata) under the bucket.
+- `DELETE /media/<path>?bucket=` — deletes the requested object.
+
+Deployments must grant the Cloud Run/Functions service account `roles/storage.objectAdmin` on the bucket so it can upload, list, delete, and call `makePublic()`.

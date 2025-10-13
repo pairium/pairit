@@ -2,10 +2,29 @@ import { Hono } from 'hono';
 import { onRequest } from 'firebase-functions/v2/https';
 import { initializeApp } from 'firebase-admin/app';
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 
 initializeApp();
 
 const firestore = getFirestore();
+const storage = getStorage();
+
+const DEFAULT_MEDIA_BUCKET = process.env.PAIRIT_MEDIA_BUCKET ?? 'pairit-lab.firebasestorage.app';
+
+function normalizeBucketName(name: string): string {
+  if (name.startsWith('gs://')) return name.slice(5);
+  return name;
+}
+
+function getMediaBucket(bucketName?: string) {
+  const target = normalizeBucketName(bucketName ?? DEFAULT_MEDIA_BUCKET);
+  return storage.bucket(target);
+}
+
+function buildPublicUrl(bucketName: string, objectName: string): string {
+  const encoded = encodeURIComponent(objectName).replace(/%2F/g, '/');
+  return `https://storage.googleapis.com/${bucketName}/${encoded}`;
+}
 
 const app = new Hono();
 
@@ -17,6 +36,26 @@ type ConfigDocument = {
   config: unknown;
   createdAt?: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
+};
+
+type MediaUploadBody = {
+  bucket?: string;
+  object: string;
+  checksum?: string;
+  data: string;
+  contentType?: string | null;
+  metadata?: Record<string, unknown> | null;
+  public?: boolean;
+};
+
+type MediaListItem = {
+  name: string;
+  bucket: string;
+  size?: number;
+  updatedAt?: string | null;
+  contentType?: string | null;
+  publicUrl?: string;
+  metadata?: Record<string, unknown> | null;
 };
 
 const COLLECTION = 'configs';
@@ -114,6 +153,130 @@ app.delete('/configs/:configId', async (c) => {
   } catch (error) {
     console.error('delete error', error);
     return c.json({ error: 'internal', message: error instanceof Error ? error.message : 'unknown error' }, 500);
+  }
+});
+
+app.post('/media/upload', async (c) => {
+  const body = await c.req.json<MediaUploadBody>().catch(() => null);
+  if (!body) return c.json({ error: 'invalid_json' }, 400);
+
+  const { bucket, object, data, contentType, metadata, public: shouldPublish } = body;
+
+  if (!object || typeof object !== 'string') {
+    return c.json({ error: 'invalid_object', message: 'object must be a non-empty string' }, 400);
+  }
+
+  if (!data || typeof data !== 'string') {
+    return c.json({ error: 'invalid_data', message: 'data must be a base64 string' }, 400);
+  }
+
+  let buffer: Buffer;
+  try {
+    buffer = Buffer.from(data, 'base64');
+  } catch (error) {
+    console.error('media upload base64 decode error', error);
+    return c.json({ error: 'invalid_data', message: 'unable to decode base64 data' }, 400);
+  }
+
+  try {
+    const bucketRef = getMediaBucket(bucket);
+    const file = bucketRef.file(object);
+
+    const saveOptions: Parameters<typeof file.save>[1] = {
+      resumable: false,
+    };
+
+    if (contentType) {
+      saveOptions.contentType = contentType;
+    }
+
+    if (metadata && typeof metadata === 'object') {
+      saveOptions.metadata = { metadata };
+    }
+
+    await file.save(buffer, saveOptions);
+
+    const wantsPublic = shouldPublish !== false;
+    if (wantsPublic) {
+      await file.makePublic();
+    }
+
+    const [fileMetadata] = await file.getMetadata();
+
+    return c.json(
+      {
+        bucket: bucketRef.name,
+        object: file.name,
+        size: fileMetadata.size ? Number(fileMetadata.size) : buffer.length,
+        contentType: fileMetadata.contentType ?? contentType ?? null,
+        updatedAt: fileMetadata.updated ? new Date(fileMetadata.updated).toISOString() : null,
+        checksum: fileMetadata.md5Hash ?? null,
+        publicUrl: wantsPublic ? buildPublicUrl(bucketRef.name, file.name) : undefined,
+        metadata: fileMetadata.metadata ?? null,
+      },
+      200,
+    );
+  } catch (error) {
+    console.error('media upload error', error);
+    return c.json(
+      { error: 'internal', message: error instanceof Error ? error.message : 'unknown error' },
+      500,
+    );
+  }
+});
+
+app.get('/media', async (c) => {
+  const bucket = c.req.query('bucket');
+  const prefix = c.req.query('prefix') ?? undefined;
+
+  try {
+    const bucketRef = getMediaBucket(bucket ?? undefined);
+    const [files] = await bucketRef.getFiles({ prefix: prefix ?? undefined });
+
+    const objects: MediaListItem[] = await Promise.all(
+      files.map(async (file) => {
+        const metadata = file.metadata ?? (await file.getMetadata())[0];
+        return {
+          name: file.name,
+          bucket: file.bucket.name,
+          size: metadata.size ? Number(metadata.size) : undefined,
+          updatedAt: metadata.updated ? new Date(metadata.updated).toISOString() : null,
+          contentType: metadata.contentType ?? null,
+          publicUrl: buildPublicUrl(file.bucket.name, file.name),
+          metadata: metadata.metadata ?? null,
+        } satisfies MediaListItem;
+      }),
+    );
+
+    return c.json({ objects }, 200);
+  } catch (error) {
+    console.error('media list error', error);
+    return c.json(
+      { error: 'internal', message: error instanceof Error ? error.message : 'unknown error' },
+      500,
+    );
+  }
+});
+
+app.delete('/media/:object', async (c) => {
+  const object = c.req.param('object');
+
+  if (!object) return c.json({ error: 'missing_object', message: 'object path required' }, 400);
+
+  try {
+    const bucketRef = getMediaBucket(DEFAULT_MEDIA_BUCKET);
+    const file = bucketRef.file(object);
+    const [exists] = await file.exists();
+    if (!exists) return c.json({ error: 'not_found' }, 404);
+
+    await file.delete();
+    return c.json({ bucket: bucketRef.name, object }, 200);
+  } catch (error) {
+    console.error('media delete error', error);
+    return c.json(
+      { error: 'internal', message: error instanceof Error ? error.message : 'unknown error' },
+      500,
+    );
   }
 });
 

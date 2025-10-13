@@ -1,3 +1,5 @@
 # AI Learnings
 - Ensure runtime registry exports requested symbols before re-export to prevent Vite import errors.
 - Navigation guards may need action context (e.g., skip-validation flags) so back buttons can bypass required-field checks while forward buttons enforce them.
+- Pairit CLI expects grouped commands (`pairit config`, `pairit media`) and media uploads proxy through the manager service with base64 payloads, so future features should honor that contract instead of adding new top-level commands; bucket selection lives in the manager (`PAIRIT_MEDIA_BUCKET`), while uploads default to public unless `--private` is supplied.
+- Hono wildcard routes (`/media/*`) with `c.req.param('*')` don't work reliably with Firebase Functions adapter; use named parameters (`/media/:object`) for path segments instead.

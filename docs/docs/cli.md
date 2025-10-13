@@ -5,17 +5,17 @@ Validate, simulate, and publish experiment configs.
 Basic usage
 
 ```zsh
-pairit lint your_experiment.yaml # Validate YAML and run lints
-pairit compile your_experiment.yaml # Parse and compile to canonical JSON
+pairit config lint your_experiment.yaml # Validate YAML and run lints
+pairit config compile your_experiment.yaml # Parse and compile to canonical JSON
 ```
 
 Publish / manage on Firestore
 
 ```zsh
-pairit publish your_experiment.yaml --owner alice@example.com
-pairit list --owner alice@example.com
-pairit get <configId> --out compiled.json # TODO
-pairit delete <configId>
+pairit config upload your_experiment.yaml --owner alice@example.com
+pairit config list --owner alice@example.com
+pairit config get <configId> --out compiled.json # TODO
+pairit config delete <configId>
 ```
 
 Coming soon
@@ -34,12 +34,20 @@ Compiled JSON can be written with `--out <file>` to inspect what the runtime wil
 
 ## Validation & lints
 
-`pairit lint` runs structural checks before you publish:
+`pairit config lint` runs structural checks before you publish:
 - Validate props against JSON Schemas declared in components.
 - Enforce unique ids across `pages`, `matchmaking`, and `agents`.
 - Require unique button ids per page and ensure every `go_to`/branch target exists.
 - Verify `assign` statements only touch `$.user_state.*` and that RHS types match the schema.
 - Reject unknown `action.type` values and undeclared component events.
+
+## Media
+
+```
+pairit media upload hero.png
+pairit media list --prefix onboarding/
+pairit media delete onboarding/hero.png
+```
 
 ## Firestore layout
 
@@ -48,6 +56,6 @@ Published configs live under `configs/{configId}` with metadata and a checksum. 
 - `groups/{groupId}` when matchmaking succeeds (shared state across participants)
 - `events/{eventId}` (optional audit trail)
 
-Chat transcripts stream through RTDB at `chats/{chat_group_id}`. Use `pairit get <configId>` to download a compiled config snapshot for auditing or debugging.
+Chat transcripts stream through RTDB at `chats/{chat_group_id}`. Use `pairit config get <configId>` to download a compiled config snapshot for auditing or debugging. Media objects live in Google Cloud Storage buckets configured for the deployment; `pairit media *` commands proxy uploads and deletes via the manager service so the CLI never requires direct GCP credentials. Bucket selection happens in the backend (via `PAIRIT_MEDIA_BUCKET`); use `--bucket <name>` only when overriding that default. Uploads are public unless you pass `--private` when calling `pairit media upload`.
 
 

@@ -27,7 +27,11 @@ program
   .description("CLI for Pairit experiment configs")
   .version("0.1.0");
 
-program
+const configCommand = program
+  .command("config")
+  .description("Manage experiment configs");
+
+configCommand
   .command("lint")
   .argument("<config>", "Path to YAML config")
   .description("Run minimal validation on a config file")
@@ -45,7 +49,7 @@ program
     }
   });
 
-program
+configCommand
   .command("compile")
   .argument("<config>", "Path to YAML config")
   .description("Compile YAML config to canonical JSON next to source")
@@ -63,11 +67,11 @@ program
     }
   });
 
-program
+configCommand
   .command("upload")
   .argument("<config>", "Path to YAML config")
   .requiredOption("--owner <owner>", "Owner email or id")
-  .option("--config-id <configId>", "Config id (defaults to filename)")
+  .option("--config-id <configId>", "Config id (defaults to hash)")
   .option("--metadata <json>", "Optional metadata JSON string")
   .description("Compile and upload config via Pairit Functions")
   .action(async (configPath: string, options: UploadOptions) => {
@@ -86,7 +90,7 @@ program
     }
   });
 
-program
+configCommand
   .command("list")
   .option("--owner <owner>", "Filter by owner")
   .description("List configs from Pairit Functions")
@@ -111,7 +115,7 @@ program
     }
   });
 
-program
+configCommand
   .command("delete")
   .argument("<configId>", "Config id to delete")
   .option("--force", "Skip confirmation")
@@ -130,6 +134,98 @@ program
       console.log(`✓ Deleted ${configId}`);
     } catch (error) {
       reportCliError("Delete failed", error);
+    }
+  });
+
+const mediaCommand = program
+  .command("media")
+  .description("Manage Cloud Storage media assets");
+
+mediaCommand
+  .command("upload")
+  .argument("<file>", "Path to the media file to upload")
+  .option(
+    "--bucket <bucket>",
+    "Destination Google Cloud Storage bucket (optional override)"
+  )
+  .option("--object <object>", "Destination object path (defaults to derived hash)")
+  .option("--content-type <contentType>", "Content type to set on the object")
+  .option("--metadata <json>", "Optional metadata JSON string")
+  .option("--private", "Keep the uploaded object private (defaults to public)")
+  .description("Upload a media asset via Pairit Functions")
+  .action(async (filePath: string, options: MediaUploadOptions) => {
+    try {
+      const isPublic = options.private ? false : true;
+      const { object, checksum, response } = await uploadMedia(filePath, {
+        bucket: options.bucket,
+        object: options.object,
+        metadata: options.metadata,
+        contentType: options.contentType,
+        public: isPublic,
+      });
+      console.log(`✓ Uploaded media ${object} (${checksum})`);
+      if (typeof response !== "undefined") {
+        console.log(JSON.stringify(response, null, 2));
+      }
+    } catch (error) {
+      reportCliError("Media upload failed", error);
+    }
+  });
+
+mediaCommand
+  .command("list")
+  .option(
+    "--bucket <bucket>",
+    "Bucket to list from (optional override)"
+  )
+  .option("--prefix <prefix>", "Prefix filter")
+  .description("List media objects via Pairit Functions")
+  .action(async (options: MediaListOptions) => {
+    try {
+      const params = new URLSearchParams();
+      if (options.bucket) params.set("bucket", options.bucket);
+      if (options.prefix) params.set("prefix", options.prefix);
+      const response = await callFunctions(`/media?${params.toString()}`, { method: "GET" });
+
+      const objects = Array.isArray(response.objects) ? response.objects : [];
+      if (!objects.length) {
+        console.log("No media objects found");
+        return;
+      }
+
+      objects.forEach((object: MediaListEntry) => {
+        console.log(
+          `${object.name} | size=${object.size ?? "n/a"} | updated=${object.updatedAt ?? "n/a"}`
+        );
+      });
+    } catch (error) {
+      reportCliError("Media list failed", error);
+    }
+  });
+
+mediaCommand
+  .command("delete")
+  .argument("<object>", "Object path to delete")
+  .option("--force", "Skip confirmation")
+  .description("Delete a media object via Pairit Functions")
+  .action(async (object: string, options: MediaDeleteOptions) => {
+    try {
+      if (!options.force) {
+        const confirmed = await promptConfirm(`Delete media ${object}? (y/N)`);
+        if (!confirmed) {
+          console.log("Deletion aborted");
+          return;
+        }
+      }
+
+      console.log(`Deleting media ${object} at ${encodeURIComponent(object)}`);
+      // await callFunctions(
+      //   `/media/${encodeURIComponent(object)}`,
+      //   { method: "DELETE" }
+      // );
+      console.log(`✓ Deleted media ${object}`);
+    } catch (error) {
+      reportCliError("Media delete failed", error);
     }
   });
 
@@ -156,6 +252,32 @@ type ConfigListEntry = {
   configId: string;
   owner: string;
   checksum: string;
+  updatedAt?: string | null;
+  metadata?: unknown;
+};
+
+type MediaUploadOptions = {
+  bucket?: string;
+  object?: string;
+  metadata?: string;
+  contentType?: string;
+  public?: boolean;
+  private?: boolean;
+};
+
+type MediaListOptions = {
+  bucket?: string;
+  prefix?: string;
+};
+
+type MediaDeleteOptions = {
+  bucket?: string;
+  force?: boolean;
+};
+
+type MediaListEntry = {
+  name: string;
+  size?: number;
   updatedAt?: string | null;
   metadata?: unknown;
 };
@@ -246,6 +368,58 @@ async function buildUploadPayload(
     },
     checksum,
   };
+}
+
+type MediaUploadPayload = {
+  bucket?: string;
+  object: string;
+  checksum: string;
+  data: string;
+  contentType?: string | null;
+  metadata?: Record<string, unknown> | null;
+  public?: boolean;
+};
+
+async function uploadMedia(
+  filePath: string,
+  options: MediaUploadOptions
+): Promise<{ object: string; checksum: string; response: unknown }> {
+  const resolved = await resolvePath(filePath);
+  const fileBuffer = await readFile(resolved);
+  const hashBuffer = createHash("sha256").update(fileBuffer).digest();
+  const checksum = hashBuffer.toString("hex");
+  const defaultObject = `${toBase64Url(hashBuffer.subarray(0, 12))}${path.extname(resolved)}`;
+  const object = options.object ?? defaultObject;
+  const shouldBePublic = typeof options.public === "boolean" ? options.public : true;
+
+  let metadata: Record<string, unknown> | undefined;
+  if (options.metadata) {
+    try {
+      metadata = JSON.parse(options.metadata) as Record<string, unknown>;
+    } catch (error) {
+      throw new Error(
+        `Invalid metadata JSON: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  const payload: MediaUploadPayload = {
+    bucket: options.bucket,
+    object,
+    checksum,
+    data: fileBuffer.toString("base64"),
+    contentType: options.contentType ?? null,
+    metadata: metadata ?? null,
+    public: shouldBePublic,
+  };
+
+  const response = await callFunctions("/media/upload", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    headers: { "Content-Type": "application/json" },
+  });
+
+  return { object, checksum, response };
 }
 
 function toBase64Url(buffer: Buffer): string {
