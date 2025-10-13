@@ -5,11 +5,14 @@ import type { ButtonAction, ButtonsComponent, ComponentInstance, TextComponent }
 import { Button } from '../components/ui/button'
 import { Survey, type SurveyProps } from '@components/survey'
 
+export type NavigationGuard = () => boolean | undefined | Promise<boolean | undefined>
+
 export interface RuntimeComponentContext {
-  onAction: (action: ButtonAction) => void
+  onAction: (action: ButtonAction) => Promise<void> | void
+  registerNavigationGuard: (guard: NavigationGuard) => () => void
 }
 
-export type RuntimeComponentRenderer<T extends ComponentInstance = ComponentInstance> = (args: {
+export type RuntimeComponentRenderer<T extends ComponentInstance = ComponentInstance> = (input: {
   component: T
   context: RuntimeComponentContext
 }) => ReactElement | null
@@ -44,7 +47,12 @@ const ButtonsRenderer: RuntimeComponentRenderer<ButtonsComponent> = ({ component
   return (
     <div className="flex flex-wrap gap-3">
       {component.props.buttons.map((button) => (
-        <Button key={button.id} onClick={() => context.onAction(button.action)}>
+        <Button
+          key={button.id}
+          onClick={() => {
+            void context.onAction(button.action)
+          }}
+        >
           {button.text}
         </Button>
       ))}
@@ -52,9 +60,9 @@ const ButtonsRenderer: RuntimeComponentRenderer<ButtonsComponent> = ({ component
   )
 }
 
-const SurveyRenderer: RuntimeComponentRenderer = ({ component }) => {
+const SurveyRenderer: RuntimeComponentRenderer = ({ component, context }) => {
   const props = (component.props ?? {}) as SurveyProps
-  return <Survey {...props} />
+  return <Survey {...props} registerNavigationGuard={context.registerNavigationGuard} />
 }
 
 if (!registry.has('text')) {
@@ -68,4 +76,3 @@ if (!registry.has('buttons')) {
 if (!registry.has('survey')) {
   registerComponent('survey', SurveyRenderer)
 }
-

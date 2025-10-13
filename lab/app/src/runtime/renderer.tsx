@@ -1,20 +1,56 @@
 import type { ButtonsComponent, ComponentInstance, Page } from './types'
 
-import { Fragment } from 'react'
+import { Fragment, useCallback, useMemo, useRef } from 'react'
 
 import { Card, CardContent } from '../components/ui/card'
 
-import { getComponentRenderer, type RuntimeComponentContext } from './registry'
+import { getComponentRenderer, type NavigationGuard, type RuntimeComponentContext } from './registry'
 
 type ButtonAction = ButtonsComponent['props']['buttons'][number]['action']
 
 interface PageRendererProps {
   page: Page
-  onAction: (action: ButtonAction) => void
+  onAction: (action: ButtonAction) => Promise<void> | void
 }
 
 export function PageRenderer({ page, onAction }: PageRendererProps) {
-  const runtimeContext: RuntimeComponentContext = { onAction }
+  const guardsRef = useRef<Set<NavigationGuard>>(new Set())
+
+  const registerNavigationGuard = useCallback((guard: NavigationGuard) => {
+    guardsRef.current.add(guard)
+    return () => {
+      guardsRef.current.delete(guard)
+    }
+  }, [])
+
+  const guardedAction = useCallback(
+    async (action: ButtonAction) => {
+      const guards = Array.from(guardsRef.current)
+      if (guards.length) {
+        for (const guard of guards) {
+          try {
+            const result = await guard()
+            if (result === false) {
+              return
+            }
+          } catch (error) {
+            console.error('Navigation blocked by guard', error)
+            return
+          }
+        }
+      }
+      await onAction(action)
+    },
+    [onAction],
+  )
+
+  const runtimeContext: RuntimeComponentContext = useMemo(
+    () => ({
+      onAction: guardedAction,
+      registerNavigationGuard,
+    }),
+    [guardedAction, registerNavigationGuard],
+  )
 
   return (
     <div className="flex justify-center">

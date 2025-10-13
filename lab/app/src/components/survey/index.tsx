@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 
 import type { ReactElement } from 'react'
 
@@ -78,6 +78,7 @@ export interface SurveyProps {
   intro?: string
   layout?: Record<string, unknown>
   onSubmitValues?: (values: Record<string, unknown>) => void | Promise<void>
+  registerNavigationGuard?: (guard: () => boolean | undefined | Promise<boolean | undefined>) => () => void
 }
 
 type FormDefaultValues = Record<string, unknown>
@@ -96,7 +97,7 @@ interface ResolvedSurveyContent {
 }
 
 export function Survey(props: SurveyProps): ReactElement | null {
-  const { definition, items: itemsProp, source, title, intro, onSubmitValues } = props
+  const { definition, items: itemsProp, source, title, intro, onSubmitValues, registerNavigationGuard } = props
 
   const { items, title: derivedTitle, intro: derivedIntro } = useMemo(
     () => resolveSurveyContent({ definition, items: itemsProp, source }),
@@ -106,6 +107,9 @@ export function Survey(props: SurveyProps): ReactElement | null {
   const finalTitle = title ?? derivedTitle
   const finalIntro = intro ?? derivedIntro
   const hasItems = items.length > 0
+
+  const requiredItemIds = useMemo(() => items.filter((item) => item.answer.required !== false).map((item) => item.id), [items])
+  const hasRequiredItems = requiredItemIds.length > 0
 
   const { schema, defaults } = useMemo(() => buildFormSchema(items), [items])
 
@@ -120,6 +124,27 @@ export function Survey(props: SurveyProps): ReactElement | null {
       if (onSubmitValues) await onSubmitValues(transformed)
     },
   })
+
+  const runNavigationValidation = useCallback(async () => {
+    const previousAttempts = form.state.submissionAttempts
+
+    await form.handleSubmit()
+
+    const submitted = form.state.submissionAttempts > previousAttempts
+    if (!submitted) {
+      return false
+    }
+
+    return form.state.isSubmitSuccessful
+  }, [form])
+
+  useEffect(() => {
+    if (!registerNavigationGuard || !hasRequiredItems) return
+    const unregister = registerNavigationGuard(runNavigationValidation)
+    return () => {
+      unregister()
+    }
+  }, [registerNavigationGuard, hasRequiredItems, runNavigationValidation])
 
   if (!hasItems) {
     return <div className="text-sm text-slate-500">No survey items configured.</div>

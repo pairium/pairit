@@ -1,5 +1,8 @@
 # Todo
 
+get pairit complete with surveys first
+- [x] visual feedback for buttons
+- [x] fix survey required items
 - [ ] add back button
 - [ ] firestore events
 - [ ] simplify runtime
@@ -7,13 +10,9 @@
 - [ ] fix sessions
   - [ ] store data
   - [ ] user id
-- [ ] get pairit complete with surveys first
 
 ## Backlog
 
 - [ ] agents
 - [ ] chat
 - [ ] live workspace
-
-## Done
-- [ ] visual feedback for buttons
