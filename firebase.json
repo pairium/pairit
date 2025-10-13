@@ -17,6 +17,9 @@
     { "codebase": "lab", "source": "lab/functions" },
     { "codebase": "manager", "source": "manager/functions" }
   ],
+  "firestore": {
+    "rules": "firestore.rules"
+  },
   "emulators": {
     "functions": {
       "port": 5001
