@@ -7,8 +7,7 @@
     "test": "pnpm -r test",
     "build": "pnpm -r build",
     "dev": "pnpm -r --parallel dev",
-    "publish:example": "tsx configs/publish-example.ts",
-    "emulators": "pnpm --filter functions build && firebase emulators:start --only functions,firestore,database --project pairit-local"
+    "emulators": "pnpm --filter functions build && firebase emulators:start --only functions,firestore"
   },
   "keywords": [],
   "author": "",

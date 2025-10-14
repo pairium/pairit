@@ -77,7 +77,7 @@ export function Landing() {
                   <FlaskConical className="h-4 w-4" /> Survey showcase
                 </Link>
                 <a
-                  href="https://console.firebase.google.com/project/pairit-local/overview"
+                  href="https://console.firebase.google.com/project/pairit-lab/overview"
                   target="_blank"
                   rel="noopener noreferrer"
                   className={ghostButton}

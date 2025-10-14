@@ -54,7 +54,7 @@ Add `--private` if you need to keep an object private. Use `--bucket <name>` onl
 
 ```zsh
 # Using the Firebase emulator (requires `firebase emulators:start --only functions,firestore`)
-export PAIRIT_FUNCTIONS_BASE_URL=http://127.0.0.1:5001/pairit-local/us-east4/api
+export PAIRIT_FUNCTIONS_BASE_URL=http://127.0.0.1:5001/pairit-lab/us-east4/lab
 node manager/cli/dist/index.js config upload configs/simple-survey-basic.yaml --owner you@example.com
 node manager/cli/dist/index.js config list
 node manager/cli/dist/index.js config delete 2f3c4d5e... --force

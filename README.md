@@ -42,7 +42,7 @@ This monorepo hosts the Pairit stack.
    - Terminal 1: `pnpm emulators`
    - Terminal 2: `pnpm --filter lab-app dev`
 
-   Visit http://localhost:3000. The emulators run functions at http://localhost:5001/pairit-local/us-central1/api and Firestore at http://localhost:8080 (UI at http://localhost:4000).
+   Visit http://localhost:3000. The emulators run functions at http://127.0.0.1:5001/pairit-lab/us-east4/lab and Firestore at http://localhost:8080 (UI at http://localhost:4000).
 
 ## Firebase Setup and Deployment
 
@@ -56,7 +56,7 @@ If you want to run just `lab-functions`: `firebase emulators:start --only functi
 
 If you want to run just `manager-functions`: `firebase emulators:start --only functions:manager,firestore`.
 
-To point the CLI to the emulator: `export PAIRIT_FUNCTIONS_BASE_URL=http://127.0.0.1:5001/pairit-local/us-central1/api`. (This is hard-coded now.)
+To point the CLI to the emulator: `export PAIRIT_FUNCTIONS_BASE_URL=http://127.0.0.1:5001/pairit-lab/us-east4/lab`. (This is hard-coded now.)
 
 ### Deploying to Production
 

@@ -476,8 +476,8 @@ function getFunctionsBaseUrl(): string {
     ? JSON.parse(process.env.FIREBASE_CONFIG).projectId
     : process.env.GCLOUD_PROJECT;
 
-  const projectId = project ?? "pairit-local";
-  return `http://127.0.0.1:5001/${projectId}/us-east4/api`;
+  const projectId = project ?? "pairit-lab";
+  return `http://127.0.0.1:5001/${projectId}/us-east4/manager`;
 }
 
 async function promptConfirm(prompt: string): Promise<boolean> {

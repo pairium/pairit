@@ -212,7 +212,16 @@ async function saveSession(session: Session): Promise<void> {
 const app = new Hono();
 
 // Allow browser calls from Vite on localhost:3000
-app.use('*', cors({ origin: '*', allowMethods: ['GET', 'POST', 'OPTIONS'] }));
+app.use(
+  '*',
+  cors({
+    origin: '*',
+    allowMethods: ['GET', 'POST', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposeHeaders: ['Content-Type'],
+    maxAge: 86400,
+  }),
+);
 
 app.get('/', (c) => c.json({ message: 'Pairit lab API' }));
 
@@ -355,6 +364,20 @@ app.post('/sessions/:id/events', async (c) => {
 
 // export as a Firebase HTTPS function by forwarding the incoming Express-style request
 export const lab = onRequest({ region: 'us-east4' }, async (req, res) => {
+  const origin = typeof req.headers.origin === 'string' ? req.headers.origin : '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  const requestedHeaders = typeof req.headers['access-control-request-headers'] === 'string'
+    ? req.headers['access-control-request-headers']
+    : 'Content-Type,Authorization,X-Requested-With';
+  res.setHeader('Access-Control-Allow-Headers', requestedHeaders);
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
+
   const url = `https://${req.hostname}${req.originalUrl}`;
 
   const headers: Record<string, string> = {};

@@ -21,7 +21,7 @@
 - **Config Testing**: For ID mismatches (hashed vs explicit), use CLI `--config-id survey-showcase` to match URL. Temporarily hardcode configs in `loadConfig()` to bypass upload/emulator sync problems; remove for prod.
 - **Hybrid Testing**: Set `VITE_API_URL` in `.env.local` (e.g., emulator URL). Local configs in `public/configs/` enable offline UI dev; remote requires uploaded configs but enables events. Restarts needed after env changes.
 - **Debugging Strategy**: Add emoji-prefixed console.logs in frontend (browser) and backend (terminal) to trace async flows (session creation → context → submit → API → storage). Include `sessionId` for cross-file tracking. Use `useMemo` for stable React context; props drilling for small apps. Remove logs post-fix to clean code.
-- **Cross-Project Access**: Lab and manager functions share Firestore project (`pairit-local`) but run independently; emulator must include both for uploads to be visible.
+- **Cross-Project Access**: Lab and manager functions share Firestore project (`pairit-lab`) but run independently; emulator must include both for uploads to be visible.
 
 ### Project Structure Insights
 - **Monorepo Workflow**: pnpm workspaces separate lab (participants) and manager (tools). Use `--filter` for targeted builds/watch. Vite loads env at startup; TanStack Router for SPA navigation.
