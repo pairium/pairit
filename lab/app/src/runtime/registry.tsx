@@ -141,7 +141,7 @@ const mediaRenderer: RuntimeComponentRenderer<'media', MediaComponent['props']> 
 
     return async (data?: Record<string, unknown>) => {
       try {
-        await submitEvent(context.sessionId!, {
+        await submitEvent(context.sessionId, {
           type: eventConfig.type ?? `media_${eventName.toLowerCase()}`,
           timestamp: new Date().toISOString(),
           componentType: 'media',

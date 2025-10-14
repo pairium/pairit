@@ -41,7 +41,7 @@ export function Media({ media, alt, onPlay, onPause, onSeek, onComplete, onError
         onPause={onPause}
         onSeeked={(e) => onSeek?.(e.currentTarget.currentTime)}
         onEnded={onComplete}
-        onError={onError}
+        onError={(e) => onError?.(e as unknown as Event)}
       >
         <source src={src} />
         {captionsSrc && <track kind="captions" src={captionsSrc} label="Captions" default />}
