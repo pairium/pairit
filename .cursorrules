@@ -1,0 +1,8 @@
+# Pairit Project Rules
+
+## Essential Reference Files
+Always consult these files for comprehensive project context:
+- **@README.md**: Quickstart guide, repo structure, deployment instructions
+- **@learnings.md**: AI learnings, implementation insights, debugging tips
+- **@todo.md**: Current priorities and development roadmap
+- **@docs/**: Complete documentation (architecture, runtime, components, etc.)
