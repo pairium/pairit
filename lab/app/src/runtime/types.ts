@@ -4,6 +4,7 @@ export type Button = { id: string; text: string; action: ButtonAction }
 
 export interface ComponentInstance<Type extends string = string, Props extends Record<string, unknown> = Record<string, unknown>> {
   type: Type
+  id?: string
   props: Props
 }
 

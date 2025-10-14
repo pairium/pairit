@@ -110,9 +110,6 @@ export function Survey(props: SurveyProps): ReactElement | null {
   const finalIntro = intro ?? derivedIntro
   const hasItems = items.length > 0
 
-  const requiredItemIds = useMemo(() => items.filter((item) => item.answer.required !== false).map((item) => item.id), [items])
-  const hasRequiredItems = requiredItemIds.length > 0
-
   const { schema, defaults } = useMemo(() => buildFormSchema(items), [items])
 
   const form = useForm({
@@ -128,25 +125,35 @@ export function Survey(props: SurveyProps): ReactElement | null {
   })
 
   const runNavigationValidation = useCallback(async (_action: ButtonAction) => {
-    const previousAttempts = form.state.submissionAttempts
+    console.log('🛡️ Navigation guard triggered for action:', _action)
 
+    const previousAttempts = form.state.submissionAttempts
+    console.log('📊 Previous submission attempts:', previousAttempts)
+
+    console.log('🔄 Calling form.handleSubmit()')
     await form.handleSubmit()
 
     const submitted = form.state.submissionAttempts > previousAttempts
+    console.log('📊 New submission attempts:', form.state.submissionAttempts, 'Submitted:', submitted)
+
     if (!submitted) {
+      console.log('❌ Form not submitted, blocking navigation')
       return false
     }
 
-    return form.state.isSubmitSuccessful
+    const success = form.state.isSubmitSuccessful
+    console.log('✅ Form submission success:', success)
+
+    return success
   }, [form])
 
   useEffect(() => {
-    if (!registerNavigationGuard || !hasRequiredItems) return
+    if (!registerNavigationGuard) return
     const unregister = registerNavigationGuard(runNavigationValidation)
     return () => {
       unregister()
     }
-  }, [registerNavigationGuard, hasRequiredItems, runNavigationValidation])
+  }, [registerNavigationGuard, runNavigationValidation])
 
   if (!hasItems) {
     return <div className="text-sm text-slate-500">No survey items configured.</div>

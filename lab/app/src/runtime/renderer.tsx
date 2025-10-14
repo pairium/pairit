@@ -11,9 +11,11 @@ type ButtonAction = ButtonsComponent['props']['buttons'][number]['action']
 interface PageRendererProps {
   page: Page
   onAction: (action: ButtonAction) => Promise<void> | void
+  sessionId?: string | null
 }
 
-export function PageRenderer({ page, onAction }: PageRendererProps) {
+export function PageRenderer({ page, onAction, sessionId }: PageRendererProps) {
+
   const guardsRef = useRef<Set<NavigationGuard>>(new Set())
 
   const registerNavigationGuard = useCallback((guard: NavigationGuard) => {
@@ -52,8 +54,9 @@ export function PageRenderer({ page, onAction }: PageRendererProps) {
     () => ({
       onAction: guardedAction,
       registerNavigationGuard,
+      sessionId,
     }),
-    [guardedAction, registerNavigationGuard],
+    [guardedAction, registerNavigationGuard, sessionId],
   )
 
   return (

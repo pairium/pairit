@@ -141,21 +141,22 @@ export function normalizePage(raw: RawPage): Page | null {
   const id = typeof raw.id === 'string' ? raw.id : null
   if (!id) return null
 
+
   const components: ComponentInstance[] = []
 
   if (typeof raw.text === 'string') {
-    components.push({ type: 'text', props: { text: raw.text } })
+    components.push({ type: 'text', id: `${id}_text`, props: { text: raw.text } })
   }
 
   if ((raw as { survey?: unknown }).survey !== undefined) {
     const surveyDefinition = (raw as { survey?: unknown }).survey
-    components.push({ type: 'survey', props: { definition: surveyDefinition, source: 'survey' } })
+    components.push({ type: 'survey', id: `${id}_survey`, props: { definition: surveyDefinition, source: 'survey' } })
   } else if ((raw as { survey_items?: unknown }).survey_items !== undefined) {
     const surveyItemsDefinition = (raw as { survey_items?: unknown }).survey_items
-    components.push({ type: 'survey', props: { definition: surveyItemsDefinition, source: 'survey_items' } })
+    components.push({ type: 'survey', id: `${id}_survey`, props: { definition: surveyItemsDefinition, source: 'survey_items' } })
   } else if ((raw as { surveyItems?: unknown }).surveyItems !== undefined) {
     const surveyItemsDefinition = (raw as { surveyItems?: unknown }).surveyItems
-    components.push({ type: 'survey', props: { definition: surveyItemsDefinition, source: 'survey_items' } })
+    components.push({ type: 'survey', id: `${id}_survey`, props: { definition: surveyItemsDefinition, source: 'survey_items' } })
   }
 
   if (Array.isArray(raw.buttons)) {
@@ -163,7 +164,7 @@ export function normalizePage(raw: RawPage): Page | null {
       .map((button) => normalizeButton(button, { pageId: id }))
       .filter((entry): entry is Button => Boolean(entry))
     if (buttons.length) {
-      components.push({ type: 'buttons', props: { buttons } })
+      components.push({ type: 'buttons', id: `${id}_buttons`, props: { buttons } })
     }
   }
 

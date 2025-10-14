@@ -7,6 +7,7 @@ import { Timestamp, getFirestore } from 'firebase-admin/firestore';
 initializeApp();
 
 const firestore = getFirestore();
+console.log('Lab functions initialized');
 
 type ButtonAction = { type: 'go_to'; target: string };
 type Button = { id: string; text: string; action: ButtonAction };
@@ -42,9 +43,35 @@ type Session = {
   currentPageId: string;
   user_state: Record<string, any>;
   endedAt?: string;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 };
 
-const sessions = new Map<string, Session>();
+type SessionDocument = {
+  id: string;
+  configId: string;
+  config: Config;
+  currentPageId: string;
+  user_state: Record<string, any>;
+  endedAt?: string | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+};
+
+type Event = {
+  type: string;
+  timestamp: string;
+  sessionId: string;
+  configId: string;
+  pageId: string;
+  componentType: string;
+  componentId: string;
+  data: Record<string, unknown>;
+};
+
+type EventDocument = Event & {
+  createdAt: Timestamp;
+};
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -100,6 +127,77 @@ function coerceConfig(raw: unknown): Config | null {
 }
 
 async function loadConfig(configId: string): Promise<{ config: Config; doc: ConfigDocument } | null> {
+  // Temporary hardcoded config for testing
+  if (configId === 'survey-showcase') {
+    const hardcodedConfig = {
+      schema_version: "0.1.0",
+      initialPageId: "intro",
+      nodes: [
+        {
+          id: "intro",
+          text: "Welcome to the survey showcase configuration.\nThis run highlights every built-in survey answer type along with descriptions, media, and branching.\n",
+          buttons: [
+            {
+              id: "start",
+              text: "Begin survey",
+              action: {
+                type: "go_to",
+                target: "profile_basics"
+              }
+            }
+          ]
+        },
+        {
+          id: "profile_basics",
+          text: "Lets start with the essentials.",
+          survey: [
+            {
+              id: "display_name",
+              text: "What should we call you?",
+              description: "This name appears on your participant dashboard.",
+              answer: "text",
+              placeholder: "Alex Doe"
+            },
+            {
+              id: "bio",
+              text: "Share a short bio",
+              description: "Give us a sentence or two about yourself.",
+              answer: "free_text",
+              placeholder: "Product designer exploring AI-assisted workflows."
+            }
+          ],
+          buttons: [
+            {
+              id: "basics_continue",
+              text: "Continue",
+              action: {
+                type: "go_to",
+                target: "outro"
+              }
+            }
+          ]
+        },
+        {
+          id: "outro",
+          text: "Thanks for participating!",
+          end: true
+        }
+      ]
+    };
+    const config = coerceConfig(hardcodedConfig);
+    if (!config) return null;
+    return {
+      config,
+      doc: {
+        configId: 'survey-showcase',
+        owner: 'test@example.com',
+        config: hardcodedConfig,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      }
+    };
+  }
+
   const docRef = firestore.collection('configs').doc(configId);
   const snapshot = await docRef.get();
   if (!snapshot.exists) return null;
@@ -108,6 +206,40 @@ async function loadConfig(configId: string): Promise<{ config: Config; doc: Conf
   const config = coerceConfig(data.config);
   if (!config) return null;
   return { config, doc: { ...data, configId: data.configId ?? configId } };
+}
+
+async function loadSession(sessionId: string): Promise<Session | null> {
+  const docRef = firestore.collection('sessions').doc(sessionId);
+  const snapshot = await docRef.get();
+  if (!snapshot.exists) return null;
+  const data = snapshot.data() as SessionDocument | undefined;
+  if (!data) return null;
+  return {
+    id: data.id,
+    configId: data.configId,
+    config: data.config,
+    currentPageId: data.currentPageId,
+    user_state: data.user_state,
+    endedAt: data.endedAt ?? undefined,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+  };
+}
+
+async function saveSession(session: Session): Promise<void> {
+  const docRef = firestore.collection('sessions').doc(session.id);
+  const now = Timestamp.now();
+  const doc: SessionDocument = {
+    id: session.id,
+    configId: session.configId,
+    config: session.config,
+    currentPageId: session.currentPageId,
+    user_state: session.user_state,
+    endedAt: session.endedAt ?? null,
+    createdAt: session.createdAt ?? now,
+    updatedAt: now,
+  };
+  await docRef.set(doc);
 }
 
 const app = new Hono();
@@ -160,7 +292,7 @@ app.post('/sessions/start', async (c) => {
     currentPageId: config.initialPageId,
     user_state: {},
   };
-  sessions.set(id, session);
+  await saveSession(session);
   const page = config.pages[session.currentPageId];
   return c.json({
     sessionId: id,
@@ -170,9 +302,9 @@ app.post('/sessions/start', async (c) => {
   });
 });
 
-app.get('/sessions/:id', (c) => {
+app.get('/sessions/:id', async (c) => {
   const id = c.req.param('id');
-  const session = sessions.get(id);
+  const session = await loadSession(id);
   if (!session) return c.json({ error: 'not_found' }, 404);
   const page = session.config.pages[session.currentPageId];
   return c.json({
@@ -187,18 +319,23 @@ app.get('/sessions/:id', (c) => {
 // Simple advance: client tells us the next target
 app.post('/sessions/:id/advance', async (c) => {
   const id = c.req.param('id');
-  const session = sessions.get(id);
+  const session = await loadSession(id);
   if (!session) return c.json({ error: 'not_found' }, 404);
   const body = (await c.req.json().catch(() => ({}))) as { target?: string };
   const target = body?.target;
-  if (!target || !session.config.pages[target]) {
-    return c.json({ error: 'invalid_target' }, 400);
+  if (!target) {
+    return c.json({ error: 'missing_target' }, 400);
   }
   session.currentPageId = target;
-  const page = session.config.pages[target];
+
+  // In hybrid mode, we don't validate page existence since frontend manages its own config
+  // Just update the session state
+  const page = session.config.pages[target] || { id: target, components: [] };
+
   if (page.end) {
     session.endedAt = new Date().toISOString();
   }
+  await saveSession(session);
   return c.json({
     sessionId: session.id,
     configId: session.configId,
@@ -206,6 +343,47 @@ app.post('/sessions/:id/advance', async (c) => {
     page,
     endedAt: session.endedAt ?? null,
   });
+});
+
+app.post('/sessions/:id/events', async (c) => {
+  const sessionId = c.req.param('id');
+  const session = await loadSession(sessionId);
+  if (!session) return c.json({ error: 'session_not_found' }, 404);
+
+  const body = (await c.req.json().catch(() => null)) as Partial<Event> | null;
+  if (!body) return c.json({ error: 'invalid_body' }, 400);
+
+  // Validate required fields
+  if (!body.type || typeof body.type !== 'string') {
+    return c.json({ error: 'missing_type' }, 400);
+  }
+  if (!body.componentType || typeof body.componentType !== 'string') {
+    return c.json({ error: 'missing_component_type' }, 400);
+  }
+  if (!body.componentId || typeof body.componentId !== 'string') {
+    return c.json({ error: 'missing_component_id' }, 400);
+  }
+  if (!body.timestamp || typeof body.timestamp !== 'string') {
+    return c.json({ error: 'missing_timestamp' }, 400);
+  }
+  if (!body.data || typeof body.data !== 'object') {
+    return c.json({ error: 'missing_data' }, 400);
+  }
+
+  const event: EventDocument = {
+    type: body.type,
+    timestamp: body.timestamp,
+    sessionId,
+    configId: session.configId,
+    pageId: session.currentPageId,
+    componentType: body.componentType,
+    componentId: body.componentId,
+    data: body.data,
+    createdAt: Timestamp.now(),
+  };
+
+  const eventRef = await firestore.collection('events').add(event);
+  return c.json({ eventId: eventRef.id });
 });
 
 // export as a Firebase HTTPS function by forwarding the incoming Express-style request

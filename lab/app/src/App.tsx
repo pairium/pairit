@@ -44,10 +44,51 @@ export default function App() {
       setLoading(true);
       setError(null);
 
+      // Try to load local config first
+      let localConfig = null;
       try {
-        const localConfig = await loadConfig(experimentId);
+        localConfig = await loadConfig(experimentId);
         if (canceled) return;
+      } catch (error) {
+        console.error('Local config load failed', error);
+        if (canceled) return;
+      }
+
+      // Try to create a remote session (works even with local config for event testing)
+      try {
+        const r = await startSession(experimentId);
+        if (canceled) return;
+        console.log('Loading in REMOTE mode - sessionId:', r.sessionId, '- events will be submitted');
+
         if (localConfig) {
+          console.log('Using local config with remote session (hybrid mode)');
+          console.log('Session currentPageId:', r.currentPageId);
+          console.log('Local config has page:', !!localConfig.pages[r.currentPageId]);
+          console.log('Local page:', localConfig.pages[r.currentPageId]);
+
+          setMode('remote');
+          setCompiledConfig(localConfig); // Use local config but with remote session
+          setCurrentPageId(r.currentPageId);
+          setSessionId(r.sessionId);
+          setPage(localConfig.pages[r.currentPageId]); // Use local page instead of remote page
+          setEndRedirectUrl(localConfig.pages[r.currentPageId]?.endRedirectUrl ?? null);
+          setEndedAt(null);
+        } else {
+          setMode('remote');
+          setCompiledConfig(null);
+          setCurrentPageId(r.currentPageId);
+          setSessionId(r.sessionId);
+          setPage(r.page);
+          setEndRedirectUrl(r.page?.endRedirectUrl ?? null);
+          setEndedAt(null);
+        }
+      } catch (e: unknown) {
+        if (canceled) return;
+        console.error('Remote session start failed:', e);
+
+        // Fall back to pure local mode if no backend available
+        if (localConfig) {
+          console.log('Loading in LOCAL mode - no events will be submitted (backend unavailable)');
           const initialPageId = localConfig.initialPageId;
           const initialPage = localConfig.pages[initialPageId] ?? null;
           setMode('local');
@@ -57,27 +98,9 @@ export default function App() {
           setPage(initialPage);
           setEndRedirectUrl(initialPage?.endRedirectUrl ?? null);
           setEndedAt(initialPage?.end ? new Date().toISOString() : null);
-          setLoading(false);
-          return;
+        } else {
+          setError(e instanceof Error ? e.message : 'Failed to start');
         }
-      } catch (error) {
-        console.error('Local config load failed', error);
-        if (canceled) return;
-      }
-
-      try {
-        const r = await startSession(experimentId);
-        if (canceled) return;
-        setMode('remote');
-        setCompiledConfig(null);
-        setCurrentPageId(r.currentPageId);
-        setSessionId(r.sessionId);
-        setPage(r.page);
-        setEndRedirectUrl(r.page?.endRedirectUrl ?? null);
-        setEndedAt(null);
-      } catch (e: unknown) {
-        if (canceled) return;
-        setError(e instanceof Error ? e.message : 'Failed to start');
       } finally {
         if (!canceled) setLoading(false);
       }
@@ -104,6 +127,33 @@ export default function App() {
     }
 
     if (!sessionId) return;
+
+    // In hybrid mode, use local config for navigation but still update remote session
+    if (mode === 'remote' && compiledConfig) {
+      const nextPage = compiledConfig.pages[a.target];
+      if (!nextPage) {
+        setError(`Unknown target: ${a.target}`);
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        // Update remote session state
+        await advance(sessionId, a.target);
+        // But use local page for rendering
+        setCurrentPageId(a.target);
+        setPage(nextPage);
+        setEndRedirectUrl(nextPage.endRedirectUrl ?? null);
+        setEndedAt(nextPage.end ? new Date().toISOString() : null);
+      } catch (error: unknown) {
+        setError(error instanceof Error ? error.message : 'Failed to advance');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Pure remote mode (no local config)
     setLoading(true);
     setError(null);
     try {
@@ -126,10 +176,12 @@ export default function App() {
           <div className="text-sm text-slate-500">
             {mode === 'remote'
               ? sessionId
-                ? `Session: ${sessionId}`
+                ? compiledConfig
+                  ? `Session: ${sessionId} (HYBRID - local config, remote events)`
+                  : `Session: ${sessionId} (REMOTE - events enabled)`
                 : 'No session'
               : mode === 'local' && experimentId
-                ? `Config: ${experimentId}`
+                ? `Config: ${experimentId} (LOCAL - no events)`
                 : '—'}
           </div>
         </div>
@@ -142,7 +194,7 @@ export default function App() {
           <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">Loading…</div>
         )}
 
-        {!loading && page && !endedAt && <PageRenderer page={page} onAction={onAction} />}
+        {!loading && page && !endedAt && <PageRenderer page={page} onAction={onAction} sessionId={sessionId} />}
 
         {!loading && endedAt && (
           <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-8 text-center">

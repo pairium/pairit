@@ -4,12 +4,14 @@ import { Button } from '../components/ui/button'
 import { Survey } from '../components/survey'
 import type { SurveyProps } from '../components/survey'
 import type { ButtonAction, ButtonsComponent, ComponentInstance, TextComponent } from './types'
+import { submitEvent } from '../lib/api'
 
 export type NavigationGuard = (action: ButtonAction) => boolean | undefined | Promise<boolean | undefined>
 
 export interface RuntimeComponentContext {
   onAction: (action: ButtonAction) => void | Promise<void>
   registerNavigationGuard: (guard: NavigationGuard) => () => void
+  sessionId?: string | null
 }
 
 export type RuntimeComponentRenderer<
@@ -99,9 +101,32 @@ const buttonsRenderer: RuntimeComponentRenderer<'buttons', ButtonsComponent['pro
 
 const surveyRenderer: RuntimeComponentRenderer<'survey', Partial<SurveyProps>> = ({ component, context }) => {
   const props = component.props as Partial<SurveyProps>
+
+  const handleSubmit = async (values: Record<string, unknown>) => {
+    if (props.onSubmitValues) {
+      await props.onSubmitValues(values)
+    }
+
+    // Submit event if we have a sessionId (remote mode)
+    if (context.sessionId) {
+      try {
+        await submitEvent(context.sessionId, {
+          type: 'survey_submission',
+          timestamp: new Date().toISOString(),
+          componentType: 'survey',
+          componentId: component.id ?? 'unknown',
+          data: values,
+        })
+      } catch (error) {
+        console.error('Failed to submit survey event', error)
+      }
+    }
+  }
+  
   return (
     <Survey
       {...props}
+      onSubmitValues={handleSubmit}
       registerNavigationGuard={props.registerNavigationGuard ?? context.registerNavigationGuard}
     />
   )
