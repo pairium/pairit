@@ -79,7 +79,7 @@ After deploying the manager API, update the CLI target:
 export PAIRIT_FUNCTIONS_BASE_URL=https://manager-abcd.a.run.app # or for now, update the hard coded url
 ```
 
-After deploying the lab API, update `lab/app/.env.local` and `lab/app/.env.prod`:
+After deploying the lab API, update `lab/app/.env.local` and `lab/app/.env.production`:
 ```zsh
 VITE_API_URL=https://lab-abcd.a.run.app
 ```

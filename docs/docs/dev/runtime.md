@@ -90,7 +90,7 @@ Flow:
 
 Environment:
 
-- Set `VITE_API_URL` in `lab/app/.env.local` (dev) or `.env.prod` (prod) to point at your lab Functions base URL.
+- Set `VITE_API_URL` in `lab/app/.env.local` (dev) or `.env.production` (prod) to point at your lab Functions base URL.
   - Example (emulator): `VITE_API_URL=http://127.0.0.1:5001/pairit-local/us-east4/lab`
   - Example (deployed): `VITE_API_URL=https://<your-lab-function-host>`
 
