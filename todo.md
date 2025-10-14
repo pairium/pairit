@@ -7,10 +7,12 @@ get pairit complete with surveys first
 - [x] media in Cloud Storage, keep metadata in Firestore
 - [ ] firestore events
   - [x] survey
-  - [ ] other components too
-    > for each
-- [ ] simplify runtime
+  - [x] other components too
+- [ ] refactor runtime
   > strip redundant logic from the normalizer. i want to keep the runtime minimal. when we add new properties and components, can we just add it to the component and the config? i don't want the runtime to care about the specific components, just some abstractions of the components. and capture a note in the docs that future additions should live in components plus config when possible.
+  - [ ] registry
+  - [ ] normalizer
+  - [ ] 
 - [ ] add paginated survey component
 - [ ] sessions
   - [ ] auth?

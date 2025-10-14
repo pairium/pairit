@@ -20,6 +20,8 @@ import { Input } from '@components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@components/ui/radio-group'
 import { Textarea } from '@components/ui/textarea'
 
+import { Media } from '@components/ui/media'
+
 import { cn } from '@app/lib/utils'
 
 import type { ButtonAction } from '../../runtime/types'
@@ -183,7 +185,7 @@ export function Survey(props: SurveyProps): ReactElement | null {
                     <FieldContent>
                       <FieldLabel htmlFor={item.id}>{item.text}</FieldLabel>
                       {item.description ? <FieldDescription>{item.description}</FieldDescription> : null}
-                      {renderMedia(item)}
+                      <Media media={item.media} alt={item.text} />
                       {renderAnswerInput({ item, field })}
                       {errors?.length ? <FieldError errors={errors} /> : null}
                     </FieldContent>
@@ -337,51 +339,6 @@ function resolveFieldErrors(errors: unknown[] | undefined): string[] | undefined
   return unique.length ? unique : undefined
 }
 
-function renderMedia(item: SurveyItemDefinition): ReactElement | null {
-  const media = item.media
-  if (!media) return null
-
-  const type = typeof media.type === 'string' ? media.type : typeof media.kind === 'string' ? media.kind : null
-  const src = typeof media.src === 'string' ? media.src : typeof media.url === 'string' ? media.url : null
-
-  if (!type || !src) return null
-
-  if (type === 'image') {
-    return <img src={src} alt={item.text} className="max-h-48 w-full rounded-lg object-cover" />
-  }
-
-  if (type === 'video') {
-    const captionsSrc = typeof media.captions === 'string' ? media.captions : undefined
-    if (!captionsSrc) {
-      return (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Video content requires captions. Provide a <code>captions</code> source to render the player or{' '}
-          <a className="underline" href={src} target="_blank" rel="noreferrer">
-            download the video
-          </a>
-          .
-        </div>
-      )
-    }
-
-    const mediaLabel =
-      typeof media.label === 'string'
-        ? media.label
-        : typeof media.alt === 'string'
-          ? media.alt
-          : item.text
-
-    return (
-      <video controls className="w-full rounded-lg" aria-label={mediaLabel}>
-        <source src={src} />
-        <track kind="captions" src={captionsSrc} label="Captions" default />
-        Your browser does not support the video tag.
-      </video>
-    )
-  }
-
-  return null
-}
 
 function resolveSurveyContent({ definition, items, source }: ResolveSurveyContentInput): ResolvedSurveyContent {
   const containerCandidate = isRecord(definition)

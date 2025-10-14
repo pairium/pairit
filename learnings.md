@@ -2,6 +2,8 @@
 - Ensure runtime registry exports requested symbols before re-export to prevent Vite import errors.
 - Navigation guards may need action context (e.g., skip-validation flags) so back buttons can bypass required-field checks while forward buttons enforce them.
 - Hono wildcard routes (`/media/*`) with `c.req.param('*')` don't work reliably with Firebase Functions adapter; use named parameters (`/media/:object`) for path segments instead.
+- Frontend and backend both needed reliable local config access. The runtime already loaded JSON from lab/app/public/configs/, so the lab functions had to mirror that instead of depending on separate manager uploads or network fetches.
+- Accurate paths matter. The first fallback pointed at app/public/configs, triggering ENOENT; switching to lab/app/public/configs resolved it. Always double-check relative pathing in monorepos.
 
 ## Event-Based Survey Submission: Key Implementation Insights
 

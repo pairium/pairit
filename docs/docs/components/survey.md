@@ -2,6 +2,13 @@
 
 Survey groups manage a sequence of questions with validation and paging. On submit, answers are written to `$.user_state` keyed by question `id`.
 
+Events
+- `onSubmit`: emitted automatically when survey is submitted (default event type: "survey_submission")
+
+Event Data
+- Contains all survey answers as key-value pairs where keys are question IDs and values are the user's responses
+- Custom data can be added via component-level `events.onSubmit.data`
+
 ## Structure
 
 - `survey` accepts either a shorthand definition for common flows or an explicit list of survey items.

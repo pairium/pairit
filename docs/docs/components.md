@@ -14,6 +14,10 @@ Component-first architecture
   - Or use `matchmaking` to assign a `groupId`, then join chat rooms shared by that group.
 - Live workspaces: a `live-workspace` component plugs into pages like any other component.
 
+- Events: all interactive components automatically emit structured events for research data collection. Configure custom event metadata to capture experiment-specific details.
+  - Button clicks, survey submissions, media interactions, matchmaking lifecycle, chat messages, and form changes all generate trackable events.
+  - Events include standard metadata (sessionId, pageId, componentId) plus configurable custom data.
+
 Result: a consistent, declarative system where pages stay lightweight and features drop in as components.
 
 

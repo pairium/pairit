@@ -23,13 +23,43 @@ Events have a standardized structure with the following fields:
 - `componentId` (string): The ID of the specific component instance
 - `data` (object): Component-specific event data (flexible structure)
 
+#### Event Configuration
+
+Components can be configured with custom event metadata in the YAML config:
+
+```yaml
+components:
+  - type: button
+    id: my_button
+    props:
+      text: "Click me"
+    events:
+      onClick:
+        type: "custom_button_click"
+        data:
+          experiment_phase: "testing"
+          button_category: "primary"
+```
+
+#### Event Hooks by Component
+
+- **Buttons**: `onClick` - emitted when button is clicked
+- **Survey**: `onSubmit` - emitted automatically when survey is submitted
+- **Media**: `onPlay`, `onPause`, `onSeek`, `onComplete`, `onError` - various media interactions
+- **Matchmaking**: `onRequestStart`, `onMatchFound`, `onTimeout`, `onCancel` - matchmaking lifecycle
+- **Chat**: `onMessageSend`, `onMessageReceive`, `onTypingStart`, `onTypingStop` - chat interactions
+- **Form**: `onSubmit`, `onFieldChange` - form submissions and field updates
+
 #### Event Data Field
 
 The `data` field is flexible and component-specific:
 
-- **Survey submissions**: Contains the survey answers as key-value pairs where keys are question IDs and values are the user's responses
-- **Button clicks**: Could contain button ID, label, and action details
-- **Media interactions**: Could contain play/pause events, timestamps, etc.
+- **Survey submissions**: Contains all survey answers as key-value pairs
+- **Button clicks**: Contains `button_id`, `label`, and custom metadata
+- **Media interactions**: Contains `media_id`, `current_time`, `duration`, etc.
+- **Matchmaking events**: Contains `pool_id`, `group_size`, `wait_duration_seconds`
+- **Chat events**: Contains `chat_group_id`, `message_id`, `sender_type`
+- **Form events**: Contains `form_id`, `field_values`, `field_id` (on change)
 
 #### Storage
 

@@ -111,3 +111,117 @@ agents:
   - id: default_agent
     model: "grok-4-fast-non-reasoning"
 ```
+
+## Component Events Showcase
+
+This comprehensive example demonstrates how to configure custom events for all interactive components. Events are optional and allow you to track user interactions with detailed metadata.
+
+```yaml
+initialPageId: intro
+
+pages:
+  - id: intro
+    text: "Welcome to the component events showcase."
+    buttons:
+      - id: start
+        text: "Begin showcase"
+        action:
+          type: go_to
+          target: button_examples
+        events:
+          onClick:
+            type: "button_click"
+            data:
+              button_id: "start"
+              label: "Begin showcase"
+              section: "navigation"
+
+  - id: button_examples
+    text: "Button event examples."
+    components:
+      - type: buttons
+        props:
+          buttons:
+            - id: primary_action
+              text: "Primary Action"
+              action:
+                type: go_to
+                target: survey_examples
+              events:
+                onClick:
+                  type: "button_click"
+                  data:
+                    button_id: "primary_action"
+                    category: "primary"
+                    priority: "high"
+
+  - id: survey_examples
+    text: "Survey components automatically emit survey_submission events."
+    survey:
+      - id: user_satisfaction
+        text: "How satisfied are you?"
+        answer: likert5
+    buttons:
+      - id: survey_continue
+        text: "Continue"
+        action:
+          type: go_to
+          target: media_examples
+
+  - id: media_examples
+    text: "Media components can emit various interaction events."
+    components:
+      - type: media
+        props:
+          kind: video
+          src: "https://example.com/demo.mp4"
+        events:
+          onPlay:
+            type: "media_play"
+            data:
+              media_id: "demo_video"
+              media_type: "video"
+          onPause:
+            type: "media_pause"
+            data:
+              media_id: "demo_video"
+          onComplete:
+            type: "media_complete"
+            data:
+              media_id: "demo_video"
+
+  - id: matchmaking_examples
+    text: "Matchmaking components emit events during the matching process."
+    components:
+      - type: matchmaking
+        props:
+          num_users: 2
+          timeoutSeconds: 30
+        events:
+          onRequestStart:
+            type: "matchmaking_start"
+            data:
+              pool_id: "demo_pool"
+          onMatchFound:
+            type: "matchmaking_success"
+            data:
+              pool_id: "demo_pool"
+          onTimeout:
+            type: "matchmaking_timeout"
+            data:
+              pool_id: "demo_pool"
+
+  - id: outro
+    end: true
+    text: "Thank you for exploring the component events showcase!"
+```
+
+Available event hooks by component:
+- **buttons**: `onClick` (default)
+- **survey**: `onSubmit` (automatic)
+- **media**: `onPlay`, `onPause`, `onSeek`, `onComplete`, `onError`
+- **matchmaking**: `onRequestStart`, `onMatchFound`, `onTimeout`, `onCancel`
+- **chat**: `onMessageSend`, `onMessageReceive`, `onTypingStart`, `onTypingStop`
+- **form**: `onSubmit`, `onFieldChange`
+
+Event data is flexible and can include any metadata relevant to your research. All events include standard fields like `sessionId`, `configId`, `pageId`, `componentType`, and `componentId`.

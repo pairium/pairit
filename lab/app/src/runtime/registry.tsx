@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 
 import { Button } from '../components/ui/button'
+import { Media } from '../components/ui/media'
 import { Survey } from '../components/survey'
 import type { SurveyProps } from '../components/survey'
-import type { ButtonAction, ButtonsComponent, ComponentInstance, TextComponent } from './types'
+import type { ButtonAction, ButtonsComponent, ComponentInstance, MediaComponent, TextComponent } from './types'
 import { submitEvent } from '../lib/api'
 
 export type NavigationGuard = (action: ButtonAction) => boolean | undefined | Promise<boolean | undefined>
@@ -88,7 +89,26 @@ const buttonsRenderer: RuntimeComponentRenderer<'buttons', ButtonsComponent['pro
         <Button
           key={button.id}
           type="button"
-          onClick={() => {
+          onClick={async () => {
+            // Emit event if configured
+            if (button.events?.onClick && context.sessionId) {
+              try {
+                await submitEvent(context.sessionId, {
+                  type: button.events.onClick.type ?? 'button_click',
+                  timestamp: new Date().toISOString(),
+                  componentType: 'buttons',
+                  componentId: component.id ?? 'unknown',
+                  data: {
+                    button_id: button.id,
+                    label: button.text,
+                    ...button.events.onClick.data,
+                  },
+                })
+              } catch (error) {
+                console.error('Failed to submit button event', error)
+              }
+            }
+
             void context.onAction(button.action)
           }}
         >
@@ -96,6 +116,59 @@ const buttonsRenderer: RuntimeComponentRenderer<'buttons', ButtonsComponent['pro
         </Button>
       ))}
     </div>
+  )
+}
+
+const mediaRenderer: RuntimeComponentRenderer<'media', MediaComponent['props']> = ({ component, context }) => {
+  const props = component.props as { type?: string; src?: string; alt?: string; label?: string; captions?: string }
+  const { type, src, alt, label, captions } = props
+
+  const media = {
+    type,
+    src,
+    url: src,
+    alt: alt || label,
+    label,
+    captions,
+  }
+
+  // Event handlers
+  const createEventHandler = (eventName: 'onPlay' | 'onPause' | 'onSeek' | 'onComplete' | 'onError') => {
+    if (!component.events?.[eventName] || !context.sessionId) return undefined
+
+    const eventConfig = component.events[eventName]
+    if (!eventConfig) return undefined
+
+    return async (data?: Record<string, unknown>) => {
+      try {
+        await submitEvent(context.sessionId!, {
+          type: eventConfig.type ?? `media_${eventName.toLowerCase()}`,
+          timestamp: new Date().toISOString(),
+          componentType: 'media',
+          componentId: component.id ?? 'unknown',
+          data: {
+            media_id: component.id ?? 'unknown',
+            media_type: type,
+            ...data,
+            ...eventConfig.data,
+          },
+        })
+      } catch (error) {
+        console.error(`Failed to submit media ${eventName} event`, error)
+      }
+    }
+  }
+
+  return (
+    <Media
+      media={media}
+      alt={alt || label}
+      onPlay={createEventHandler('onPlay')}
+      onPause={createEventHandler('onPause')}
+      onSeek={(currentTime) => createEventHandler('onSeek')?.({ current_time: currentTime })}
+      onComplete={createEventHandler('onComplete')}
+      onError={(error) => createEventHandler('onError')?.({ error_message: error.toString() })}
+    />
   )
 }
 
@@ -122,7 +195,7 @@ const surveyRenderer: RuntimeComponentRenderer<'survey', Partial<SurveyProps>> =
       }
     }
   }
-  
+
   return (
     <Survey
       {...props}
@@ -134,6 +207,7 @@ const surveyRenderer: RuntimeComponentRenderer<'survey', Partial<SurveyProps>> =
 
 registerComponent('text', textRenderer)
 registerComponent('buttons', buttonsRenderer)
+registerComponent('media', mediaRenderer)
 registerComponent('survey', surveyRenderer)
 
 

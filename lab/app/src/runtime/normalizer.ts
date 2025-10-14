@@ -49,6 +49,7 @@ function normalizeButton(raw: unknown, options: NormalizationOptions): Button | 
     id,
     text,
     action: skipValidation ? { type: 'go_to', target: goTo.target, skipValidation: true } : { type: 'go_to', target: goTo.target },
+    events: button.events,
   }
 }
 
@@ -128,10 +129,14 @@ function normalizeComponent(raw: RawComponent, options: NormalizationOptions): C
   if (!type) return null
 
   const props = isRecord(record.props) ? { ...(record.props as Record<string, unknown>) } : {}
+  const id = typeof record.id === 'string' ? record.id : undefined
+  const events = isRecord(record.events) ? record.events as Record<string, { type?: string; data?: Record<string, unknown> }> : undefined
 
   return {
     type,
+    id,
     props,
+    events,
   }
 }
 

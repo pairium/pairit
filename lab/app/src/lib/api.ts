@@ -1,3 +1,4 @@
+import type { EventPayload } from '../runtime/types'
 import type { Page } from '../runtime/types'
 
 const baseUrl = import.meta.env.VITE_API_URL;
@@ -6,14 +7,6 @@ type StartResponse = { sessionId: string; configId: string; currentPageId: strin
 type GetResponse = { sessionId: string; currentPageId: string; page: Page; endedAt: string | null };
 type AdvanceResponse = GetResponse;
 type SubmitEventResponse = { eventId: string };
-
-export type EventPayload = {
-  type: string;
-  timestamp: string;
-  componentType: string;
-  componentId: string;
-  data: Record<string, unknown>;
-};
 
 export async function startSession(configId: string): Promise<StartResponse> {
   const r = await fetch(`${baseUrl}/sessions/start`, {

@@ -3,11 +3,19 @@ import { cors } from 'hono/cors';
 import { onRequest } from 'firebase-functions/v2/https';
 import { initializeApp } from 'firebase-admin/app';
 import { Timestamp, getFirestore } from 'firebase-admin/firestore';
+import { readFile } from 'fs/promises';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
 initializeApp();
 
 const firestore = getFirestore();
 console.log('Lab functions initialized');
+
+// Get path to configs directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const configsDir = join(__dirname, '../../app/public/configs');
 
 type ButtonAction = { type: 'go_to'; target: string };
 type Button = { id: string; text: string; action: ButtonAction };
@@ -127,85 +135,44 @@ function coerceConfig(raw: unknown): Config | null {
 }
 
 async function loadConfig(configId: string): Promise<{ config: Config; doc: ConfigDocument } | null> {
-  // Temporary hardcoded config for testing
-  if (configId === 'survey-showcase') {
-    const hardcodedConfig = {
-      schema_version: "0.1.0",
-      initialPageId: "intro",
-      nodes: [
-        {
-          id: "intro",
-          text: "Welcome to the survey showcase configuration.\nThis run highlights every built-in survey answer type along with descriptions, media, and branching.\n",
-          buttons: [
-            {
-              id: "start",
-              text: "Begin survey",
-              action: {
-                type: "go_to",
-                target: "profile_basics"
-              }
-            }
-          ]
-        },
-        {
-          id: "profile_basics",
-          text: "Lets start with the essentials.",
-          survey: [
-            {
-              id: "display_name",
-              text: "What should we call you?",
-              description: "This name appears on your participant dashboard.",
-              answer: "text",
-              placeholder: "Alex Doe"
-            },
-            {
-              id: "bio",
-              text: "Share a short bio",
-              description: "Give us a sentence or two about yourself.",
-              answer: "free_text",
-              placeholder: "Product designer exploring AI-assisted workflows."
-            }
-          ],
-          buttons: [
-            {
-              id: "basics_continue",
-              text: "Continue",
-              action: {
-                type: "go_to",
-                target: "outro"
-              }
-            }
-          ]
-        },
-        {
-          id: "outro",
-          text: "Thanks for participating!",
-          end: true
-        }
-      ]
-    };
-    const config = coerceConfig(hardcodedConfig);
-    if (!config) return null;
-    return {
-      config,
-      doc: {
-        configId: 'survey-showcase',
-        owner: 'test@example.com',
-        config: hardcodedConfig,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
-      }
-    };
-  }
-
+  // First try to load from Firestore
   const docRef = firestore.collection('configs').doc(configId);
   const snapshot = await docRef.get();
-  if (!snapshot.exists) return null;
-  const data = snapshot.data() as ConfigDocument | undefined;
-  if (!data || typeof data.config === 'undefined') return null;
-  const config = coerceConfig(data.config);
-  if (!config) return null;
-  return { config, doc: { ...data, configId: data.configId ?? configId } };
+  if (snapshot.exists) {
+    const data = snapshot.data() as ConfigDocument | undefined;
+    if (data && typeof data.config !== 'undefined') {
+      const config = coerceConfig(data.config);
+      if (config) {
+        return { config, doc: { ...data, configId: data.configId ?? configId } };
+      }
+    }
+  }
+
+  // Fallback: try to load from local configs directory (for development)
+  try {
+    const configPath = join(configsDir, `${configId}.json`);
+    const configContent = await readFile(configPath, 'utf8');
+    const raw = JSON.parse(configContent);
+    const config = coerceConfig(raw);
+    if (config) {
+      return {
+        config,
+        doc: {
+          configId,
+          owner: 'local',
+          checksum: undefined,
+          metadata: null,
+          config: raw,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        }
+      };
+    }
+  } catch (error) {
+    console.log(`Local config fallback failed for ${configId}:`, error);
+  }
+
+  return null;
 }
 
 async function loadSession(sessionId: string): Promise<Session | null> {

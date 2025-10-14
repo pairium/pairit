@@ -16,14 +16,13 @@ This repo hosts a minimal end-to-end slice of the Pairit stack: a pnpm monorepo 
 - `manager`: Experimenter-facing tools and app
     - `manager/cli`
     - `manager/functions`
-    - `manager/app`
 - `configs/`: example configs
 
 ## Quickstart
 
 1. Install dependencies: `pnpm install`.
 2. Build the workspaces: `pnpm build`.
-3. Compile the sample config: `pnpm publish:example` (writes `configs/simple-survey.json`).
+3. Compile sample configs: `pnpm --filter manager-cli build && node manager/cli/dist/index.js config compile lab/app/public/configs/component-events-showcase.yaml` (demonstrates event configuration).
 4. Start local services: open three terminals (A `pnpm emulators`, B `pnpm --filter functions dev`, C `pnpm --filter web dev`) then visit `http://localhost:5173`.
 5. Manual walkthrough: click **Start session** in the web client, watch the `POST /sessions/start` response with `sessionId` and node `intro`, click **Next** to advance to `survey_1` then `outro`, and confirm the session doc under `sessions/{sessionId}` in the Firestore emulator.
 6. API spot checks (optional): start a session with `curl -X POST http://localhost:5001/pairit-local/us-east4/api/sessions/start -H 'Content-Type: application/json' -d '{"publicId":"demo"}'`, advance it with `curl -X POST http://localhost:5001/pairit-local/us-east4/api/sessions/SESSION_ID/advance -H 'Content-Type: application/json' -d '{"event":{"type":"next"}}'`, and fetch state with `curl http://localhost:5001/pairit-local/us-east4/api/sessions/SESSION_ID`.
