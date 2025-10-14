@@ -140,8 +140,12 @@ const mediaRenderer: RuntimeComponentRenderer<'media', MediaComponent['props']> 
     if (!eventConfig) return undefined
 
     return async (data?: Record<string, unknown>) => {
+      if (!context.sessionId) {
+        console.error('No sessionId provided for event submission')
+        return
+      }
       try {
-        await submitEvent(context.sessionId, {
+        await submitEvent(context.sessionId as string, {
           type: eventConfig.type ?? `media_${eventName.toLowerCase()}`,
           timestamp: new Date().toISOString(),
           componentType: 'media',
