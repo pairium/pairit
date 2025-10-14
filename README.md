@@ -52,7 +52,11 @@ This project uses a single Firebase project for Firestore rules, Cloud Functions
 
 The `pnpm emulators` script builds the functions and starts the emulators for functions, Firestore, and Realtime Database.
 
-To point the CLI to the emulator: `export PAIRIT_FUNCTIONS_BASE_URL=http://127.0.0.1:5001/pairit-local/us-central1/api`.
+If you want to run just `lab-functions`: `firebase emulators:start --only functions:lab,firestore`.
+
+If you want to run just `manager-functions`: `firebase emulators:start --only functions:manager,firestore`.
+
+To point the CLI to the emulator: `export PAIRIT_FUNCTIONS_BASE_URL=http://127.0.0.1:5001/pairit-local/us-central1/api`. (This is hard-coded now.)
 
 ### Deploying to Production
 
@@ -99,3 +103,34 @@ To point the CLI to the emulator: `export PAIRIT_FUNCTIONS_BASE_URL=http://127.0
    (First time: `firebase hosting:sites:create docs`)
 
    `firebase deploy --only hosting:docs`
+
+## Todo
+
+get pairit complete with surveys first
+- [x] visual feedback for buttons
+- [x] fix survey required items
+- [x] add back button
+- [x] media in Cloud Storage, keep metadata in Firestore
+- [x] firestore events
+  - [x] survey
+  - [x] other components too
+- [-] refactor runtime
+  > strip redundant logic from the normalizer. i want to keep the runtime minimal. when we add new properties and components, can we just add it to the component and the config? i don't want the runtime to care about the specific components, just some abstractions of the components. and capture a note in the docs that future additions should live in components plus config when possible.
+  - [x] registry
+  - [ ] normalizer - need to think about where to put the defensive logic
+  - [ ] regression test
+- [ ] add paginated survey component
+- [ ] sessions
+  - [ ] auth?
+  - [ ] store data
+  - [ ] user id
+- [ ] cli auth
+- [ ] make app & docs look nice like [shadcn](https://ui.shadcn.com/)
+   - [ ] consolidate styles
+
+### Backlog
+
+- [ ] developer preview
+- [ ] agents
+- [ ] chat
+- [ ] live workspace

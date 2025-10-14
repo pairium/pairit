@@ -98,7 +98,7 @@ function normalizeTextComponent(raw: RawComponent): TextComponent | null {
 
 // survey component performs its own normalization; the runtime only passes through definitions
 
-function normalizeComponent(raw: RawComponent, options: NormalizationOptions): ComponentInstance | null {
+function normalizeComponent(raw: unknown, options: NormalizationOptions): ComponentInstance | null {
   if (raw == null) return null
 
   if (typeof raw === 'string') {
@@ -146,22 +146,32 @@ export function normalizePage(raw: RawPage): Page | null {
   const id = typeof raw.id === 'string' ? raw.id : null
   if (!id) return null
 
-
   const components: ComponentInstance[] = []
+
+  const pushNormalizedComponent = (entry: unknown) => {
+    const component = normalizeComponent(entry, { pageId: id })
+    if (component) components.push(component)
+  }
 
   if (typeof raw.text === 'string') {
     components.push({ type: 'text', id: `${id}_text`, props: { text: raw.text } })
   }
 
-  if ((raw as { survey?: unknown }).survey !== undefined) {
-    const surveyDefinition = (raw as { survey?: unknown }).survey
-    components.push({ type: 'survey', id: `${id}_survey`, props: { definition: surveyDefinition, source: 'survey' } })
-  } else if ((raw as { survey_items?: unknown }).survey_items !== undefined) {
-    const surveyItemsDefinition = (raw as { survey_items?: unknown }).survey_items
-    components.push({ type: 'survey', id: `${id}_survey`, props: { definition: surveyItemsDefinition, source: 'survey_items' } })
-  } else if ((raw as { surveyItems?: unknown }).surveyItems !== undefined) {
-    const surveyItemsDefinition = (raw as { surveyItems?: unknown }).surveyItems
-    components.push({ type: 'survey', id: `${id}_survey`, props: { definition: surveyItemsDefinition, source: 'survey_items' } })
+  const surveySource = (() => {
+    if ((raw as { survey?: unknown }).survey !== undefined) {
+      return { definition: (raw as { survey?: unknown }).survey, source: 'survey' as const }
+    }
+    if ((raw as { survey_items?: unknown }).survey_items !== undefined) {
+      return { definition: (raw as { survey_items?: unknown }).survey_items, source: 'survey_items' as const }
+    }
+    if ((raw as { surveyItems?: unknown }).surveyItems !== undefined) {
+      return { definition: (raw as { surveyItems?: unknown }).surveyItems, source: 'survey_items' as const }
+    }
+    return undefined
+  })()
+
+  if (surveySource) {
+    components.push({ type: 'survey', id: `${id}_survey`, props: { definition: surveySource.definition, source: surveySource.source } })
   }
 
   if (Array.isArray(raw.buttons)) {
@@ -173,27 +183,21 @@ export function normalizePage(raw: RawPage): Page | null {
     }
   }
 
-  const componentsInput: unknown[] = []
-
   if (Array.isArray(raw.components)) {
-    componentsInput.push(...raw.components)
+    for (const entry of raw.components) {
+      pushNormalizedComponent(entry)
+    }
   }
 
   if (typeof raw.componentType === 'string') {
-    componentsInput.push({ type: raw.componentType, props: raw.props })
+    pushNormalizedComponent({ type: raw.componentType, props: raw.props })
   } else if (Array.isArray(raw.componentType)) {
-    componentsInput.push(...raw.componentType)
+    for (const entry of raw.componentType) {
+      pushNormalizedComponent(entry)
+    }
   }
 
-  for (const entry of componentsInput) {
-    const component = normalizeComponent(entry as RawComponent, { pageId: id })
-    if (component) components.push(component)
-  }
-
-  const endRedirectUrl =
-    typeof (raw as { endRedirectUrl?: unknown }).endRedirectUrl === 'string'
-      ? (raw as { endRedirectUrl?: string }).endRedirectUrl
-      : undefined
+  const endRedirectUrl = typeof raw.endRedirectUrl === 'string' ? raw.endRedirectUrl : undefined
 
   if (!components.length) {
     return {
@@ -216,12 +220,7 @@ export function normalizeConfig(config: unknown): { initialPageId: string; pages
   if (!config || typeof config !== 'object') return null
   const parsed = config as { initialPageId?: unknown; pages?: unknown; nodes?: unknown }
 
-  const initialPageId =
-    typeof parsed.initialPageId === 'string'
-      ? parsed.initialPageId
-      : typeof parsed.initialPageId === 'string'
-        ? parsed.initialPageId
-        : null
+  const initialPageId = typeof parsed.initialPageId === 'string' ? parsed.initialPageId : null
   if (!initialPageId) return null
 
   const pagesInput = parsed.pages ?? parsed.nodes

@@ -2,6 +2,7 @@ import type { CompiledConfig } from './config'
 
 import { getConfig, registerConfig } from './config'
 import { normalizeConfig } from './normalizer'
+import '../components/runtime'
 
 export { registerComponent, unregisterComponent, setFallbackComponent } from './registry'
 export type { RuntimeComponentContext, RuntimeComponentRenderer } from './registry'
