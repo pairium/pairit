@@ -218,11 +218,10 @@ mediaCommand
         }
       }
 
-      console.log(`Deleting media ${object} at ${encodeURIComponent(object)}`);
-      // await callFunctions(
-      //   `/media/${encodeURIComponent(object)}`,
-      //   { method: "DELETE" }
-      // );
+      await callFunctions(
+        `/media/${encodeURIComponent(object)}`,
+        { method: "DELETE" }
+      );
       console.log(`✓ Deleted media ${object}`);
     } catch (error) {
       reportCliError("Media delete failed", error);
