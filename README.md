@@ -1,115 +1,101 @@
 # Pairit Quickstart
 
-This repo hosts a minimal end-to-end slice of the Pairit stack: a pnpm monorepo with a Vite/React client, Firebase Functions powered by Hono, and supporting packages for the configuration DSL and runtime.
-
-## Prerequisites
-
-- Node.js 22 (Functions deploy target) or newer
-- pnpm 8+
-- Firebase CLI (`npm i -g firebase-tools`) if you want to run emulators
+This monorepo hosts the Pairit stack.
 
 ## Repository Structure
 
-- `lab/functions`: Participant-facing app
-    - `lab/functions`: Firebase Cloud Functions API built with Hono
-    - `lab/app`: Vite React Tanstack frontend
-- `manager`: Experimenter-facing tools and app
-    - `manager/cli`
-    - `manager/functions`
-- `configs/`: example configs
+- `docs/`
+- `lab/`: Participant-facing app
+  - `app/`: Vite + React frontend
+  - `functions/`: Hono backend on Firebase Functions
+- `manager/`: Experimenter-facing tools
+  - `cli/`: CLI for managing experiments
+  - `functions/`: Hono backend on Firebase Functions
+
+## Prerequisites
+
+- Node.js 22 or newer
+- pnpm 8 or newer
+- Firebase CLI: `npm i -g firebase-tools`
 
 ## Quickstart
 
-1. Install dependencies: `pnpm install`.
-2. Build the workspaces: `pnpm build`.
-3. Compile sample configs: `pnpm --filter manager-cli build && node manager/cli/dist/index.js config compile lab/app/public/configs/component-events-showcase.yaml` (demonstrates event configuration).
-4. Start local services: open three terminals (A `pnpm emulators`, B `pnpm --filter functions dev`, C `pnpm --filter web dev`) then visit `http://localhost:5173`.
-5. Manual walkthrough: click **Start session** in the web client, watch the `POST /sessions/start` response with `sessionId` and node `intro`, click **Next** to advance to `survey_1` then `outro`, and confirm the session doc under `sessions/{sessionId}` in the Firestore emulator.
-6. API spot checks (optional): start a session with `curl -X POST http://localhost:5001/pairit-local/us-east4/api/sessions/start -H 'Content-Type: application/json' -d '{"publicId":"demo"}'`, advance it with `curl -X POST http://localhost:5001/pairit-local/us-east4/api/sessions/SESSION_ID/advance -H 'Content-Type: application/json' -d '{"event":{"type":"next"}}'`, and fetch state with `curl http://localhost:5001/pairit-local/us-east4/api/sessions/SESSION_ID`.
-7. Tests: `pnpm test` (runs the compiler unit test and checks other packages for pending tests).
+### Experimenters
 
-## Firebase Functions & CLI Deployment
+1. Review the experimenter docs in `docs/` or at [pairit-lab-docs.web.app](https://pairit-lab-docs.web.app), starting with `docs/quickstart.md` for a YAML template.
+2. Use the CLI to validate or publish your config once the CLI is installed (see `manager/cli/README.md`):
 
-We manage two Cloud Functions codebases: `lab` (participant runtime) and `manager` (experiment management CLI API). See firebase.json.
+   ```zsh
+   pairit config lint your_experiment.yaml
+   pairit config compile your_experiment.yaml
+   pairit config upload your_experiment.yaml --owner you@example.com
+   ```
 
-### Local emulators
+3. Share the published experiment link with participants.
 
-```zsh
-# Install dependencies
-pnpm install
+### Developers
 
-# Build the function bundles once (re-run after changes)
-pnpm --filter lab-functions run build
-pnpm --filter manager-functions run build
+1. Install dependencies: `pnpm install`
+2. Build packages: `pnpm build`
+3. Start local services:
 
-# Start the emulators for Firestore + both function codebases
-firebase emulators:start --only functions:lab,functions:manager,firestore --project pairit-local
+   - Terminal 1: `pnpm emulators`
+   - Terminal 2: `pnpm --filter lab-app dev`
 
-# In another shell, point the CLI at the emulator if needed
-export PAIRIT_FUNCTIONS_BASE_URL=http://127.0.0.1:5001/pairit-local/us-east4/api
-```
+   Visit http://localhost:3000. The emulators run functions at http://localhost:5001/pairit-local/us-central1/api and Firestore at http://localhost:8080 (UI at http://localhost:4000).
 
-If you only want the manager API when iterating on the CLI, drop `functions:lab` from the `--only` flag.
+## Firebase Setup and Deployment
 
-### Deploying to Firebase
+This project uses a single Firebase project for Firestore rules, Cloud Functions (two codebases: `lab` for participant API and `manager` for experimenter API), and Hosting (two sites: `lab-app` for the web app and `docs` for documentation). See `firebase.json` for configuration details.
 
-```zsh
-# Authenticate and select project
-firebase login
-firebase use <your-project-id>
+### Local Emulators
 
-# Build the codebase you plan to deploy
-pnpm --filter lab-functions run build # participant runtime (optional)
-pnpm --filter manager-functions run build # manager API
+The `pnpm emulators` script builds the functions and starts the emulators for functions, Firestore, and Realtime Database.
 
-# Deploy both codebases
-firebase deploy --only functions
+To point the CLI to the emulator: `export PAIRIT_FUNCTIONS_BASE_URL=http://127.0.0.1:5001/pairit-local/us-central1/api`.
 
-# Deploy just the manager API
-firebase deploy --only functions:manager
+### Deploying to Production
 
-# Or just the lab API
-firebase deploy --only functions:lab
-```
+1. Authenticate and select project:
 
-After deploying the manager API, update the CLI target:
+   `firebase login`
 
-```zsh
-export PAIRIT_FUNCTIONS_BASE_URL=https://manager-abcd.a.run.app # or for now, update the hard coded url
-```
+   `firebase use <your-project-id>`
 
-After deploying the lab API, update `lab/app/.env.local` and `lab/app/.env.production`:
-```zsh
-VITE_API_URL=https://lab-abcd.a.run.app
-```
+   (Replace `<your-project-id>` with your Firebase project, e.g., `pairit-lab`. Create it in the Firebase console if needed.)
 
-The CLI defaults to the emulator URL (`http://127.0.0.1:5001/...`) when `PAIRIT_FUNCTIONS_BASE_URL` is unset and `FIREBASE_CONFIG`/`GCLOUD_PROJECT` resolve to `pairit-local`.
+2. Deploy Cloud Functions:
 
-### Deploying the lab web app
+   Build: `pnpm --filter lab-functions build && pnpm --filter manager-functions build`
 
-Use Firebase Hosting (not App Hosting) for the `lab/app` frontend. The build artifact is a static bundle, so Hosting gives you the global CDN + SPA rewrites you need without managing an SSR runtime.
+   Deploy both: `firebase deploy --only functions`
 
-```zsh
-# Build the app
-pnpm --filter lab-app build
+   Or deploy specific: `firebase deploy --only functions:lab` or `functions:manager`
 
-firebase hosting:sites:create lab-docs --project pairit-lab # run once to register the secondary site
-firebase target:apply hosting lab-app your-site-id # If you use Firebase targets, bind the target once
-firebase hosting:sites:create pairit-lab # or this
+   The API base URL will be `https://<region>-<your-project-id>.cloudfunctions.net/api` (default region: us-central1; check your function configuration).
 
-# Deploy (once your project is selected with `firebase use`)
-firebase deploy --only hosting:lab-app
-```
+   Update configurations:
 
-### Deploying the docs
+   - CLI: `export PAIRIT_FUNCTIONS_BASE_URL=<deployed-api-url>`
+   - Web app: In `lab/app/.env.production`, set `VITE_API_URL=<deployed-api-url>`
 
-```zsh
-cd docs
-uv sync
-source .venv/bin/activate
-mkdocs build
-cd ..
-firebase hosting:sites:create lab-docs --project pairit-lab # run once to register the secondary site
-firebase target:apply hosting docs lab-docs # run once to link the target to the site name
-firebase deploy --only hosting:docs
-```
+3. Deploy the lab web app (static hosting):
+
+   `pnpm --filter lab-app build`
+
+   (First time: `firebase hosting:sites:create lab-app`)
+
+   `firebase deploy --only hosting:lab-app`
+
+4. Deploy documentation:
+
+   ```zsh
+   cd docs
+   uv sync
+   mkdocs build
+   cd ..
+   ```
+
+   (First time: `firebase hosting:sites:create docs`)
+
+   `firebase deploy --only hosting:docs`
