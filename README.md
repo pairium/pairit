@@ -122,7 +122,7 @@ get pairit complete with surveys first
 - [x] add paginated survey component
 - [x] sessions
   - [x] store data
-- [ ] update landing page with example configs
+- [x] update landing page with example configs
 - [ ] lab app auth?
   - [ ] user id
 - [ ] cli auth

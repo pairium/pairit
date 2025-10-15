@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from '@tanstack/react-router';
 
+import Header from './components/Header';
 import { Button } from './components/ui/button';
 import { advance, startSession } from './lib/api';
 import { loadConfig } from './runtime';
@@ -170,22 +171,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-4xl items-center justify-between px-6 py-4">
-          <div className="text-lg font-semibold tracking-tight">Pairit Lab</div>
-          <div className="text-sm text-slate-500">
-            {mode === 'remote'
-              ? sessionId
-                ? compiledConfig
-                  ? `Session: ${sessionId} (HYBRID - local config, remote events)`
-                  : `Session: ${sessionId} (REMOTE - events enabled)`
-                : 'No session'
-              : mode === 'local' && experimentId
-                ? `Config: ${experimentId} (LOCAL - no events)`
-                : '—'}
-          </div>
-        </div>
-      </header>
+      <Header
+        mode={mode}
+        sessionId={sessionId}
+        compiledConfig={compiledConfig}
+        experimentId={experimentId}
+      />
 
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-6 py-12">
         {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
