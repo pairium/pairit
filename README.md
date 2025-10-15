@@ -118,8 +118,9 @@ get pairit complete with surveys first
   > strip redundant logic from the normalizer. i want to keep the runtime minimal. when we add new properties and components, can we just add it to the component and the config? i don't want the runtime to care about the specific components, just some abstractions of the components. and capture a note in the docs that future additions should live in components plus config when possible.
   - [x] registry
   - [ ] normalizer - need to think about where to put the defensive logic
-  - [ ] regression test
+  - [x] regression test
 - [ ] add paginated survey component
+- [ ] update landing page with example configs
 - [ ] sessions
   - [ ] auth?
   - [ ] store data

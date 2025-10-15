@@ -24,7 +24,7 @@ import { Media } from '@components/ui/media'
 
 import { cn } from '@app/lib/utils'
 
-import type { ButtonAction } from '../../runtime/types'
+import type { ButtonAction } from '../runtime/types'
 
 export interface SurveyItemChoice {
   value: string
@@ -83,6 +83,7 @@ export interface SurveyProps {
   layout?: Record<string, unknown>
   onSubmitValues?: (values: Record<string, unknown>) => void | Promise<void>
   registerNavigationGuard?: (guard: (action: ButtonAction) => boolean | undefined | Promise<boolean | undefined>) => () => void
+  initialValues?: Record<string, unknown>
 }
 
 type FormDefaultValues = Record<string, unknown>
@@ -101,7 +102,16 @@ interface ResolvedSurveyContent {
 }
 
 export function Survey(props: SurveyProps): ReactElement | null {
-  const { definition, items: itemsProp, source, title, intro, onSubmitValues, registerNavigationGuard } = props
+  const {
+    definition,
+    items: itemsProp,
+    source,
+    title,
+    intro,
+    onSubmitValues,
+    registerNavigationGuard,
+    initialValues,
+  } = props
 
   const { items, title: derivedTitle, intro: derivedIntro } = useMemo(
     () => resolveSurveyContent({ definition, items: itemsProp, source }),
@@ -114,8 +124,13 @@ export function Survey(props: SurveyProps): ReactElement | null {
 
   const { schema, defaults } = useMemo(() => buildFormSchema(items), [items])
 
+  const defaultValues = useMemo(
+    () => mergeInitialValues(defaults, initialValues, items),
+    [defaults, initialValues, items],
+  )
+
   const form = useForm({
-    defaultValues: defaults,
+    defaultValues,
     validators: {
       onSubmit: schema,
     },
@@ -595,6 +610,78 @@ function normalizeSurveyNext(raw: unknown): string | Record<string, string> | un
   if (!mappingEntries.length) return undefined
 
   return Object.fromEntries(mappingEntries)
+}
+
+function mergeInitialValues(
+  defaults: FormDefaultValues,
+  initialValues: Record<string, unknown> | undefined,
+  items: SurveyItemDefinition[],
+): FormDefaultValues {
+  if (!initialValues) return defaults
+
+  let didChange = false
+  const merged: FormDefaultValues = { ...defaults }
+
+  for (const item of items) {
+    if (!Object.hasOwn(initialValues, item.id)) continue
+
+    const rawValue = initialValues[item.id]
+    if (rawValue === undefined) continue
+
+    const coercedValue = coerceInitialValue(item, rawValue)
+
+    if (coercedValue === undefined) continue
+
+    merged[item.id] = coercedValue
+    didChange = true
+  }
+
+  return didChange ? merged : defaults
+}
+
+function coerceInitialValue(item: SurveyItemDefinition, raw: unknown): unknown {
+  const { answer } = item
+
+  switch (answer.type) {
+    case 'text':
+    case 'free_text':
+      if (typeof raw === 'string') return raw
+      if (raw === null) return ''
+      return String(raw)
+
+    case 'numeric': {
+      if (typeof raw === 'number' && Number.isFinite(raw)) return String(raw)
+      if (typeof raw === 'string') {
+        const trimmed = raw.trim()
+        return trimmed
+      }
+      return undefined
+    }
+
+    case 'multiple_choice':
+    case 'likert5':
+    case 'likert7': {
+      if (typeof raw !== 'string') return undefined
+      const trimmed = raw.trim()
+      if (!trimmed.length) return undefined
+      const allowedChoices = new Set((answer.choices ?? []).map((choice) => choice.value))
+      if (allowedChoices.size && !allowedChoices.has(trimmed)) return undefined
+      return trimmed
+    }
+
+    case 'multi_select': {
+      if (!Array.isArray(raw)) return undefined
+      const allowedChoices = new Set((answer.choices ?? []).map((choice) => choice.value))
+      const sanitized = raw
+        .map((entry) => (typeof entry === 'string' ? entry.trim() : String(entry ?? '')))
+        .filter((value) => value.length && (!allowedChoices.size || allowedChoices.has(value)))
+
+      return sanitized.length ? sanitized : []
+    }
+
+    default:
+      return raw
+  }
 }
 
 function buildFormSchema(items: SurveyItemDefinition[]): { schema: SurveySchema; defaults: FormDefaultValues } {

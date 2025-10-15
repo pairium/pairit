@@ -1,0 +1,145 @@
+{
+  "schema_version": "0.1.0",
+  "initialPageId": "intro",
+  "nodes": [
+    {
+      "id": "intro",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "Welcome to the paged survey demo.\nThis walk-through shows how a single component can manage multi-step surveys.\n"
+          }
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "intro_start",
+                "text": "Start",
+                "action": {
+                  "type": "go_to",
+                  "target": "survey_flow"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "survey_flow",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "Work through each section below. Your progress saves as you go."
+          }
+        },
+        {
+          "type": "paged_survey",
+          "id": "onboarding_flow",
+          "props": {
+            "initialPageId": "basics",
+            "completeAction": {
+              "type": "go_to",
+              "target": "outro"
+            },
+            "pages": [
+              {
+                "id": "basics",
+                "survey": {
+                  "title": "Profile basics",
+                  "items": [
+                    {
+                      "id": "preferred_name",
+                      "text": "What name should we use?",
+                      "answer": "text"
+                    },
+                    {
+                      "id": "timezone",
+                      "text": "Which time zone are you working from?",
+                      "answer": "text"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "collaboration",
+                "survey": {
+                  "title": "Collaboration preferences",
+                  "items": [
+                    {
+                      "id": "collaboration_style",
+                      "text": "Which collaboration style fits you best?",
+                      "answer": {
+                        "multiple_choice": {
+                          "choices": [
+                            "Async first",
+                            "Hybrid schedule",
+                            "Mostly synchronous"
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "meetings_per_week",
+                      "text": "Roughly how many meetings per week feel productive?",
+                      "answer": {
+                        "numeric": {
+                          "min": 0,
+                          "max": 40,
+                          "step": 1
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "wrap_up",
+                "survey": {
+                  "title": "Final touches",
+                  "items": [
+                    {
+                      "id": "focus_topics",
+                      "text": "Select any topics you'd like us to focus on.",
+                      "answer": {
+                        "multi_select": {
+                          "choices": [
+                            "Onboarding",
+                            "Feedback loops",
+                            "Process automation",
+                            "Culture & rituals"
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "id": "final_note",
+                      "text": "Anything else we should know?",
+                      "answer": "free_text"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "outro",
+      "end": true,
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "All set! Thanks for completing the paged survey."
+          }
+        }
+      ]
+    }
+  ]
+}
