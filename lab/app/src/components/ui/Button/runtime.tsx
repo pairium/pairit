@@ -1,8 +1,8 @@
-import { Button } from './button'
-import { submitEvent } from '../../lib/api'
-import { defineRuntimeComponent } from '../../runtime/define-runtime-component'
-import type { RuntimeComponentContext } from '../../runtime/registry'
-import type { ButtonsComponent } from '../../runtime/types'
+import { Button } from './Button'
+import { submitEvent } from '@app/lib/api'
+import { defineRuntimeComponent } from '@app/runtime/define-runtime-component'
+import type { RuntimeComponentContext } from '@app/runtime/registry'
+import type { ButtonsComponent } from '@app/runtime/types'
 
 type ButtonDefinition = ButtonsComponent['props']['buttons'][number]
 

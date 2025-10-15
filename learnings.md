@@ -4,6 +4,7 @@
 - Hono wildcard routes (`/media/*`) with `c.req.param('*')` don't work reliably with Firebase Functions adapter; use named parameters (`/media/:object`) for path segments instead.
 - Runtime adapters now sit next to their UI components as `*.runtime.ts` files (see `lab/app/src/components/runtime.ts`); they call `defineRuntimeComponent()` to self-register and keep event logic colocated while the registry stays a thin lookup table.
 - `defineRuntimeComponent()` generics must constrain props to `Record<string, unknown>` so registration matches the registry's renderer signature.
+- UI component modules now live in PascalCase directories (e.g., `lab/app/src/components/ui/Button/Button.tsx`) to mirror React naming and avoid case collisions when the repo is cloned on case-insensitive filesystems.
 - `Survey` accepts optional `initialValues`, merging them with generated defaults (strings for text/numeric, arrays for multi-select). Pre-fill paginated flows with sanitized values instead of reimplementing form schema mapping.
 - `PagedSurvey` wraps multiple `Survey` instances, reusing registerNavigationGuard to drive Next/Finish buttons. Persist per-page answers via `onSubmitValues` and pass merged `initialValues` back in when revisiting pages; no need to touch the runtime normalizer.
 - Frontend and backend both needed reliable local config access. The runtime already loaded JSON from lab/app/public/configs/, so the lab functions had to mirror that instead of depending on separate manager uploads or network fetches.

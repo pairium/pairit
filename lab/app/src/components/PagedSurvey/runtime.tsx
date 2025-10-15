@@ -1,7 +1,7 @@
-import { PagedSurvey, type PagedSurveyProps } from './paged_survey'
-import { submitEvent } from '../lib/api'
-import { defineRuntimeComponent } from '../runtime/define-runtime-component'
-import type { ButtonAction } from '../runtime/types'
+import { PagedSurvey, type PagedSurveyPage, type PagedSurveyProps } from './PagedSurvey'
+import { submitEvent } from '@app/lib/api'
+import { defineRuntimeComponent } from '@app/runtime/define-runtime-component'
+import type { ButtonAction } from '@app/runtime/types'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -21,20 +21,21 @@ export const PagedSurveyRuntime = defineRuntimeComponent<'paged_survey', Partial
 
       const pageId = typeof page.id === 'string' && page.id.trim().length ? page.id : null
       const surveyCandidate = (page as { survey?: unknown }).survey
-      const survey = isRecord(surveyCandidate) ? surveyCandidate : {}
+      const survey = isRecord(surveyCandidate) ? (surveyCandidate as PagedSurveyPage['survey']) : null
 
       if (!pageId || !survey) {
         return []
       }
 
-      const originalSubmit = survey.onSubmitValues
+      const typedSurvey = survey as PagedSurveyPage['survey']
+      const originalSubmit = typeof typedSurvey.onSubmitValues === 'function' ? typedSurvey.onSubmitValues : undefined
 
       return [
         {
           ...page,
           id: pageId,
           survey: {
-            ...survey,
+            ...typedSurvey,
             onSubmitValues: async (values: Record<string, unknown>) => {
               if (originalSubmit) {
                 await originalSubmit(values)

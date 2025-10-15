@@ -1,5 +1,5 @@
-import { defineRuntimeComponent } from '../../runtime/define-runtime-component'
-import type { TextComponent } from '../../runtime/types'
+import { defineRuntimeComponent } from '@app/runtime/define-runtime-component'
+import type { TextComponent } from '@app/runtime/types'
 
 export const TextRuntime = defineRuntimeComponent<'text', TextComponent['props']>({
   type: 'text',

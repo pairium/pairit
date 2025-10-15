@@ -1,4 +1,4 @@
-import type { CompiledConfig } from '../runtime/config'
+import type { CompiledConfig } from '@app/runtime/config'
 
 type HeaderProps = {
   mode: 'local' | 'remote' | null

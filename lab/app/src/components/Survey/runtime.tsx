@@ -1,7 +1,7 @@
-import { Survey } from './survey'
-import type { SurveyProps } from './survey'
-import { submitEvent } from '../lib/api'
-import { defineRuntimeComponent } from '../runtime/define-runtime-component'
+import { Survey } from './Survey'
+import type { SurveyProps } from './Survey'
+import { submitEvent } from '@app/lib/api'
+import { defineRuntimeComponent } from '@app/runtime/define-runtime-component'
 
 export const SurveyRuntime = defineRuntimeComponent<'survey', Partial<SurveyProps>>({
   type: 'survey',

@@ -2,15 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { ReactElement } from 'react'
 
-import { Button } from '@components/ui/button'
+import { Button } from '@components/ui/Button'
 
-import type { ButtonAction } from '../runtime/types'
+import type { ButtonAction } from '@app/runtime/types'
 
-import { Survey, type SurveyProps } from './survey'
+import { Survey, type SurveyProps } from '../Survey'
+
+type SurveyPageOverrides = Pick<SurveyProps, 'onSubmitValues' | 'registerNavigationGuard'>
 
 export interface PagedSurveyPage {
   id: string
-  survey: Omit<SurveyProps, 'registerNavigationGuard' | 'onSubmitValues'>
+  survey: Omit<SurveyProps, 'registerNavigationGuard' | 'onSubmitValues'> & SurveyPageOverrides
 }
 
 export interface PagedSurveyProps {

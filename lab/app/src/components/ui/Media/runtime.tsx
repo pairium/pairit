@@ -1,8 +1,8 @@
-import { Media } from './media'
-import { submitEvent } from '../../lib/api'
-import { defineRuntimeComponent } from '../../runtime/define-runtime-component'
-import type { RuntimeComponentContext } from '../../runtime/registry'
-import type { MediaComponent } from '../../runtime/types'
+import { Media } from './Media'
+import { submitEvent } from '@app/lib/api'
+import { defineRuntimeComponent } from '@app/runtime/define-runtime-component'
+import type { RuntimeComponentContext } from '@app/runtime/registry'
+import type { MediaComponent } from '@app/runtime/types'
 
 type MediaEventName = 'onPlay' | 'onPause' | 'onSeek' | 'onComplete' | 'onError'
 

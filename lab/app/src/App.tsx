@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from '@tanstack/react-router';
 
 import Header from './components/Header';
-import { Button } from './components/ui/button';
+import { Button } from '@components/ui/Button';
 import { advance, startSession } from './lib/api';
 import { loadConfig } from './runtime';
 import { PageRenderer } from './runtime/renderer';

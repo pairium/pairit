@@ -2,7 +2,7 @@ import type { ButtonsComponent, ComponentInstance, Page } from './types'
 
 import { Fragment, useCallback, useMemo, useRef } from 'react'
 
-import { Card, CardContent } from '../components/ui/card'
+import { Card, CardContent } from '@components/ui/Card'
 
 import { getComponentRenderer, type NavigationGuard, type RuntimeComponentContext } from './registry'
 

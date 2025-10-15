@@ -5,7 +5,7 @@ import type { ReactElement } from 'react'
 import { useForm, type AnyFieldApi } from '@tanstack/react-form'
 import { z } from 'zod'
 
-import { Checkbox } from '@components/ui/checkbox'
+import { Checkbox } from '@components/ui/Checkbox'
 import {
   Field,
   FieldContent,
@@ -15,16 +15,16 @@ import {
   FieldLabel,
   FieldLegend,
   FieldSet,
-} from '@components/ui/field'
-import { Input } from '@components/ui/input'
-import { RadioGroup, RadioGroupItem } from '@components/ui/radio-group'
-import { Textarea } from '@components/ui/textarea'
+} from '@components/ui/Field'
+import { Input } from '@components/ui/Input'
+import { RadioGroup, RadioGroupItem } from '@components/ui/RadioGroup'
+import { Textarea } from '@components/ui/Textarea'
 
-import { Media } from '@components/ui/media'
+import { Media } from '@components/ui/Media'
 
 import { cn } from '@app/lib/utils'
 
-import type { ButtonAction } from '../runtime/types'
+import type { ButtonAction } from '@app/runtime/types'
 
 export interface SurveyItemChoice {
   value: string

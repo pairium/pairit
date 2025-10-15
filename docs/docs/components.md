@@ -24,7 +24,8 @@ Result: a consistent, declarative system where pages stay lightweight and featur
 
 ## Runtime adapters
 
-- Each interactive component owns a `*.runtime.ts` adapter colocated with its UI module. Example: `lab/app/src/components/ui/button.runtime.tsx` registers the button runtime wrapper and handles event submission.
+- Each interactive component owns a `*.runtime.ts` adapter colocated with its UI module. Example: `lab/app/src/components/ui/Button/runtime.tsx` registers the button runtime wrapper and handles event submission.
+- UI modules and their adapters live in PascalCase directories (`Button/Button.tsx`, `Button/runtime.tsx`) so the filesystem mirrors React component naming and stays stable on case-insensitive hosts.
 - Adapters call `defineRuntimeComponent()` (see `lab/app/src/runtime/define-runtime-component.ts`) to register renderers with the runtime registry without pulling registry code into UI files.
 - `lab/app/src/components/runtime.ts` imports every adapter for side effects so the bundle includes all registrations. Adding a new component means updating its UI module, creating the matching runtime adapter, then adding one import line to this manifest.
 - Component-owned normalization or validation can live inside the adapter by extending the returned object, keeping the central runtime agnostic of component specifics.
