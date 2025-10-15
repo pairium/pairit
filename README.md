@@ -119,11 +119,11 @@ get pairit complete with surveys first
   - [x] registry
   - [ ] normalizer - need to think about where to put the defensive logic
   - [x] regression test
-- [ ] add paginated survey component
+- [x] add paginated survey component
+- [x] sessions
+  - [x] store data
 - [ ] update landing page with example configs
-- [ ] sessions
-  - [ ] auth?
-  - [ ] store data
+- [ ] lab app auth?
   - [ ] user id
 - [ ] cli auth
 - [ ] make app & docs look nice like [shadcn](https://ui.shadcn.com/)

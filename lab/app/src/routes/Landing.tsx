@@ -1,12 +1,41 @@
 import type { HTMLAttributes } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Bird, CircuitBoard, FlaskConical, Mail, Undo2 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { Bird, CircuitBoard, FlaskConical, Mail, Sparkles, Undo2 } from 'lucide-react'
 
 const buttonBase =
   'inline-flex items-center gap-2 rounded-lg border border-transparent bg-black px-4 py-2 text-sm font-medium text-white shadow transition-colors hover:bg-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900'
 
 const ghostButton =
   'inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm transition hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900'
+
+type DemoConfig = {
+  id: string
+  title: string
+  description: string
+  icon: LucideIcon
+}
+
+const demoConfigs: DemoConfig[] = [
+  {
+    id: 'survey-showcase',
+    title: 'Survey showcase',
+    description: 'Full walkthrough covering every built-in survey answer type, branching, and media.',
+    icon: FlaskConical,
+  },
+  {
+    id: 'simple-survey',
+    title: 'Paged survey demo',
+    description: 'Lightweight multi-step survey that highlights the paged survey component in action.',
+    icon: Sparkles,
+  },
+  {
+    id: 'component-events-showcase',
+    title: 'Component events showcase',
+    description: 'Deep dive into event instrumentation for buttons, media, matchmaking, chat, and more.',
+    icon: CircuitBoard,
+  },
+]
 
 export function Landing() {
   return (
@@ -61,7 +90,7 @@ export function Landing() {
                 Running an experiment?
               </CardTitle>
               <CardDescription>
-                Check out a Pairit demo.
+                Browse the demos below.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -69,13 +98,6 @@ export function Landing() {
                 Find out more about Pairit for your research. Pairit is a platform for creating and running experiments with humans and AI.
               </p>
               <div className="flex gap-3">
-                <Link
-                  to="/$experimentId"
-                  params={{ experimentId: 'survey-showcase' }}
-                  className={buttonBase}
-                >
-                  <FlaskConical className="h-4 w-4" /> Survey showcase
-                </Link>
                 <a
                   href="https://console.firebase.google.com/project/pairit-lab/overview"
                   target="_blank"
@@ -89,19 +111,42 @@ export function Landing() {
           </Card>
         </div>
 
-        <section>
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Demo configurations</h2>
+          <p className="text-sm text-slate-600">
+            Load any config by visiting <code>/$experimentId</code> with the IDs below.
+          </p>
+          <div className="grid gap-4 md:grid-cols-2">
+            {demoConfigs.map(({ id, title, description, icon: Icon }) => (
+              <Card key={id} className="flex h-full flex-col justify-between">
+                <CardHeader className="space-y-2">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Icon className="h-5 w-5 text-slate-500" />
+                    {title}
+                  </CardTitle>
+                  <CardDescription>{description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Link to="/$experimentId" params={{ experimentId: id }} className={buttonBase}>
+                    Open {id}
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Need a human?</h2>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Mail className="h-5 w-5 text-slate-500" /> Need a human?
+                <Mail className="h-5 w-5 text-slate-500" /> Email the lab
               </CardTitle>
-              <CardDescription>
-                Reach the experiment coordinator for help or debrief.
-              </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-slate-600">
-                Send a quick note describing how you arrived and what you expected to find.
+                Reach the experiment coordinator for help.
               </p>
               <a className={buttonBase} href="mailto:lab@pairit.test">
                 <Mail className="h-4 w-4" /> Email lab@pairit.test
