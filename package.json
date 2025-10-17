@@ -7,7 +7,7 @@
     "test": "pnpm -r test",
     "build": "pnpm -r build",
     "dev": "pnpm -r --parallel dev",
-    "emulators": "pnpm --filter functions build && firebase emulators:start --only functions,firestore"
+    "emulators": "pnpm --filter lab-functions build && pnpm --filter manager-functions build && firebase emulators:start --only functions,firestore"
   },
   "keywords": [],
   "author": "",

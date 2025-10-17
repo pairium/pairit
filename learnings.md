@@ -1,5 +1,6 @@
 # AI Learnings
 - Ensure runtime registry exports requested symbols before re-export to prevent Vite import errors.
+- Root scripts must target `lab-functions` and `manager-functions` explicitly; a bare `--filter functions` matches no workspace packages and silently skips builds.
 - Navigation guards may need action context (e.g., skip-validation flags) so back buttons can bypass required-field checks while forward buttons enforce them.
 - Hono wildcard routes (`/media/*`) with `c.req.param('*')` don't work reliably with Firebase Functions adapter; use named parameters (`/media/:object`) for path segments instead.
 - Runtime adapters now sit next to their UI components as `*.runtime.ts` files (see `lab/app/src/components/runtime.ts`); they call `defineRuntimeComponent()` to self-register and keep event logic colocated while the registry stays a thin lookup table.
