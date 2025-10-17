@@ -131,5 +131,7 @@ get pairit complete with surveys first
 
 - [ ] developer preview
 - [ ] agents
+   - https://ai-sdk.dev/
+   - https://vercel.com/changelog/introducing-ai-elements
 - [ ] chat
 - [ ] live workspace
