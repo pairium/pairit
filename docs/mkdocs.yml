@@ -1,4 +1,5 @@
 site_name: "Pairit Docs"
+site_url: https://pairit-lab-docs.web.app/
 nav:
   - Experimenter:
       - Overview: index.md

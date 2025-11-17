@@ -18,5 +18,5 @@ For full documentation visit [Material for MkDocs](https://squidfunk.github.io/m
 
 ## Deployment
 
-1. Run `mkdoc build`.
+1. Run `mkdocs build`.
 2. Then `firebase deploy --only hosting`.

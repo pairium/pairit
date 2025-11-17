@@ -64,9 +64,7 @@ To point the CLI to the emulator: `export PAIRIT_FUNCTIONS_BASE_URL=http://127.0
 
    `firebase login`
 
-   `firebase use <your-project-id>`
-
-   (Replace `<your-project-id>` with your Firebase project, e.g., `pairit-lab`. Create it in the Firebase console if needed.)
+   `firebase use pairit-lab`
 
 2. Deploy Cloud Functions:
 
