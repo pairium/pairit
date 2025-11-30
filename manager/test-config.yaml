@@ -1,0 +1,25 @@
+schema_version: 0.1.0
+initialPageId: intro
+
+pages:
+  - id: intro
+    components:
+      - type: text
+        props:
+          text: "This is a test configuration for authentication testing."
+      - type: buttons
+        props:
+          buttons:
+            - id: intro_next
+              text: "Next"
+              action:
+                type: go_to
+                target: outro
+
+  - id: outro
+    end: true
+    components:
+      - type: text
+        props:
+          text: "Test complete!"
+

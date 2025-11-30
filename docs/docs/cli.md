@@ -58,4 +58,61 @@ Published configs live under `configs/{configId}` with metadata and a checksum. 
 
 Chat transcripts stream through RTDB at `chats/{chat_group_id}`. Use `pairit config get <configId>` to download a compiled config snapshot for auditing or debugging. Media objects live in Google Cloud Storage buckets configured for the deployment; `pairit media *` commands proxy uploads and deletes via the manager service so the CLI never requires direct GCP credentials. Bucket selection happens in the backend (via `PAIRIT_MEDIA_BUCKET`); use `--bucket <name>` only when overriding that default. Uploads are public unless you pass `--private` when calling `pairit media upload`.
 
+## Authentication
+
+All manager API endpoints require Firebase Authentication. The CLI provides authentication commands to manage your credentials.
+
+### Commands
+
+- `pairit auth login` - Authenticate with email/password (Google Sign-In coming soon)
+- `pairit auth logout` - Clear stored authentication token
+- `pairit auth status` - Check authentication status
+
+### Setup for Firebase Emulator (Local Development)
+
+When testing with Firebase emulators, set these environment variables:
+
+```bash
+export USE_FIREBASE_EMULATOR=true
+export FIREBASE_PROJECT_ID=pairit-lab
+export PAIRIT_FUNCTIONS_BASE_URL=http://127.0.0.1:5001/pairit-lab/us-east4/manager
+```
+
+Then run:
+```bash
+pairit auth login
+```
+
+The CLI will automatically use the emulator at `http://localhost:9099` with the fake API key.
+
+### Setup for Production
+
+Set these environment variables:
+
+```bash
+export FIREBASE_API_KEY=your-actual-api-key
+export FIREBASE_AUTH_DOMAIN=pairit-lab.firebaseapp.com
+export FIREBASE_PROJECT_ID=pairit-lab
+export PAIRIT_FUNCTIONS_BASE_URL=https://your-deployed-function-url
+```
+
+Then run:
+```bash
+pairit auth login
+```
+
+### Troubleshooting
+
+**Error: "API key not valid"**
+- Make sure `USE_FIREBASE_EMULATOR=true` is set for emulator usage
+- Or set `FIREBASE_API_KEY` with a valid production API key
+
+**Error: "Authentication required"**
+- Run `pairit auth login` first
+- Check that token is stored: `cat ~/.config/pairit/auth.json`
+
+**Error: "Connection refused"**
+- Make sure Firebase emulators are running
+- Check that Auth emulator is on port 9099
+
 

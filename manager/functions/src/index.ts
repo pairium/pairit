@@ -3,11 +3,13 @@ import { onRequest } from 'firebase-functions/v2/https';
 import { initializeApp } from 'firebase-admin/app';
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
+import { requireAuth, type AuthenticatedUser } from './middleware';
 
 initializeApp();
 
 const firestore = getFirestore();
 const storage = getStorage();
+console.log('[AUTH-v2] Manager functions initialized');
 
 const DEFAULT_MEDIA_BUCKET = process.env.PAIRIT_MEDIA_BUCKET ?? 'pairit-lab.firebasestorage.app';
 
@@ -60,24 +62,46 @@ type MediaListItem = {
 
 const COLLECTION = 'configs';
 
-app.post('/configs/upload', async (c) => {
+// Security: All config and media endpoints require authentication
+app.post('/configs/upload', requireAuth, async (c) => {
+  // Debug: Log to verify new code is running
+  console.log('[AUTH-v2] Config upload endpoint called');
+  
+  const user = c.get('user');
   const body = await c.req
-    .json<{ configId: string; owner: string; checksum: string; metadata?: Record<string, unknown>; config: unknown }>()
+    .json<{ configId: string; checksum: string; metadata?: Record<string, unknown>; config: unknown }>()
     .catch(() => null);
 
-  if (!body) return c.json({ error: 'invalid_json' }, 400);
+  if (!body) {
+    console.log('[AUTH-v2] Invalid JSON body');
+    return c.json({ error: 'invalid_json' }, 400);
+  }
+  
+  console.log('[AUTH-v2] Body received:', { configId: body.configId, hasChecksum: !!body.checksum, hasConfig: typeof body.config !== 'undefined' });
 
-  const { configId, owner, checksum, metadata, config } = body;
+  const { configId, checksum, metadata, config } = body;
 
-  if (!configId || !owner || !checksum || typeof config === 'undefined')
-    return c.json({ error: 'missing_fields' }, 400);
+  // Security: Validate required fields and sanitize configId
+  if (!configId || typeof configId !== 'string' || configId.trim().length === 0) {
+    return c.json({ error: 'invalid_config_id' }, 400);
+  }
+  if (!checksum || typeof checksum !== 'string') {
+    return c.json({ error: 'invalid_checksum' }, 400);
+  }
+  if (typeof config === 'undefined') {
+    return c.json({ error: 'missing_config' }, 400);
+  }
+
+  // Security: Use authenticated user's UID as owner (prevent owner spoofing)
+  const owner = user.uid;
+  const sanitizedConfigId = configId.trim();
 
   try {
-    const docRef = firestore.collection(COLLECTION).doc(configId);
+    const docRef = firestore.collection(COLLECTION).doc(sanitizedConfigId);
     const existing = await docRef.get();
 
     const payload: ConfigDocument = {
-      configId,
+      configId: sanitizedConfigId,
       owner,
       checksum,
       metadata: (metadata ?? null) as Record<string, unknown> | null,
@@ -110,11 +134,12 @@ app.post('/configs/upload', async (c) => {
   }
 });
 
-app.get('/configs', async (c) => {
-  const owner = c.req.query('owner');
-  const query = owner
-    ? firestore.collection(COLLECTION).where('owner', '==', owner)
-    : firestore.collection(COLLECTION);
+// Security: Require auth, filter by authenticated user's configs only
+app.get('/configs', requireAuth, async (c) => {
+  const user = c.get('user');
+  
+  // Security: Only return configs owned by authenticated user
+  const query = firestore.collection(COLLECTION).where('owner', '==', user.uid);
 
   try {
     const snapshot = await query.orderBy('updatedAt', 'desc').get();
@@ -138,15 +163,28 @@ app.get('/configs', async (c) => {
   }
 });
 
-app.delete('/configs/:configId', async (c) => {
+// Security: Require auth and verify ownership before deletion
+app.delete('/configs/:configId', requireAuth, async (c) => {
+  const user = c.get('user');
   const configId = c.req.param('configId');
 
-  if (!configId) return c.json({ error: 'missing_config_id' }, 400);
+  if (!configId || typeof configId !== 'string') {
+    return c.json({ error: 'missing_config_id' }, 400);
+  }
 
   try {
     const docRef = firestore.collection(COLLECTION).doc(configId);
     const snapshot = await docRef.get();
-    if (!snapshot.exists) return c.json({ error: 'not_found' }, 404);
+    if (!snapshot.exists) {
+      return c.json({ error: 'not_found' }, 404);
+    }
+
+    const data = snapshot.data() as ConfigDocument | undefined;
+    
+    // Security: Verify ownership before deletion
+    if (!data || data.owner !== user.uid) {
+      return c.json({ error: 'forbidden', message: 'You do not have permission to delete this config.' }, 403);
+    }
 
     await docRef.delete();
     return c.json({ configId }, 200);
@@ -156,7 +194,8 @@ app.delete('/configs/:configId', async (c) => {
   }
 });
 
-app.post('/media/upload', async (c) => {
+// Security: Require authentication for all media operations
+app.post('/media/upload', requireAuth, async (c) => {
   const body = await c.req.json<MediaUploadBody>().catch(() => null);
   if (!body) return c.json({ error: 'invalid_json' }, 400);
 
@@ -225,7 +264,8 @@ app.post('/media/upload', async (c) => {
   }
 });
 
-app.get('/media', async (c) => {
+// Security: Require authentication to list media
+app.get('/media', requireAuth, async (c) => {
   const bucket = c.req.query('bucket');
   const prefix = c.req.query('prefix') ?? undefined;
 
@@ -258,7 +298,8 @@ app.get('/media', async (c) => {
   }
 });
 
-app.delete('/media/:object', async (c) => {
+// Security: Require authentication to delete media
+app.delete('/media/:object', requireAuth, async (c) => {
   const object = c.req.param('object');
 
   if (!object) return c.json({ error: 'missing_object', message: 'object path required' }, 400);

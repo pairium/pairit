@@ -7,7 +7,10 @@
     "test": "pnpm -r test",
     "build": "pnpm -r build",
     "dev": "pnpm -r --parallel dev",
-    "emulators": "pnpm --filter lab-functions build && pnpm --filter manager-functions build && firebase emulators:start --only functions,firestore"
+    "emulators": "pnpm --filter lab-functions build && pnpm --filter manager-functions build && firebase emulators:start --only functions,firestore",
+    "test:auth": "bash tests/auth/run-all.sh",
+    "test:auth:basic": "bash tests/auth/test-basic.sh",
+    "test:auth:full": "bash tests/auth/test-with-emulator.sh"
   },
   "keywords": [],
   "author": "",

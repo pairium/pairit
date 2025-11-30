@@ -8,6 +8,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import fetch, { RequestInit } from "node-fetch";
 import YAML from "yaml";
+import { loginWithEmail, loginWithGoogle, clearToken, getAuthStatus, getStoredToken } from "./auth.js";
 
 type ExperimentPage = {
   id: string;
@@ -26,6 +27,59 @@ program
   .name("pairit")
   .description("CLI for Pairit experiment configs")
   .version("0.1.0");
+
+// Auth command group
+const authCommand = program
+  .command("auth")
+  .description("Manage authentication");
+
+authCommand
+  .command("login")
+  .description("Authenticate with Firebase")
+  .option("--provider <provider>", "Auth provider: email or google", "email")
+  .action(async (options: { provider: string }) => {
+    try {
+      console.log("Authenticating...");
+      let token;
+      if (options.provider === "google") {
+        token = await loginWithGoogle();
+      } else {
+        token = await loginWithEmail();
+      }
+      console.log(`✓ Authenticated as ${token.email || token.uid}`);
+    } catch (error) {
+      reportCliError("Login failed", error);
+    }
+  });
+
+authCommand
+  .command("logout")
+  .description("Clear stored authentication token")
+  .action(async () => {
+    try {
+      await clearToken();
+      console.log("✓ Logged out");
+    } catch (error) {
+      reportCliError("Logout failed", error);
+    }
+  });
+
+authCommand
+  .command("status")
+  .description("Show authentication status")
+  .action(async () => {
+    try {
+      const status = await getAuthStatus();
+      if (status.authenticated && status.user) {
+        console.log(`✓ Authenticated as ${status.user.email || status.user.uid}`);
+      } else {
+        console.log("✗ Not authenticated. Run 'pairit auth login'");
+        process.exitCode = 1;
+      }
+    } catch (error) {
+      reportCliError("Status check failed", error);
+    }
+  });
 
 const configCommand = program
   .command("config")
@@ -70,13 +124,16 @@ configCommand
 configCommand
   .command("upload")
   .argument("<config>", "Path to YAML config")
-  .requiredOption("--owner <owner>", "Owner email or id")
   .option("--config-id <configId>", "Config id (defaults to hash)")
   .option("--metadata <json>", "Optional metadata JSON string")
-  .description("Compile and upload config via Pairit Functions")
+  .description("Compile and upload config via Pairit Functions (owner set from authenticated user)")
   .action(async (configPath: string, options: UploadOptions) => {
     try {
       const { payload, checksum } = await buildUploadPayload(configPath, options);
+      
+      // Debug: Log payload structure
+      console.error("Debug: Upload payload:", JSON.stringify(payload, null, 2));
+      
       const response = await callFunctions("/configs/upload", {
         method: "POST",
         body: JSON.stringify(payload),
@@ -92,12 +149,10 @@ configCommand
 
 configCommand
   .command("list")
-  .option("--owner <owner>", "Filter by owner")
-  .description("List configs from Pairit Functions")
-  .action(async (options: ListOptions) => {
+  .description("List configs owned by authenticated user")
+  .action(async () => {
     try {
-      const params = options.owner ? `?owner=${encodeURIComponent(options.owner)}` : "";
-      const response = await callFunctions(`/configs${params}`, { method: "GET" });
+      const response = await callFunctions("/configs", { method: "GET" });
 
       const configs = Array.isArray(response.configs) ? response.configs : [];
       if (!configs.length) {
@@ -234,14 +289,10 @@ program.parseAsync(process.argv).catch((err) => {
 });
 
 type UploadOptions = {
-  owner: string;
   configId?: string;
   metadata?: string;
 };
 
-type ListOptions = {
-  owner?: string;
-};
 
 type DeleteOptions = {
   force?: boolean;
@@ -335,7 +386,6 @@ async function compileConfig(configPath: string): Promise<string> {
 
 type UploadPayload = {
   configId: string;
-  owner: string;
   checksum: string;
   metadata?: Record<string, unknown> | null;
   config: unknown;
@@ -344,7 +394,13 @@ type UploadPayload = {
 async function buildUploadPayload(
   configPath: string,
   options: UploadOptions
-): Promise<{ payload: UploadPayload; checksum: string }> {
+): Promise<{ payload: Omit<UploadPayload, 'owner'>; checksum: string }> {
+  // Security: Verify authentication before upload
+  const token = await getStoredToken();
+  if (!token) {
+    throw new Error("Authentication required. Run 'pairit auth login'.");
+  }
+
   const compiledPath = await compileConfig(configPath);
   const compiledContent = await readFile(compiledPath, "utf8");
   const hashBuffer = createHash("sha256").update(compiledContent).digest();
@@ -360,7 +416,6 @@ async function buildUploadPayload(
   return {
     payload: {
       configId,
-      owner: options.owner,
       checksum,
       metadata: metadata ?? null,
       config: parsed,
@@ -452,10 +507,33 @@ async function resolvePath(configPath: string): Promise<string> {
 async function callFunctions(pathname: string, init: RequestInit): Promise<any> {
   const baseUrl = getFunctionsBaseUrl();
   const url = new URL(pathname, baseUrl).toString();
-  const response = await fetch(url, init);
+  
+  // Security: Inject auth token if available
+  const token = await getStoredToken();
+  const headers: Record<string, string> = {
+    ...(init.headers as Record<string, string>),
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token.idToken}`;
+  }
+  
+  const requestInit: RequestInit = {
+    ...init,
+    headers,
+  };
+  
+  const response = await fetch(url, requestInit);
 
   const text = await response.text();
   if (!response.ok) {
+    // Security: Provide helpful error messages for auth failures
+    if (response.status === 401) {
+      throw new Error(`Authentication required. Run 'pairit auth login'.`);
+    }
+    if (response.status === 403) {
+      throw new Error(`Permission denied. You may not have access to this resource.`);
+    }
     throw new Error(`HTTP ${response.status}: ${text}`);
   }
 
