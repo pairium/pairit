@@ -22,7 +22,9 @@ const AUTH_FILE = join(AUTH_DIR, 'auth.json');
 const USE_EMULATOR = process.env.FIREBASE_AUTH_EMULATOR_HOST || process.env.USE_FIREBASE_EMULATOR === 'true';
 const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY || (USE_EMULATOR ? 'fake-api-key' : '');
 const FIREBASE_AUTH_DOMAIN = process.env.FIREBASE_AUTH_DOMAIN || 'pairit-lab.firebaseapp.com';
-const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'pairit-lab';
+
+// Note: Project ID is not needed for Firebase Auth REST API calls
+// It's only used in getFunctionsBaseUrl() for constructing emulator URLs
 
 // Use emulator URL if emulator is detected, otherwise use production
 const AUTH_BASE_URL = USE_EMULATOR 

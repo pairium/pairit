@@ -2,6 +2,19 @@
 
 # Comprehensive authentication test with Firebase Auth emulator
 # Requires: Firebase emulators running with auth enabled
+#
+# Prerequisites:
+#   - Firebase emulators must be running before running this script
+#   - To start emulators manually:
+#     pnpm --filter manager-functions build
+#     pnpm --filter lab-functions build
+#     firebase emulators:start --only auth,functions,firestore
+#
+# Emulator URLs:
+#   - Functions: http://127.0.0.1:5001
+#   - Firestore: http://localhost:8080
+#   - Auth: http://localhost:9099
+#   - UI: http://localhost:4000
 
 set -e
 

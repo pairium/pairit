@@ -1,7 +1,20 @@
 #!/bin/bash
 
 # Test script for authentication implementation
-# This script tests the authentication flow with Firebase emulators
+# Tests basic authentication without requiring emulators (tests unauthenticated access)
+#
+# Prerequisites:
+#   - Functions emulator should be running (or functions deployed)
+#   - To start emulators manually:
+#     pnpm --filter manager-functions build
+#     pnpm --filter lab-functions build
+#     firebase emulators:start --only auth,functions,firestore
+#
+# Emulator URLs:
+#   - Functions: http://127.0.0.1:5001
+#   - Firestore: http://localhost:8080
+#   - Auth: http://localhost:9099
+#   - UI: http://localhost:4000
 
 set -e
 

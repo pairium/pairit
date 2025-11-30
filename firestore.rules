@@ -1,10 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Configs: read public (for participant access), write owner only
-    // Security: Prevents unauthorized config modifications
+    // Configs: read/write owner only
+    // Security: Prevents unauthorized config access and modifications
+    // Note: Participants access configs via API endpoints (which use Admin SDK) or static files, not directly from Firestore
     match /configs/{configId} {
-      allow read: if true;
+      allow read: if request.auth != null && resource.data.owner == request.auth.uid;
       // Security: Only allow writes if authenticated and owner matches
       // Supports both create (request.resource) and update (resource) operations
       allow create: if request.auth != null && 

@@ -102,7 +102,7 @@ Pairit implements Firebase Authentication for experimenter operations (config an
 **Configs Collection:**
 ```javascript
 match /configs/{configId} {
-  allow read: if true;  // Public read for participant access
+  allow read: if request.auth != null && resource.data.owner == request.auth.uid;
   allow create: if request.auth != null && 
                   request.resource.data.owner == request.auth.uid;
   allow update, delete: if request.auth != null && 
@@ -111,10 +111,11 @@ match /configs/{configId} {
 ```
 
 **Security Features:**
-- Read: Public (for participant access to configs)
+- Read: Owner only (participants access configs via API endpoints using Admin SDK, or static files)
 - Write: Requires authentication AND ownership match
-- Prevents unauthorized modifications even if API is bypassed
+- Prevents unauthorized access and modifications even if API is bypassed
 - Defense in depth: API + Firestore rules
+- Note: Lab API endpoints use Firebase Admin SDK which bypasses security rules, so participant access via `/sessions/start` still works
 
 ### 7. HTTPS Enforcement
 

@@ -74,9 +74,10 @@ When testing with Firebase emulators, set these environment variables:
 
 ```bash
 export USE_FIREBASE_EMULATOR=true
-export FIREBASE_PROJECT_ID=pairit-lab
 export PAIRIT_FUNCTIONS_BASE_URL=http://127.0.0.1:5001/pairit-lab/us-east4/manager
 ```
+
+Note: Project ID is automatically detected from `FIREBASE_CONFIG.projectId` or `GCLOUD_PROJECT` if `PAIRIT_FUNCTIONS_BASE_URL` is not set.
 
 Then run:
 ```bash
@@ -92,9 +93,10 @@ Set these environment variables:
 ```bash
 export FIREBASE_API_KEY=your-actual-api-key
 export FIREBASE_AUTH_DOMAIN=pairit-lab.firebaseapp.com
-export FIREBASE_PROJECT_ID=pairit-lab
 export PAIRIT_FUNCTIONS_BASE_URL=https://your-deployed-function-url
 ```
+
+Note: Project ID is automatically detected from `FIREBASE_CONFIG.projectId` or `GCLOUD_PROJECT` if `PAIRIT_FUNCTIONS_BASE_URL` is not set.
 
 Then run:
 ```bash
