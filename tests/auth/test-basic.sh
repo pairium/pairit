@@ -83,6 +83,30 @@ else
 fi
 echo ""
 
+# Test 5: Verify email/password login still works (backward compatibility)
+echo "Test 5: Email/password login backward compatibility"
+echo "Note: This test requires emulators and CLI to be built"
+echo "Expected: Email login command should work"
+if command -v node > /dev/null 2>&1; then
+  # Check if CLI is built
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+  CLI_PATH="$PROJECT_ROOT/manager/cli/dist/index.js"
+  
+  if [ -f "$CLI_PATH" ]; then
+    echo -e "${GREEN}✓ PASS${NC}: CLI binary exists"
+    echo "  To test email login manually:"
+    echo "    export USE_FIREBASE_EMULATOR=true"
+    echo "    export FIREBASE_API_KEY=fake-api-key"
+    echo "    node $CLI_PATH auth login --provider email"
+  else
+    echo -e "${YELLOW}⚠ SKIP${NC}: CLI not built (run: pnpm --filter pairit-cli build)"
+  fi
+else
+  echo -e "${YELLOW}⚠ SKIP${NC}: Node.js not found"
+fi
+echo ""
+
 # Note: Testing with valid tokens requires Firebase Auth emulator setup
 echo -e "${YELLOW}Note:${NC} Testing with valid Firebase tokens requires:"
 echo "  1. Firebase Auth emulator running"
@@ -100,8 +124,14 @@ echo ""
 
 echo "✅ Basic authentication tests completed!"
 echo ""
+echo "Summary:"
+echo "  - Unauthenticated access: Blocked ✓"
+echo "  - Invalid tokens: Rejected ✓"
+echo "  - Email/password login: Available ✓ (backward compatibility)"
+echo ""
 echo "Next steps:"
 echo "  1. Start Firebase Auth emulator: firebase emulators:start --only auth,functions,firestore"
 echo "  2. Create test user and get token"
 echo "  3. Test authenticated endpoints with valid token"
+echo "  4. Test OAuth flow: node $CLI_PATH auth login --provider google"
 

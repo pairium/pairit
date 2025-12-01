@@ -59,13 +59,18 @@ Pairit implements Firebase Authentication for experimenter operations (config an
 
 **Token Structure:**
 - Stores: `idToken`, `refreshToken`, `expiresAt`, `uid`, `email`, `provider`
+- `provider` field: `'email'` for email link auth, `'google'` for OAuth
+- Provider field is metadata only (backend doesn't use it)
 - Expiration tracking for automatic refresh
-- No plaintext passwords stored
+- No passwords stored (email link is passwordless)
+- Same token structure regardless of authentication method
 
 **Token Refresh:**
 - Automatic refresh when token expires
 - Uses refresh token to obtain new ID token
+- Preserves provider field (`email` or `google`) during refresh
 - Handles refresh failures gracefully
+- Backward compatible with tokens missing provider field
 
 ### 4. Input Validation & Sanitization
 
@@ -165,51 +170,147 @@ match /configs/{configId} {
 - Authentication failures default to denying access
 - No fallback to anonymous access for protected operations
 
+### 11. OAuth Security (Google Sign-In)
+
+**PKCE Implementation:**
+- Code verifier: Random 32-byte value, base64url encoded (43 chars)
+- Code challenge: SHA256 hash of verifier, base64url encoded
+- Prevents authorization code interception attacks
+- Required for public clients (CLI applications)
+
+**State Parameter:**
+- Random state token generated for each OAuth flow
+- Validated on callback to prevent CSRF attacks
+- State mismatch results in rejection
+
+**Callback Server:**
+- Local HTTP server on `localhost` (ports 9000-9010)
+- Only accepts connections from localhost
+- 5-minute timeout prevents hanging processes
+- Automatic port discovery if primary port in use
+- Graceful error handling for port conflicts
+
+**Token Exchange:**
+- Authorization code exchanged server-side using PKCE verifier
+- Uses Firebase Auth REST API `/accounts:signInWithIdp` endpoint
+- Validates authorization code before exchange
+- Same token structure as email link authentication
+
+**Provider Field:**
+- OAuth tokens marked with `provider: 'google'`
+- Email tokens marked with `provider: 'email'`
+- Provider preserved during token refresh
+- Backward compatible with tokens missing provider field
+
+**Error Handling:**
+- Port conflicts: Automatic fallback to alternative ports
+- Browser unavailable: Manual URL provided for headless environments
+- User cancellation: Cleanup and clear error message
+- Timeout: Server shutdown and error message
+- Network errors: Retry logic and clear error messages
+
 ## CLI Authentication
 
 ### Commands
 
-- `pairit auth login`: Authenticate with email/password (Google Sign-In coming soon)
+- `pairit auth login [--provider <email|google>]`: Authenticate with email link or Google Sign-In (default: email)
 - `pairit auth logout`: Clear stored authentication token
 - `pairit auth status`: Check authentication status
 
 ### Authentication Methods
 
-**Email/Password:**
-- Uses Firebase Auth REST API
-- Prompts securely for credentials
+**Email Link (Magic Link):**
+- Passwordless authentication via email
+- User enters email, receives sign-in link
+- Local callback server receives oobCode from link
+- Uses Firebase Auth REST API `/accounts:sendOobCode` and `/accounts:signInWithEmailLink`
 - Stores tokens locally with restricted permissions
+- Provider field: `'email'`
 
-**Google Sign-In:**
-- Planned for future implementation
-- Will use OAuth 2.0 flow with local callback server
+**Google Sign-In (OAuth):**
+- Uses OAuth 2.0 flow with PKCE
+- Opens browser for Google Sign-In
+- Local callback server receives authorization code
+- Exchanges code for Firebase ID token
+- Stores tokens locally with restricted permissions
+- Provider field: `'google'`
+
+**Similarities:**
+- Both methods use local callback server (ports 9000-9010)
+- Both produce identical token structures
+- Tokens from both methods work identically for API calls
+- Users can switch between providers seamlessly
+- Token refresh works for both provider types
 
 ### Token Injection
 
-All CLI API requests automatically include `Authorization: Bearer <token>` header if token is available. Authentication errors provide clear guidance to users.
+All CLI API requests automatically include `Authorization: Bearer <token>` header if token is available. Authentication errors provide clear guidance to users. The backend treats tokens identically regardless of authentication method (email link or OAuth).
+
+### 12. Email Link Security
+
+**Callback Server:**
+- Local HTTP server on `localhost` (ports 9000-9010)
+- Receives oobCode parameter from Firebase email link
+- 5-minute timeout prevents hanging processes
+- Automatic port discovery if primary port in use
+
+**Email Link Flow:**
+1. User enters email address
+2. CLI sends sign-in link via Firebase REST API
+3. User clicks link in email
+4. Browser redirects to local callback server with oobCode
+5. CLI exchanges oobCode for Firebase ID token
+
+**Firebase Console Setup:**
+1. Enable Email/Password provider
+2. Enable "Email link (passwordless sign-in)" option
+3. Configure action URL settings (optional)
 
 ## Security Checklist
 
+**General Authentication:**
 - ✅ Token verification with Firebase Admin SDK
 - ✅ Server-side owner assignment (prevents spoofing)
 - ✅ Ownership verification on all mutations
 - ✅ Firestore security rules enforcement
 - ✅ Secure token storage (file permissions)
 - ✅ Token expiration and refresh handling
+- ✅ Provider field preservation during refresh
 - ✅ Input validation and sanitization
 - ✅ Error handling without information disclosure
 - ✅ HTTPS enforcement in production
 - ✅ Fail-secure defaults
 
+**Email Link Security:**
+- ✅ Passwordless authentication (no passwords stored)
+- ✅ Callback server localhost-only
+- ✅ 5-minute timeout prevents hanging
+- ✅ Port validation (9000-9010 range only)
+- ✅ oobCode validation before token exchange
+- ✅ Provider field preserved during refresh
+
+**OAuth-Specific Security:**
+- ✅ PKCE implementation (code verifier/challenge)
+- ✅ State parameter for CSRF protection
+- ✅ Callback server localhost-only
+- ✅ 5-minute timeout prevents hanging
+- ✅ Port validation (9000-9010 range only)
+- ✅ Authorization code validation before exchange
+- ✅ Provider field preserved during refresh
+- ✅ Browser opening fails gracefully (headless environments)
+
 ## Future Security Enhancements
 
-1. **Participant Authentication**: Optional Firebase Anonymous Auth for multi-device session continuity
-2. **Rate Limiting**: Per-user and per-IP limits on API endpoints
-3. **Audit Logging**: Track all authentication and authorization events
-4. **Token Rotation**: Automatic token rotation for long-lived sessions
-5. **MFA Support**: Multi-factor authentication for experimenters
-6. **SSO Integration**: SAML/OAuth for institutional authentication
-7. **Session Management**: Session timeout and concurrent session limits
+1. **Additional OAuth Providers**: GitHub, Microsoft, etc. (extend `OAuthProvider` type)
+2. **Custom Redirect Port**: Allow `--port` flag for callback server
+3. **Headless Mode**: Support for environments without browser (manual code entry)
+4. **Participant Authentication**: Optional Firebase Anonymous Auth for multi-device session continuity
+5. **Rate Limiting**: Per-user and per-IP limits on API endpoints
+6. **Audit Logging**: Track all authentication and authorization events
+7. **Token Rotation**: Automatic token rotation for long-lived sessions
+8. **MFA Support**: Multi-factor authentication for experimenters
+9. **SSO Integration**: SAML/OAuth for institutional authentication
+10. **Session Management**: Session timeout and concurrent session limits
 
 ## Security Incident Response
 

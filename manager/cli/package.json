@@ -13,7 +13,9 @@
   },
   "dependencies": {
     "commander": "^12.1.0",
+    "dotenv": "^17.2.3",
     "node-fetch": "^3.3.2",
+    "open": "^10.1.0",
     "yaml": "^2.6.0"
   },
   "devDependencies": {
@@ -22,4 +24,3 @@
     "typescript": "^5.9.3"
   }
 }
-

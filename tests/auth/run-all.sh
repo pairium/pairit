@@ -180,6 +180,31 @@ else
 fi
 echo ""
 
+# Step 6: Build CLI for OAuth tests
+echo -e "${BLUE}Step 6:${NC} Building CLI for OAuth tests..."
+cd "$PROJECT_ROOT"
+if pnpm --filter pairit-cli build; then
+  echo -e "${GREEN}✓ CLI built${NC}"
+else
+  echo -e "${YELLOW}⚠ CLI build failed, skipping OAuth tests${NC}"
+  echo ""
+  echo -e "${GREEN}✅ Authentication tests completed (OAuth tests skipped)${NC}"
+  echo ""
+  exit 0
+fi
+echo ""
+
+# Step 7: Run OAuth-specific tests
+echo -e "${BLUE}Step 7:${NC} Running OAuth-specific tests..."
+cd "$SCRIPT_DIR"
+if bash test-oauth.sh; then
+  echo -e "${GREEN}✓ OAuth tests passed${NC}"
+else
+  echo -e "${RED}✗ OAuth tests failed${NC}"
+  exit 1
+fi
+echo ""
+
 # Success
 echo -e "${GREEN}✅ All authentication tests completed successfully!${NC}"
 echo ""

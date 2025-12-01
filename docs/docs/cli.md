@@ -60,61 +60,70 @@ Chat transcripts stream through RTDB at `chats/{chat_group_id}`. Use `pairit con
 
 ## Authentication
 
-All manager API endpoints require Firebase Authentication. The CLI provides authentication commands to manage your credentials.
+All manager API endpoints require Firebase Authentication. The CLI provides two authentication methods:
+
+1. **Email Link (Magic Link)** - Passwordless sign-in via email
+2. **Google OAuth** - Sign in with your Google account
 
 ### Commands
 
-- `pairit auth login` - Authenticate with email/password (Google Sign-In coming soon)
+- `pairit auth login` - Authenticate with email link (default)
+- `pairit auth login --provider google` - Authenticate with Google OAuth
 - `pairit auth logout` - Clear stored authentication token
 - `pairit auth status` - Check authentication status
 
-### Setup for Firebase Emulator (Local Development)
+### Email Link Authentication (Default)
 
-When testing with Firebase emulators, set these environment variables:
+Email link authentication sends a sign-in link to your email. No password required.
 
-```bash
-export USE_FIREBASE_EMULATOR=true
-export PAIRIT_FUNCTIONS_BASE_URL=http://127.0.0.1:5001/pairit-lab/us-east4/manager
-```
-
-Note: Project ID is automatically detected from `FIREBASE_CONFIG.projectId` or `GCLOUD_PROJECT` if `PAIRIT_FUNCTIONS_BASE_URL` is not set.
-
-Then run:
 ```bash
 pairit auth login
+# Enter your email
+# Check your inbox and click the sign-in link
+# Authentication completes automatically
 ```
 
-The CLI will automatically use the emulator at `http://localhost:9099` with the fake API key.
+**Firebase Console Setup:**
+1. Go to Firebase Console > Authentication > Sign-in method
+2. Click on "Email/Password" provider
+3. Enable "Email link (passwordless sign-in)"
+4. Save
 
-### Setup for Production
+### Google OAuth Authentication
 
-Set these environment variables:
+For Google OAuth, you need to set up OAuth credentials:
 
 ```bash
-export FIREBASE_API_KEY=your-actual-api-key
-export FIREBASE_AUTH_DOMAIN=pairit-lab.firebaseapp.com
-export PAIRIT_FUNCTIONS_BASE_URL=https://your-deployed-function-url
+export GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+export GOOGLE_CLIENT_SECRET=your-client-secret
+export FIREBASE_API_KEY=your-firebase-api-key
+
+pairit auth login --provider google
 ```
 
-Note: Project ID is automatically detected from `FIREBASE_CONFIG.projectId` or `GCLOUD_PROJECT` if `PAIRIT_FUNCTIONS_BASE_URL` is not set.
+See [OAuth Setup Guide](dev/oauth-setup.md) for detailed instructions.
 
-Then run:
+### Environment Variables
+
 ```bash
-pairit auth login
+# Required for both methods
+export FIREBASE_API_KEY=your-firebase-api-key
+
+# Required for Google OAuth only
+export GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+export GOOGLE_CLIENT_SECRET=your-client-secret
 ```
 
 ### Troubleshooting
 
-**Error: "API key not valid"**
-- Make sure `USE_FIREBASE_EMULATOR=true` is set for emulator usage
-- Or set `FIREBASE_API_KEY` with a valid production API key
+**Error: "OPERATION_NOT_ALLOWED"**
+- Email link sign-in is not enabled in Firebase Console
+- Enable "Email link (passwordless sign-in)" under Email/Password provider
 
 **Error: "Authentication required"**
 - Run `pairit auth login` first
 - Check that token is stored: `cat ~/.config/pairit/auth.json`
 
-**Error: "Connection refused"**
-- Make sure Firebase emulators are running
-- Check that Auth emulator is on port 9099
+**Note:** Email link and Google OAuth are not supported with Firebase Auth emulator. Use production Firebase for authentication.
 
 

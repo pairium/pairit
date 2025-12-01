@@ -5,7 +5,6 @@ import { createHash } from "node:crypto";
 import { readFile, writeFile, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { fileURLToPath } from "node:url";
 import fetch, { RequestInit } from "node-fetch";
 import YAML from "yaml";
 import { loginWithEmail, loginWithGoogle, clearToken, getAuthStatus, getStoredToken } from "./auth.js";
@@ -579,7 +578,3 @@ function reportCliError(prefix: string, error: unknown) {
   }
   process.exitCode = 1;
 }
-
-export const __filename = fileURLToPath(import.meta.url);
-export const __dirname = path.dirname(__filename);
-
