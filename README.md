@@ -129,6 +129,10 @@ get pairit complete with surveys first
 
 ### Backlog
 
+- [ ] unify lab app (Bun + Hono serving both API and frontend)
+  - removes Firebase Functions dependency
+  - enables WebSocket/SSE for chat and streaming
+  - single Docker deployment
 - [ ] developer preview
 - [ ] agents
    - https://ai-sdk.dev/
