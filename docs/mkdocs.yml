@@ -22,8 +22,10 @@ nav:
       - Custom Components: components/custom.md
   - Developer:
       - Architecture: dev/architecture.md
+      - Deployment: dev/deployment.md
       - Runtime: dev/runtime.md
       - Backend: dev/backend.md
+      - Authentication: dev/authentication.md
       - Realtime: dev/realtime.md
       - Storage: dev/storage.md
       - Validation: dev/validation.md

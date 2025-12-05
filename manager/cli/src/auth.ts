@@ -101,6 +101,9 @@ export async function getStoredToken(): Promise<AuthToken | null> {
     return token;
   } catch (error) {
     console.error('Failed to read auth token:', error instanceof Error ? error.message : 'unknown error');
+    if (error instanceof Error) {
+      console.error('Stack trace:', error.stack);
+    }
     return null;
   }
 }
@@ -455,7 +458,7 @@ export async function loginWithEmail(): Promise<AuthToken> {
   try {
     await sendSignInLink(email, continueUrl);
     console.log(`✓ Sign-in link sent to ${email}`);
-    console.log('Please check your email and click the sign-in link.');
+    console.log('Please check your email and click the sign-in link. (If you don\'t see it, check your spam folder.)');
     console.log('Waiting for authentication...');
   } catch (error) {
     callbackServer.server.close();

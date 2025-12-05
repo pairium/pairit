@@ -60,6 +60,8 @@ To point the CLI to the emulator: `export PAIRIT_FUNCTIONS_BASE_URL=http://127.0
 
 ### Deploying to Production
 
+> **New project?** See the complete [Deployment Guide](docs/docs/dev/deployment.md) for all required GCP IAM roles, APIs, and Firebase settings.
+
 1. Authenticate and select project:
 
    `firebase login`

@@ -1,0 +1,14 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "configs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "owner", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
+

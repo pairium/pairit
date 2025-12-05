@@ -130,9 +130,6 @@ configCommand
     try {
       const { payload, checksum } = await buildUploadPayload(configPath, options);
       
-      // Debug: Log payload structure
-      console.error("Debug: Upload payload:", JSON.stringify(payload, null, 2));
-      
       const response = await callFunctions("/configs/upload", {
         method: "POST",
         body: JSON.stringify(payload),
@@ -509,6 +506,7 @@ async function callFunctions(pathname: string, init: RequestInit): Promise<any> 
   
   // Security: Inject auth token if available
   const token = await getStoredToken();
+  
   const headers: Record<string, string> = {
     ...(init.headers as Record<string, string>),
   };
@@ -545,10 +543,16 @@ async function callFunctions(pathname: string, init: RequestInit): Promise<any> 
 }
 
 function getFunctionsBaseUrl(): string {
-  // const envUrl = process.env.PAIRIT_FUNCTIONS_BASE_URL;
-  const envUrl = "https://manager-pdxzcarxcq-uk.a.run.app";
+  // Allow override via environment variable
+  const envUrl = process.env.PAIRIT_FUNCTIONS_BASE_URL;
   if (envUrl) return envUrl;
 
+  // Default to production URL (can be overridden with PAIRIT_FUNCTIONS_BASE_URL)
+  const defaultUrl = "https://manager-pdxzcarxcq-uk.a.run.app";
+
+  if (defaultUrl) return defaultUrl;
+
+  // Local emulator fallback
   const project = process.env.FIREBASE_CONFIG
     ? JSON.parse(process.env.FIREBASE_CONFIG).projectId
     : process.env.GCLOUD_PROJECT;

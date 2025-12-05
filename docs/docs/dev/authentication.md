@@ -4,6 +4,8 @@
 
 Pairit implements Firebase Authentication for experimenter operations (config and media management) while maintaining anonymous participation for experiments. This document outlines the security practices implemented.
 
+> **Deploying to a new project?** See the [Deployment Guide](deployment.md) for required IAM roles, APIs, and Firebase settings.
+
 ## Security Architecture
 
 ### Authentication Flow

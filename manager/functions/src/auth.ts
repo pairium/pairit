@@ -71,7 +71,11 @@ export async function verifyExperimenterToken(
   } catch (error) {
     // Log error for monitoring but don't leak details to client
     // Common errors: expired token, invalid signature, revoked token
-    console.error('Token verification failed:', error instanceof Error ? error.message : 'unknown error');
+    const errorMessage = error instanceof Error ? error.message : 'unknown error';
+    console.error('Token verification failed:', errorMessage);
+    if (error instanceof Error && error.stack) {
+      console.error('Stack trace:', error.stack);
+    }
     return null;
   }
 }
