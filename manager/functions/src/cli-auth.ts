@@ -22,11 +22,11 @@ import { html } from 'hono/html';
 import { createHash, randomBytes } from 'crypto';
 
 // Configuration - set via environment variables on Cloud Functions
-// Can be set via: firebase functions:config:set oauth.google_client_id="..." etc.
-// Or via Cloud Run environment variables in Google Cloud Console
+// Use Secret Manager: firebase functions:secrets:set GOOGLE_CLIENT_ID, etc.
+// Note: FIREBASE_API_KEY is a reserved prefix, so we use PAIRIT_FIREBASE_API_KEY instead
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET ?? '';
-const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY ?? '';
+const FIREBASE_API_KEY = process.env.PAIRIT_FIREBASE_API_KEY ?? '';
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';

@@ -325,7 +325,11 @@ app.delete('/media/:object', requireAuth, async (c) => {
   }
 });
 
-export const manager = onRequest({ region: 'us-east4', invoker: 'public' }, async (req, res) => {
+export const manager = onRequest({ 
+  region: 'us-east4', 
+  invoker: 'public',
+  secrets: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'PAIRIT_FIREBASE_API_KEY'],
+}, async (req, res) => {
   const url = `https://${req.hostname}${req.originalUrl}`;
 
   const headers: Record<string, string> = {};

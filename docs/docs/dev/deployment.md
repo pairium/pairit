@@ -114,13 +114,14 @@ gcloud services enable \
 
 **Authorized Domains:**
 
-For the CLI's local OAuth callback to work, add `127.0.0.1` to authorized domains:
+For authentication to work, you must add the following domains to Firebase's authorized domains list:
 
 1. Go to Firebase Console → Authentication → Settings → Authorized domains
-2. Click **Add domain**
-3. Add `127.0.0.1` (this allows the CLI's local callback server to receive auth tokens)
+2. Click **Add domain** and add:
+   - `127.0.0.1` (for CLI's local OAuth callback server)
+   - Your Cloud Functions domain, e.g., `manager-xxxxx-xx.a.run.app` (for Email Link authentication). You can find this URL in the output of `firebase deploy --only functions:manager` or in Firebase project homepage's Functions tab
 
-> **Note**: `localhost` is typically authorized by default, but `127.0.0.1` must be added explicitly for the CLI OAuth flow.
+> **Note**: `localhost` is typically authorized by default, but `127.0.0.1` must be added explicitly for the CLI OAuth flow. The Cloud Functions domain is **required** for Email Link authentication—Firebase will reject `sendOobCode` requests with `UNAUTHORIZED_DOMAIN` error if the `continueUrl` domain is not allowlisted.
 
 ### 2. Firestore
 
@@ -182,41 +183,60 @@ OAuth secrets are configured on Cloud Functions (server-side), not on the CLI. T
 
 ### Required Secrets for Cloud Functions
 
-Set these environment variables when deploying the manager function:
+The manager function requires these secrets for authentication. They are declared in the function definition and automatically injected as environment variables at runtime:
 
-```bash
-# Required for server-side OAuth
-GOOGLE_CLIENT_ID=<your-oauth-client-id>
-GOOGLE_CLIENT_SECRET=<your-oauth-client-secret>
-FIREBASE_API_KEY=<your-firebase-web-api-key>
+```typescript
+// manager/functions/src/index.ts
+export const manager = onRequest({ 
+  region: 'us-east4', 
+  invoker: 'public',
+  secrets: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'PAIRIT_FIREBASE_API_KEY'],
+}, async (req, res) => {
+  // ...
+});
 ```
 
-**Set via Firebase CLI:**
+| Secret Name | Purpose |
+|-------------|---------|
+| `GOOGLE_CLIENT_ID` | OAuth 2.0 Client ID for Google Sign-In |
+| `GOOGLE_CLIENT_SECRET` | OAuth 2.0 Client Secret for Google Sign-In |
+| `PAIRIT_FIREBASE_API_KEY` | Firebase Web API Key (note: `FIREBASE_` prefix is reserved by Firebase, so we use `PAIRIT_` prefix) |
+
+**Set secrets via Firebase CLI (using Secret Manager):**
 
 ```bash
+# Set each secret (you'll be prompted to enter the value)
 firebase functions:secrets:set GOOGLE_CLIENT_ID
 firebase functions:secrets:set GOOGLE_CLIENT_SECRET
-firebase functions:secrets:set FIREBASE_API_KEY
+firebase functions:secrets:set PAIRIT_FIREBASE_API_KEY
+
+# Or pipe values directly
+echo "your-client-id" | firebase functions:secrets:set GOOGLE_CLIENT_ID --data-file=-
+echo "your-client-secret" | firebase functions:secrets:set GOOGLE_CLIENT_SECRET --data-file=-
+echo "your-api-key" | firebase functions:secrets:set PAIRIT_FIREBASE_API_KEY --data-file=-
 ```
 
-Or set as environment config:
-
-```bash
-firebase functions:config:set oauth.google_client_id="your-client-id" \
-  oauth.google_client_secret="your-secret" \
-  oauth.firebase_api_key="your-api-key"
-```
+> **Note**: Firebase Functions v2 uses Secret Manager for secrets, not `firebase functions:config:set` (which was for v1). The secrets are automatically granted access to the compute service account during deployment.
 
 **Get these values from:**
-- `FIREBASE_API_KEY`: Firebase Console → Project Settings → General → Web API Key
+- `PAIRIT_FIREBASE_API_KEY`: Firebase Console → Project Settings → General → Web API Key
 - `GOOGLE_CLIENT_ID` & `GOOGLE_CLIENT_SECRET`: Google Cloud Console → APIs & Services → Credentials → Create OAuth 2.0 Client ID (Web application type)
 
 ### Configuring Google OAuth Client
 
+> **Important**: You must create a **Web application** OAuth client, NOT a Desktop app. Using a Desktop app client will result in `Error 401: invalid_client` during the OAuth flow.
+
 1. Go to [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials)
-2. Create OAuth 2.0 Client ID (Application type: **Web application**)
-3. Add authorized redirect URI: `https://manager-<hash>-<region>.a.run.app/auth/google/callback`
-4. Copy Client ID and Client Secret
+2. Click **+ CREATE CREDENTIALS** → **OAuth client ID**
+3. Select Application type: **Web application** (NOT Desktop app)
+4. Name: `Pairit Manager` (or similar)
+5. Under **Authorized redirect URIs**, click **+ ADD URI** and add:
+   - `https://manager-<hash>-<region>.a.run.app/auth/google/callback`
+   - (Find your exact URL from `firebase deploy --only functions:manager` output or Firebase Console → Functions)
+6. Click **Create**
+7. Copy the **Client ID** and **Client Secret**
+
+**Why Web application?** The server-side OAuth flow requires a proper client secret validation and redirect URI matching, which only Web application clients support. Desktop app clients use a different flow and will fail with `invalid_client` error.
 
 ## CLI Environment Variables (Optional)
 
@@ -253,6 +273,22 @@ pairit config upload manager/test-config.yaml
 ```
 
 ## Troubleshooting
+
+### OAuth Error 401: invalid_client
+
+**Cause**: The Google OAuth client is configured as "Desktop app" instead of "Web application", or the client ID/secret is incorrect.
+
+**Fix**: 
+1. Go to [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials)
+2. Check your OAuth 2.0 Client ID type - it must be **Web application**
+3. If it's a Desktop app, create a new Web application client
+4. Ensure the authorized redirect URI matches exactly: `https://manager-<hash>-<region>.a.run.app/auth/google/callback`
+5. Update secrets with the new client ID and secret:
+   ```bash
+   firebase functions:secrets:set GOOGLE_CLIENT_ID
+   firebase functions:secrets:set GOOGLE_CLIENT_SECRET
+   firebase deploy --only functions:manager
+   ```
 
 ### 401 Unauthorized (HTML response)
 
@@ -295,9 +331,9 @@ pairit config upload manager/test-config.yaml
 | API: Identity Toolkit | GCP APIs | Enabled |
 | Auth: Email/Password | Firebase Auth | Enabled (with email link) |
 | Auth: Google | Firebase Auth | Enabled |
-| Auth: Authorized domain | Firebase Auth | `127.0.0.1` |
-| **Server:** FIREBASE_API_KEY | Cloud Functions env | Web API Key |
-| **Server:** GOOGLE_CLIENT_ID | Cloud Functions env | OAuth Client ID |
-| **Server:** GOOGLE_CLIENT_SECRET | Cloud Functions env | OAuth Client Secret |
+| Auth: Authorized domains | Firebase Auth | `127.0.0.1`, Cloud Functions URL |
+| **Server:** PAIRIT_FIREBASE_API_KEY | Secret Manager | Web API Key |
+| **Server:** GOOGLE_CLIENT_ID | Secret Manager | OAuth Client ID |
+| **Server:** GOOGLE_CLIENT_SECRET | Secret Manager | OAuth Client Secret |
 | CLI: PAIRIT_FUNCTIONS_BASE_URL | .env (optional) | Override functions URL |
 

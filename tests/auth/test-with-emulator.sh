@@ -18,8 +18,24 @@
 
 set -e
 
+# Get current Firebase project ID
+get_firebase_project() {
+  local project=$(firebase use 2>/dev/null | head -n1 | tr -d '[:space:]' || echo "")
+  if [ -z "$project" ]; then
+    # Fallback: try to get from firebase projects:list
+    project=$(firebase projects:list 2>/dev/null | grep "(current)" | awk '{print $1}' | head -n1 || echo "")
+  fi
+  echo "$project"
+}
+
+FIREBASE_PROJECT=$(get_firebase_project)
+if [ -z "$FIREBASE_PROJECT" ]; then
+  echo "Warning: Could not determine Firebase project ID, using 'pairit-lab' as fallback"
+  FIREBASE_PROJECT="pairit-lab"
+fi
+
 AUTH_EMULATOR_URL="http://localhost:9099"
-BASE_URL="http://127.0.0.1:5001/pairit-lab/us-east4/manager"
+BASE_URL="http://127.0.0.1:5001/$FIREBASE_PROJECT/us-east4/manager"
 FIREBASE_API_KEY="fake-api-key" # Emulator uses fake key
 
 # Colors

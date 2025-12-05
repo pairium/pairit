@@ -36,6 +36,16 @@ FUNCTIONS_URL="http://127.0.0.1:5001"          # Functions emulator endpoint
 MAX_WAIT_TIME=60                                # Max seconds to wait for emulators
 WAIT_INTERVAL=2                                 # Check interval in seconds
 
+# Get current Firebase project ID
+get_firebase_project() {
+  local project=$(firebase use 2>/dev/null | head -n1 | tr -d '[:space:]' || echo "")
+  if [ -z "$project" ]; then
+    # Fallback: try to get from firebase projects:list
+    project=$(firebase projects:list 2>/dev/null | grep "(current)" | awk '{print $1}' | head -n1 || echo "")
+  fi
+  echo "$project"
+}
+
 # Track emulator PID
 EMULATOR_PID=""
 
@@ -95,9 +105,19 @@ wait_for_emulator() {
   # Now wait for the manager function to be loaded (takes longer)
   echo -e "${BLUE}Waiting for manager functions to load...${NC}"
   wait_time=0
+  
+  # Get Firebase project ID
+  FIREBASE_PROJECT=$(get_firebase_project)
+  if [ -z "$FIREBASE_PROJECT" ]; then
+    echo ""
+    echo -e "${RED}✗ Could not determine Firebase project ID${NC}"
+    echo "Run: firebase use <project-id>"
+    return 1
+  fi
+  
   while [ $wait_time -lt $MAX_WAIT_TIME ]; do
     # Check if manager function returns a valid response (401 = auth required = function loaded)
-    response=$(curl -s -o /dev/null -w "%{http_code}" "$FUNCTIONS_URL/pairit-lab/us-east4/manager/configs" 2>/dev/null || echo "000")
+    response=$(curl -s -o /dev/null -w "%{http_code}" "$FUNCTIONS_URL/$FIREBASE_PROJECT/us-east4/manager/configs" 2>/dev/null || echo "000")
     if [ "$response" = "401" ]; then
       echo -e "${GREEN}✓ Manager functions are ready!${NC}"
       return 0

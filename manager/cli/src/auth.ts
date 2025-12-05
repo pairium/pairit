@@ -317,7 +317,7 @@ async function createAuthCallbackServer(
             <html>
               <body style="font-family: system-ui; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #1a1a2e; color: #e4e4e7;">
                 <div style="text-align: center;">
-                  <h1 style="color: #4ade80;">✓ Authentication successful!</h1>
+                  <h1 style="color: #4ade80;">Authentication successful!</h1>
                   <p>You can close this window and return to the terminal.</p>
                 </div>
               </body>
