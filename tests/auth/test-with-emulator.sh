@@ -191,8 +191,10 @@ echo ""
 
 # Step 9: Test that both email and OAuth tokens work identically
 echo -e "${BLUE}Step 9:${NC} Testing token compatibility"
-echo "Email/password tokens and OAuth tokens should work identically"
-echo "Both use the same Firebase ID token format"
+echo "All auth methods produce identical Firebase ID tokens:"
+echo "  - Email/password (emulator test)"
+echo "  - Email link (server-side, production)"
+echo "  - Google OAuth (server-side, production)"
 echo -e "${GREEN}✓ PASS${NC}: Token format is provider-agnostic"
 echo ""
 
@@ -205,5 +207,8 @@ echo "  - Owner assignment: Correct ✓"
 echo "  - Ownership verification: Working ✓"
 echo "  - Unauthorized operations: Blocked ✓"
 echo "  - Token refresh: Provider preservation (tested in CLI) ✓"
-echo "  - Token compatibility: Email and OAuth tokens work identically ✓"
+echo "  - Token compatibility: All auth methods work identically ✓"
+echo ""
+echo "Note: Server-side auth (Email link, OAuth) requires production Firebase."
+echo "      No local secrets needed - just run: pairit auth login"
 

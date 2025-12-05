@@ -4,6 +4,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { requireAuth, type AuthenticatedUser } from './middleware';
+import { cliAuthApp } from './cli-auth';
 
 initializeApp();
 
@@ -29,6 +30,9 @@ function buildPublicUrl(bucketName: string, objectName: string): string {
 }
 
 const app = new Hono();
+
+// Mount CLI authentication routes (no auth required for login flow)
+app.route('/', cliAuthApp);
 
 type ConfigDocument = {
   configId: string;

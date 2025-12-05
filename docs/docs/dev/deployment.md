@@ -176,23 +176,63 @@ export const manager = onRequest({
 
 Without this setting, Cloud Run will reject requests before they reach your code.
 
-## CLI Environment Variables
+## Function Environment Variables
 
-For CLI usage, set these in `.env` or environment:
+OAuth secrets are configured on Cloud Functions (server-side), not on the CLI. This means CLI users don't need to configure any secrets for Google Sign-In.
+
+### Required Secrets for Cloud Functions
+
+Set these environment variables when deploying the manager function:
 
 ```bash
-# Required for authentication
-FIREBASE_API_KEY=<your-firebase-web-api-key>
-
-# Optional: Override functions URL
-PAIRIT_FUNCTIONS_BASE_URL=https://manager-xxxxx-xx.a.run.app
-
-# Optional: For Google OAuth
+# Required for server-side OAuth
 GOOGLE_CLIENT_ID=<your-oauth-client-id>
 GOOGLE_CLIENT_SECRET=<your-oauth-client-secret>
+FIREBASE_API_KEY=<your-firebase-web-api-key>
 ```
 
-Get `FIREBASE_API_KEY` from Firebase Console → Project Settings → General → Web API Key
+**Set via Firebase CLI:**
+
+```bash
+firebase functions:secrets:set GOOGLE_CLIENT_ID
+firebase functions:secrets:set GOOGLE_CLIENT_SECRET
+firebase functions:secrets:set FIREBASE_API_KEY
+```
+
+Or set as environment config:
+
+```bash
+firebase functions:config:set oauth.google_client_id="your-client-id" \
+  oauth.google_client_secret="your-secret" \
+  oauth.firebase_api_key="your-api-key"
+```
+
+**Get these values from:**
+- `FIREBASE_API_KEY`: Firebase Console → Project Settings → General → Web API Key
+- `GOOGLE_CLIENT_ID` & `GOOGLE_CLIENT_SECRET`: Google Cloud Console → APIs & Services → Credentials → Create OAuth 2.0 Client ID (Web application type)
+
+### Configuring Google OAuth Client
+
+1. Go to [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials)
+2. Create OAuth 2.0 Client ID (Application type: **Web application**)
+3. Add authorized redirect URI: `https://manager-<hash>-<region>.a.run.app/auth/google/callback`
+4. Copy Client ID and Client Secret
+
+## CLI Environment Variables (Optional)
+
+**CLI users don't need to set any environment variables for authentication!** Both Google OAuth and Email Link authentication use server-side flows.
+
+The following are optional overrides for development or custom deployments:
+
+```bash
+# Optional: Override functions URL (for development or custom deployments)
+PAIRIT_FUNCTIONS_BASE_URL=https://manager-xxxxx-xx.a.run.app
+
+# Optional: For automatic token refresh (if not set, user will need to re-login when token expires)
+FIREBASE_API_KEY=<your-firebase-web-api-key>
+```
+
+**Note:** Both `pairit auth login --provider google` and `pairit auth login --provider email` work without any local secrets. The only reason to set `FIREBASE_API_KEY` locally is to enable automatic token refresh (tokens expire after 1 hour).
 
 ## Verification Steps
 
@@ -256,7 +296,8 @@ pairit config upload manager/test-config.yaml
 | Auth: Email/Password | Firebase Auth | Enabled (with email link) |
 | Auth: Google | Firebase Auth | Enabled |
 | Auth: Authorized domain | Firebase Auth | `127.0.0.1` |
-| CLI: FIREBASE_API_KEY | .env | Web API Key |
-| CLI: GOOGLE_CLIENT_ID | .env | OAuth Client ID (for Google login) |
-| CLI: GOOGLE_CLIENT_SECRET | .env | OAuth Client Secret |
+| **Server:** FIREBASE_API_KEY | Cloud Functions env | Web API Key |
+| **Server:** GOOGLE_CLIENT_ID | Cloud Functions env | OAuth Client ID |
+| **Server:** GOOGLE_CLIENT_SECRET | Cloud Functions env | OAuth Client Secret |
+| CLI: PAIRIT_FUNCTIONS_BASE_URL | .env (optional) | Override functions URL |
 

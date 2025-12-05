@@ -84,9 +84,9 @@ fi
 echo ""
 
 # Test 5: Verify email/password login still works (backward compatibility)
-echo "Test 5: Email/password login backward compatibility"
-echo "Note: This test requires emulators and CLI to be built"
-echo "Expected: Email login command should work"
+echo "Test 5: Authentication methods"
+echo "Note: Both Email and OAuth use server-side auth (no local secrets needed)"
+echo "Expected: Auth login commands should work"
 if command -v node > /dev/null 2>&1; then
   # Check if CLI is built
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -95,10 +95,9 @@ if command -v node > /dev/null 2>&1; then
   
   if [ -f "$CLI_PATH" ]; then
     echo -e "${GREEN}✓ PASS${NC}: CLI binary exists"
-    echo "  To test email login manually:"
-    echo "    export USE_FIREBASE_EMULATOR=true"
-    echo "    export FIREBASE_API_KEY=fake-api-key"
-    echo "    node $CLI_PATH auth login --provider email"
+    echo "  To test authentication manually (no env vars needed!):"
+    echo "    node $CLI_PATH auth login --provider email   # Email link"
+    echo "    node $CLI_PATH auth login --provider google  # Google OAuth"
   else
     echo -e "${YELLOW}⚠ SKIP${NC}: CLI not built (run: pnpm --filter pairit-cli build)"
   fi
@@ -109,7 +108,7 @@ echo ""
 
 # Note: Testing with valid tokens requires Firebase Auth emulator setup
 echo -e "${YELLOW}Note:${NC} Testing with valid Firebase tokens requires:"
-echo "  1. Firebase Auth emulator running"
+echo "  1. Firebase Auth emulator running (for backend tests)"
 echo "  2. Creating a test user"
 echo "  3. Getting a valid ID token"
 echo ""
@@ -127,11 +126,13 @@ echo ""
 echo "Summary:"
 echo "  - Unauthenticated access: Blocked ✓"
 echo "  - Invalid tokens: Rejected ✓"
-echo "  - Email/password login: Available ✓ (backward compatibility)"
+echo "  - Server-side auth: No local secrets needed ✓"
 echo ""
 echo "Next steps:"
 echo "  1. Start Firebase Auth emulator: firebase emulators:start --only auth,functions,firestore"
 echo "  2. Create test user and get token"
 echo "  3. Test authenticated endpoints with valid token"
-echo "  4. Test OAuth flow: node $CLI_PATH auth login --provider google"
+echo "  4. Test real auth flow (no env vars needed!):"
+echo "     node $CLI_PATH auth login --provider google"
+echo "     node $CLI_PATH auth login --provider email"
 

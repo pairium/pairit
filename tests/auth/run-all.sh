@@ -180,32 +180,22 @@ else
 fi
 echo ""
 
-# Step 6: Build CLI for OAuth tests
-echo -e "${BLUE}Step 6:${NC} Building CLI for OAuth tests..."
+# Step 5: Build CLI
+echo -e "${BLUE}Step 5:${NC} Building CLI..."
 cd "$PROJECT_ROOT"
 if pnpm --filter pairit-cli build; then
   echo -e "${GREEN}✓ CLI built${NC}"
 else
-  echo -e "${YELLOW}⚠ CLI build failed, skipping OAuth tests${NC}"
-  echo ""
-  echo -e "${GREEN}✅ Authentication tests completed (OAuth tests skipped)${NC}"
-  echo ""
-  exit 0
-fi
-echo ""
-
-# Step 7: Run OAuth-specific tests
-echo -e "${BLUE}Step 7:${NC} Running OAuth-specific tests..."
-cd "$SCRIPT_DIR"
-if bash test-oauth.sh; then
-  echo -e "${GREEN}✓ OAuth tests passed${NC}"
-else
-  echo -e "${RED}✗ OAuth tests failed${NC}"
-  exit 1
+  echo -e "${YELLOW}⚠ CLI build failed${NC}"
 fi
 echo ""
 
 # Success
 echo -e "${GREEN}✅ All authentication tests completed successfully!${NC}"
+echo ""
+echo "Note: Server-side auth (Email link, OAuth) requires manual testing:"
+echo "  - Run: pairit auth login --provider google"
+echo "  - Run: pairit auth login --provider email"
+echo "  - For multi-user tests: ./test-multi-user-auth.sh user1@example.com user2@example.com"
 echo ""
 

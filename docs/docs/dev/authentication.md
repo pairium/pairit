@@ -174,29 +174,35 @@ match /configs/{configId} {
 
 ### 11. OAuth Security (Google Sign-In)
 
-**PKCE Implementation:**
+**Server-Side OAuth Flow:**
+- All OAuth secrets (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, FIREBASE_API_KEY) remain on the server
+- CLI users don't need to configure any secrets for Google Sign-In
+- Server handles: OAuth initiation, token exchange, and Firebase token generation
+- CLI only receives the final Firebase tokens via localhost redirect
+
+**Server-Side PKCE Implementation:**
 - Code verifier: Random 32-byte value, base64url encoded (43 chars)
 - Code challenge: SHA256 hash of verifier, base64url encoded
+- Server generates and validates PKCE parameters
 - Prevents authorization code interception attacks
-- Required for public clients (CLI applications)
 
-**State Parameter:**
-- Random state token generated for each OAuth flow
-- Validated on callback to prevent CSRF attacks
-- State mismatch results in rejection
+**State Parameter (Dual Layer):**
+- CLI generates state token for CSRF protection
+- Server generates separate state for OAuth flow
+- Both validated to ensure callback integrity
+- State mismatch at any layer results in rejection
 
-**Callback Server:**
+**CLI Callback Server:**
 - Local HTTP server on `localhost` (ports 9000-9010)
-- Only accepts connections from localhost
+- Receives Firebase tokens directly from Pairit server (not Google auth code)
 - 5-minute timeout prevents hanging processes
 - Automatic port discovery if primary port in use
-- Graceful error handling for port conflicts
 
-**Token Exchange:**
-- Authorization code exchanged server-side using PKCE verifier
-- Uses Firebase Auth REST API `/accounts:signInWithIdp` endpoint
-- Validates authorization code before exchange
-- Same token structure as email link authentication
+**Server Auth Endpoints:**
+- `GET /auth/login` - Displays login page, initiates OAuth flow
+- `GET /auth/google/callback` - Receives Google callback, exchanges tokens, redirects to CLI
+- OAuth sessions stored server-side with 5-minute expiry
+- All token exchanges happen server-side
 
 **Provider Field:**
 - OAuth tokens marked with `provider: 'google'`
@@ -223,19 +229,24 @@ match /configs/{configId} {
 
 **Email Link (Magic Link):**
 - Passwordless authentication via email
-- User enters email, receives sign-in link
-- Local callback server receives oobCode from link
-- Uses Firebase Auth REST API `/accounts:sendOobCode` and `/accounts:signInWithEmailLink`
+- Uses **server-side flow** - no local secrets required!
+- CLI opens browser to Pairit server's `/auth/login` endpoint
+- User enters email on server's web form
+- Server sends sign-in link (server has the API key)
+- User clicks link, server exchanges oobCode for Firebase tokens
+- Server redirects to CLI's localhost with tokens
 - Stores tokens locally with restricted permissions
 - Provider field: `'email'`
+- **No FIREBASE_API_KEY needed on CLI**
 
 **Google Sign-In (OAuth):**
-- Uses OAuth 2.0 flow with PKCE
-- Opens browser for Google Sign-In
-- Local callback server receives authorization code
-- Exchanges code for Firebase ID token
-- Stores tokens locally with restricted permissions
+- Uses **server-side OAuth flow** - no local secrets required!
+- CLI opens browser to Pairit server's `/auth/login` endpoint
+- Server handles OAuth with Google (has client ID/secret)
+- Server exchanges tokens and redirects to CLI's localhost with Firebase tokens
+- CLI stores tokens locally with restricted permissions
 - Provider field: `'google'`
+- **No GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, or FIREBASE_API_KEY needed on CLI**
 
 **Similarities:**
 - Both methods use local callback server (ports 9000-9010)
@@ -250,23 +261,29 @@ All CLI API requests automatically include `Authorization: Bearer <token>` heade
 
 ### 12. Email Link Security
 
-**Callback Server:**
-- Local HTTP server on `localhost` (ports 9000-9010)
-- Receives oobCode parameter from Firebase email link
-- 5-minute timeout prevents hanging processes
-- Automatic port discovery if primary port in use
+**Server-Side Email Link Flow:**
+- All API calls use server's FIREBASE_API_KEY (not exposed to CLI)
+- Server handles sending email and exchanging oobCode
+- CLI only receives final Firebase tokens
 
 **Email Link Flow:**
-1. User enters email address
-2. CLI sends sign-in link via Firebase REST API
-3. User clicks link in email
-4. Browser redirects to local callback server with oobCode
-5. CLI exchanges oobCode for Firebase ID token
+1. CLI opens browser to server's `/auth/login` page
+2. User enters email address on web form
+3. Server sends sign-in link via Firebase REST API
+4. User clicks link in email
+5. Browser redirects to server's `/auth/email/callback` with oobCode
+6. Server exchanges oobCode for Firebase tokens
+7. Server redirects to CLI's localhost with tokens
+8. CLI stores tokens locally
+
+**Server Auth Endpoints for Email:**
+- `POST /auth/email/send` - Sends sign-in email (form submission)
+- `GET /auth/email/callback` - Receives oobCode, exchanges tokens, redirects to CLI
 
 **Firebase Console Setup:**
 1. Enable Email/Password provider
 2. Enable "Email link (passwordless sign-in)" option
-3. Configure action URL settings (optional)
+3. Add server's callback URL to authorized redirect URIs
 
 ## Security Checklist
 
@@ -284,22 +301,24 @@ All CLI API requests automatically include `Authorization: Bearer <token>` heade
 - ✅ Fail-secure defaults
 
 **Email Link Security:**
+- ✅ Server-side flow (FIREBASE_API_KEY never exposed to CLI)
 - ✅ Passwordless authentication (no passwords stored)
-- ✅ Callback server localhost-only
-- ✅ 5-minute timeout prevents hanging
-- ✅ Port validation (9000-9010 range only)
-- ✅ oobCode validation before token exchange
+- ✅ Server handles email sending and token exchange
+- ✅ CLI callback server localhost-only
+- ✅ 5-minute timeout on both CLI and server
+- ✅ Session validation before oobCode exchange
 - ✅ Provider field preserved during refresh
 
 **OAuth-Specific Security:**
-- ✅ PKCE implementation (code verifier/challenge)
-- ✅ State parameter for CSRF protection
-- ✅ Callback server localhost-only
-- ✅ 5-minute timeout prevents hanging
-- ✅ Port validation (9000-9010 range only)
-- ✅ Authorization code validation before exchange
+- ✅ Server-side OAuth (secrets never exposed to CLI users)
+- ✅ PKCE implementation (code verifier/challenge) on server
+- ✅ Dual-layer state parameter for CSRF protection
+- ✅ Callback server localhost-only on CLI
+- ✅ 5-minute timeout prevents hanging (both CLI and server)
+- ✅ Server validates tokens before redirecting to CLI
 - ✅ Provider field preserved during refresh
 - ✅ Browser opening fails gracefully (headless environments)
+- ✅ OAuth secrets configured via Cloud Functions environment variables
 
 ## Future Security Enhancements
 

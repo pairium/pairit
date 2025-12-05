@@ -9,11 +9,9 @@
 #
 # Prerequisites:
 #   - CLI must be built: pnpm --filter pairit-cli build
-#   - Required environment variables:
-#     - FIREBASE_API_KEY
-#     - GOOGLE_CLIENT_ID
-#     - GOOGLE_CLIENT_SECRET
-#   - For production tests (not emulator):
+#   - Manager functions deployed with OAuth secrets configured server-side
+#   - NO local environment variables needed! (server-side auth)
+#   - For production tests:
 #     - Email link sign-in enabled in Firebase Console
 #     - Google Sign-In enabled in Firebase Console
 #
@@ -195,31 +193,13 @@ check_prerequisites() {
   fi
   log_success "Test config exists"
   
-  # Check .env loading
+  # Note: No local environment variables needed for authentication!
+  # Server-side auth handles all OAuth secrets
+  log_success "Server-side auth: No local secrets required"
+  
+  # Optional: Check if .env exists for other settings
   if [ -f "$PROJECT_ROOT/.env" ]; then
-    log_success "Loaded .env from $PROJECT_ROOT/.env"
-  fi
-  
-  # Check environment variables
-  if [ -z "$FIREBASE_API_KEY" ]; then
-    echo -e "${YELLOW}WARNING:${NC} FIREBASE_API_KEY not set"
-    echo "Set it with: export FIREBASE_API_KEY=your-api-key"
-  else
-    log_success "FIREBASE_API_KEY is set"
-  fi
-  
-  if [ -z "$GOOGLE_CLIENT_ID" ]; then
-    echo -e "${YELLOW}WARNING:${NC} GOOGLE_CLIENT_ID not set"
-    echo "OAuth tests will be skipped"
-  else
-    log_success "GOOGLE_CLIENT_ID is set (${GOOGLE_CLIENT_ID:0:20}...)"
-  fi
-  
-  if [ -z "$GOOGLE_CLIENT_SECRET" ]; then
-    echo -e "${YELLOW}WARNING:${NC} GOOGLE_CLIENT_SECRET not set"
-    echo "OAuth tests will be skipped"
-  else
-    log_success "GOOGLE_CLIENT_SECRET is set"
+    log_info "Found .env file (optional settings may be loaded)"
   fi
   
   echo ""
@@ -476,11 +456,8 @@ main() {
   backup_auth
   trap restore_auth EXIT
   
-  # Check OAuth availability
-  if [ -z "$GOOGLE_CLIENT_ID" ] || [ -z "$GOOGLE_CLIENT_SECRET" ]; then
-    log_info "Google OAuth credentials not set - OAuth tests will be skipped"
-    skip_oauth=true
-  fi
+  # Note: OAuth is always available with server-side auth (no local secrets needed)
+  log_info "Server-side auth enabled - both Email and OAuth are available"
   
   # ==========================================================================
   # Phase 1: User1 Email Login (Login #1)
