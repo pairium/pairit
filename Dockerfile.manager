@@ -1,0 +1,27 @@
+FROM oven/bun:1 AS base
+WORKDIR /app
+
+# Install dependencies
+FROM base AS deps
+COPY package.json bun.lock ./
+COPY manager/server/package.json ./manager/server/
+COPY lib/ ./lib/
+RUN bun install --frozen-lockfile
+
+# Build the app
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/manager/server/node_modules ./manager/server/node_modules
+COPY . .
+
+# Production image
+FROM base AS runner
+ENV NODE_ENV=production
+
+COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/manager/server ./manager/server
+COPY --from=builder /app/node_modules ./node_modules
+
+WORKDIR /app/manager/server
+EXPOSE 3002
+CMD ["bun", "run", "src/index.ts"]

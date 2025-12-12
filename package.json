@@ -2,25 +2,24 @@
   "name": "pairit",
   "version": "0.1.0",
   "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "pnpm -r test",
-    "build": "pnpm -r build",
-    "dev": "pnpm -r --parallel dev",
-    "emulators": "pnpm --filter lab-functions build && pnpm --filter manager-functions build && firebase emulators:start --only functions,firestore"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.18.2",
   "type": "module",
   "private": true,
+  "workspaces": [
+    "manager/*",
+    "lab/*",
+    "lib/*"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "build": "bun run --filter '*' build",
+    "dev": "bun run --filter '*' dev",
+    "emulators": "echo 'Deprecated: use docker compose up'"
+  },
   "devDependencies": {
     "@types/node": "^24.7.0",
-    "@vitejs/plugin-react": "^5.0.4",
-    "tsup": "^8.5.0",
-    "tsx": "^4.20.6",
-    "typescript": "^5.9.3",
-    "vitest": "^2.1.9"
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@google-cloud/storage": "^7.14.0"
   }
 }
