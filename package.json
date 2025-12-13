@@ -6,7 +6,9 @@
   "private": true,
   "workspaces": [
     "manager/*",
+    "manager/server",
     "lab/*",
+    "lab/server",
     "lib/*"
   ],
   "scripts": {

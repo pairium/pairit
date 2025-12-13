@@ -10,38 +10,38 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-  # Uncomment after Phase 2 when servers are implemented
-  # lab-server:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.lab
-  #   ports:
-  #     - "3001:3001"
-  #   environment:
-  #     - MONGODB_URI=mongodb://mongodb:27017/pairit
-  #     - STORAGE_BACKEND=local
-  #     - STORAGE_PATH=/app/storage
-  #   depends_on:
-  #     mongodb:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ./storage:/app/storage
 
-  # manager-server:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.manager
-  #   ports:
-  #     - "3002:3002"
-  #   environment:
-  #     - MONGODB_URI=mongodb://mongodb:27017/pairit
-  #     - STORAGE_BACKEND=local
-  #     - STORAGE_PATH=/app/storage
-  #   depends_on:
-  #     mongodb:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ./storage:/app/storage
+  lab-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.lab
+    ports:
+      - "3001:3001"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/pairit
+      - STORAGE_BACKEND=local
+      - STORAGE_PATH=/app/storage
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./storage:/app/storage
+
+  manager-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.manager
+    ports:
+      - "3002:3002"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/pairit
+      - STORAGE_BACKEND=local
+      - STORAGE_PATH=/app/storage
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./storage:/app/storage
 
 volumes:
   mongodb_data:

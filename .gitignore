@@ -256,6 +256,9 @@ count.txt
 .nitro
 .tanstack
 
+# Storage directory (user uploads and local storage backend)
+storage/
+
 # General
 .DS_Store
 __MACOSX/

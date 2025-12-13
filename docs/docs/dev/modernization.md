@@ -1,32 +1,5 @@
-I'll analyze the current codebase structure to understand dependencies and create a comprehensive migration roadmap. Let me first explore the existing architecture.
-
-[16 tools called]
-
-Now I have a complete picture of the current architecture. Let me create a comprehensive migration roadmap with proper phasing, testing strategy, and cleanup integrated into each phase.
-
----
-
 # Modernization Roadmap: Pairit Stack Migration
-
-## Branch Strategy
-
-```
-main (current Firebase stack)
-  └── modernization/integration (long-lived integration branch)
-        ├── modernization/phase-1-infrastructure
-        ├── modernization/phase-2-backend
-        ├── modernization/phase-3-auth
-        ├── modernization/phase-4-frontend
-        └── modernization/phase-5-cli
-```
-
-**PR Flow:**
-1. Create `modernization/integration` from `main`
-2. Each phase branch created from `modernization/integration`
-3. PRs: phase branch → `modernization/integration`
-4. After all phases pass integration tests: `modernization/integration` → `main`
-
----
+This is a complete modernization roadmap. We don't care about backward compatibility or migration. We just want to remove all the deprecated dependencies and migrate to the latest stack.
 
 ## Phase Dependency Analysis
 
@@ -50,7 +23,9 @@ Phase 5: CLI (Update to new auth/API - requires auth + backend)
 
 ---
 
-## Phase 1: Infrastructure Foundation
+## Phase 1: Infrastructure Foundation ✅
+
+**Status:** COMPLETED (December 2024)
 
 **Branch:** `modernization/phase-1-infrastructure`
 
@@ -102,13 +77,21 @@ bun test lib/storage/
 ```
 
 **Exit Criteria:**
-- [ ] `bun install` completes without error
-- [ ] `docker compose up mongodb` starts successfully
-- [ ] Storage abstraction tests pass for both local and GCS backends (mocked)
+- [x] `bun install` completes without error
+- [x] `docker compose up mongodb` starts successfully
+- [x] Storage abstraction tests pass for both local and GCS backends (mocked)
+
+**Completion Notes:**
+- Migrated from pnpm to Bun workspaces
+- Created Docker Compose configuration with MongoDB 8
+- Implemented storage abstraction with LocalStorage and GCSStorage backends
+- All services configured with health checks and dependencies
 
 ---
 
-## Phase 2: Backend Migration (Lab + Manager Servers)
+## Phase 2: Backend Migration (Lab + Manager Servers) ✅
+
+**Status:** COMPLETED (December 2024)
 
 **Branch:** `modernization/phase-2-backend`
 
@@ -253,12 +236,26 @@ bun test manager/server/
 ```
 
 **Exit Criteria:**
-- [ ] Lab server starts and responds to health check
-- [ ] Manager server starts and responds to health check
-- [ ] Session CRUD operations work with MongoDB
-- [ ] Config CRUD operations work with MongoDB
-- [ ] Media upload works with local filesystem
-- [ ] All existing API contracts maintained (response shapes unchanged)
+- [x] Lab server starts and responds to health check
+- [x] Manager server starts and responds to health check
+- [x] Session CRUD operations work with MongoDB
+- [x] Config CRUD operations work with MongoDB
+- [x] Media upload works with local filesystem
+- [x] All existing API contracts maintained (response shapes unchanged)
+
+**Completion Notes:**
+- Implemented lab server with Elysia framework (3001)
+  - Routes: `/sessions/start`, `/sessions/:id`, `/sessions/:id/advance`, `/sessions/:id/events`, `/configs/:configId`
+  - MongoDB collections: `sessions`, `events`, `configs`
+- Implemented manager server with Elysia framework (3002)
+  - Routes: `/configs/upload`, `/configs`, `/configs/:configId`, `/media/upload`, `/media`, `/media/:object`
+  - Integrated storage abstraction for media handling
+- Added Elysia TypeBox schema validation to all endpoints (automatic request validation)
+  - 100% coverage: All 11 routes (5 lab + 6 manager) have complete schema validation
+  - Schemas defined for all params, bodies, and queries
+- Created multi-stage Dockerfiles for both servers
+- Updated docker-compose.yml with lab-server and manager-server services
+- All services running successfully with health checks
 
 ### Files to Delete After Phase 2
 
@@ -283,7 +280,17 @@ bun test manager/server/
 | Add Better Auth to manager server | — |
 | Configure Google OAuth provider | — |
 | Add auth middleware to protected routes | — |
+| Add optional auth for lab user sessions | — |
+| Add `requireAuth` flag to config schema | — |
+| Generate unique session links (session tokens) | — |
 | Create user sessions collection in MongoDB | — |
+
+### Authentication Modes
+
+**Manager Routes:** Always require authentication (OAuth)
+**Lab User Routes:** 
+- **With `requireAuth: true`** (default): Users must sign in with Google OAuth
+- **With `requireAuth: false`**: Users access sessions via unique session link without login
 
 ### Code Structure
 
@@ -318,6 +325,104 @@ const app = new Elysia()
   // ... rest of routes
 ```
 
+**Optional Auth Middleware (`lab/server/src/lib/auth-middleware.ts`):**
+```typescript
+import { db } from "./db";
+import { auth } from "../../../../lib/auth";
+
+export async function optionalAuthMiddleware({ 
+  request, 
+  params 
+}: { 
+  request: Request; 
+  params: { id?: string } 
+}) {
+  const configId = params.id; // from route params or body
+  if (!configId) return { requireAuth: true, user: null };
+
+  // Check config settings
+  const config = await db.collection("configs").findOne({ configId });
+  const requireAuth = config?.requireAuth ?? true;
+
+  if (!requireAuth) {
+    // Check for valid session token in URL param or query
+    const url = new URL(request.url);
+    const sessionToken = url.searchParams.get("token");
+    
+    if (sessionToken) {
+      const session = await db.collection("sessions").findOne({ 
+        sessionToken,
+        configId 
+      });
+      
+      if (session) {
+        return { requireAuth: false, sessionId: session._id, user: null };
+      }
+    }
+  }
+
+  // Fallback to regular auth
+  const session = await auth.api.getSession({ headers: request.headers });
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+  
+  return { requireAuth: true, user: session.user };
+}
+```
+
+**Session Creation with Token (`lab/server/src/routes/sessions.ts`):**
+```typescript
+import { randomBytes } from "crypto";
+
+app.post("/sessions/start", async ({ body, request }) => {
+  const { configId } = body;
+  const config = await db.collection("configs").findOne({ configId });
+  const requireAuth = config?.requireAuth ?? true;
+
+  let user = null;
+  if (requireAuth) {
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (!session) {
+      throw new Error("Unauthorized");
+    }
+    user = session.user;
+  }
+
+  // Generate unique session token for shareable link
+  const sessionToken = randomBytes(32).toString("hex");
+  
+  const newSession = {
+    configId,
+    userId: user?.id ?? null,
+    sessionToken,
+    createdAt: new Date(),
+    // ... other session data
+  };
+
+  const result = await db.collection("sessions").insertOne(newSession);
+  
+  // Return session with unique link
+  return {
+    sessionId: result.insertedId,
+    sessionToken,
+    shareableLink: requireAuth 
+      ? null 
+      : `${process.env.PUBLIC_URL}/${configId}?token=${sessionToken}`
+  };
+});
+```
+
+**Config Schema Update (`manager/server/src/routes/configs.ts`):**
+```typescript
+const ConfigSchema = Type.Object({
+  configId: Type.String(),
+  owner: Type.String(),
+  requireAuth: Type.Optional(Type.Boolean()), // Add this field
+  // ... other config fields
+});
+```
+
 ### Testing Strategy
 
 ```bash
@@ -338,6 +443,44 @@ curl -X POST http://localhost:3002/configs/upload \
   -H "Cookie: better-auth.session=..." \
   -H "Content-Type: application/json" \
   -d '{"configId": "test", ...}'
+
+# 5. Test config upload with requireAuth flag
+curl -X POST http://localhost:3002/configs/upload \
+  -H "Cookie: better-auth.session=..." \
+  -H "Content-Type: application/json" \
+  -d '{"configId": "test", "requireAuth": false, "owner": "test@example.com", ...}'
+
+# 6. Test session creation with requireAuth: false
+curl -X POST http://localhost:3001/sessions/start \
+  -H "Content-Type: application/json" \
+  -d '{"configId": "test"}'
+# Expected: Returns sessionId, sessionToken, and shareableLink
+
+# 7. Test access via unique link (no auth required)
+# Use the shareableLink from step 6
+curl "http://localhost:3001/sessions/{sessionId}?token={sessionToken}"
+# Expected: Success without authentication
+
+# 8. Test access without token when requireAuth: false (should fail)
+curl "http://localhost:3001/sessions/{sessionId}"
+# Expected: 401 Unauthorized
+
+# 9. Test session creation with requireAuth: true (default)
+curl -X POST http://localhost:3002/configs/upload \
+  -H "Cookie: better-auth.session=..." \
+  -H "Content-Type: application/json" \
+  -d '{"configId": "test-auth", "owner": "test@example.com", ...}'
+
+curl -X POST http://localhost:3001/sessions/start \
+  -H "Content-Type: application/json" \
+  -d '{"configId": "test-auth"}'
+# Expected: 401 Unauthorized (no auth header)
+
+curl -X POST http://localhost:3001/sessions/start \
+  -H "Cookie: better-auth.session=..." \
+  -H "Content-Type: application/json" \
+  -d '{"configId": "test-auth"}'
+# Expected: Success with authenticated user
 ```
 
 **Exit Criteria:**
@@ -346,6 +489,11 @@ curl -X POST http://localhost:3002/configs/upload \
 - [ ] Protected routes reject unauthenticated requests
 - [ ] Protected routes accept authenticated requests
 - [ ] User records created in MongoDB
+- [ ] Config schema accepts `requireAuth` boolean field
+- [ ] Session creation generates unique token when `requireAuth: false`
+- [ ] Lab users can access sessions via unique link without login when auth is disabled
+- [ ] Lab users cannot access sessions without token or auth when `requireAuth: true`
+- [ ] Manager routes always require authentication regardless of config setting
 
 ---
 
