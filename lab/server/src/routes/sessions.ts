@@ -13,6 +13,10 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { getConfigsCollection } from '../lib/db';
 
+import { randomBytes } from 'crypto';
+
+import { optionalAuthMiddleware } from '../lib/auth-middleware';
+
 function isPage(value: unknown): value is { id: string; end?: boolean; components?: unknown[] } {
     if (!value || typeof value !== 'object') return false;
     const page = value as any;
@@ -84,7 +88,7 @@ async function loadSession(sessionId: string): Promise<Session | null> {
     };
 }
 
-async function saveSession(session: Session): Promise<void> {
+async function saveSession(session: Session & { sessionToken?: string; userId?: string | null }): Promise<void> {
     const collection = await getSessionsCollection();
     const now = new Date();
     const doc: SessionDocument = {
@@ -94,6 +98,8 @@ async function saveSession(session: Session): Promise<void> {
         currentPageId: session.currentPageId,
         user_state: session.user_state,
         endedAt: session.endedAt ?? null,
+        sessionToken: session.sessionToken,
+        userId: session.userId ?? null,
         createdAt: session.createdAt ?? now,
         updatedAt: now,
     };
@@ -105,7 +111,8 @@ async function saveSession(session: Session): Promise<void> {
 }
 
 export const sessionsRoutes = new Elysia({ prefix: '/sessions' })
-    .post('/start', async ({ body, set }) => {
+    .use(optionalAuthMiddleware)
+    .post('/start', async ({ body, set, requireAuth, user }) => {
         const loaded = await loadConfig(body.configId);
         if (!loaded) {
             set.status = 404;
@@ -113,33 +120,61 @@ export const sessionsRoutes = new Elysia({ prefix: '/sessions' })
         }
 
         const { config } = loaded;
+
+
+
+        let userId: string | null = null;
+        if (requireAuth && user) {
+            userId = user.id;
+        }
+
+        // Generate unique session token for shareable links (when auth not required)
+        const sessionToken = !requireAuth ? randomBytes(32).toString('hex') : undefined;
+
         const id = uid();
-        const session: Session = {
+        const session: Session & { sessionToken?: string; userId?: string | null } = {
             id,
             configId: body.configId,
             config,
             currentPageId: config.initialPageId,
             user_state: {},
+            sessionToken,
+            userId,
         };
         await saveSession(session);
         const page = config.pages[session.currentPageId];
-        return {
+
+        const response: any = {
             sessionId: id,
             configId: body.configId,
             currentPageId: session.currentPageId,
             page,
         };
+
+        // Include shareable link if auth is not required
+        if (!requireAuth && sessionToken) {
+            response.sessionToken = sessionToken;
+            response.shareableLink = `${process.env.PUBLIC_URL || 'http://localhost:3001'}/${body.configId}?token=${sessionToken}`;
+        }
+
+        return response;
     }, {
         body: t.Object({
             configId: t.String({ minLength: 1 })
         })
     })
-    .get('/:id', async ({ params: { id }, set }) => {
+    .get('/:id', async ({ params: { id }, query, set }) => {
         const session = await loadSession(id);
         if (!session) {
             set.status = 404;
             return { error: 'not_found' };
         }
+
+        // Auth already validated by middleware
+        // If requireAuth is true, middleware ensures we have a user session or valid token (unlikely for strict auth)
+        // Actually, for strict auth, middleware ensures Better Auth session.
+        // For hybrid, middleware allows token.
+
         const page = session.config.pages[session.currentPageId];
         return {
             sessionId: session.id,
@@ -151,14 +186,19 @@ export const sessionsRoutes = new Elysia({ prefix: '/sessions' })
     }, {
         params: t.Object({
             id: t.String()
+        }),
+        query: t.Object({
+            token: t.Optional(t.String())
         })
     })
-    .post('/:id/advance', async ({ params: { id }, body, set }) => {
+    .post('/:id/advance', async ({ params: { id }, body, query, set }) => {
         const session = await loadSession(id);
         if (!session) {
             set.status = 404;
             return { error: 'not_found' };
         }
+
+        // Auth handled by middleware
 
         session.currentPageId = body.target;
 
@@ -182,5 +222,8 @@ export const sessionsRoutes = new Elysia({ prefix: '/sessions' })
         }),
         body: t.Object({
             target: t.String({ minLength: 1 })
+        }),
+        query: t.Object({
+            token: t.Optional(t.String())
         })
     });

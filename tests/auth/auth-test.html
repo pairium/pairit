@@ -1,26 +1,4 @@
-/**
- * Manager Server Entry Point
- * Elysia app with config and media management
- */
-import { Elysia } from 'elysia';
-import { cors } from '@elysiajs/cors';
-import { auth } from '../../../lib/auth';
-import { configsRoutes } from './routes/configs';
-import { mediaRoutes } from './routes/media';
-
-const app = new Elysia()
-    .use(
-        cors({
-            origin: '*',
-            methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-            allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-            exposeHeaders: ['Content-Type'],
-            maxAge: 86400,
-        })
-    )
-    // Mount Better Auth handler at /api/auth/*
-    .all('/api/auth/*', ({ request }) => auth.handler(request))
-    .get('/test-auth', () => new Response(`<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <title>Pairit Auth Test</title>
@@ -38,6 +16,12 @@ const app = new Elysia()
     
     <div id="login-section">
         <button onclick="login()">Sign in with Google</button>
+    </div>
+
+    <div id="result-section" class="hidden">
+        <h3>Login Successful?</h3>
+        <p>If you were redirected back here (or to the callback URL) and see a session token cookie, copy it!</p>
+        <p>Your session token should be in the Cookies for <code>localhost</code>.</p>
     </div>
 
     <script>
@@ -63,10 +47,4 @@ const app = new Elysia()
         }
     </script>
 </body>
-</html>`, { headers: { 'content-type': 'text/html' } }))
-    .get('/', () => ({ message: 'Pairit manager API' }))
-    .use(configsRoutes)
-    .use(mediaRoutes)
-    .listen(Number(process.env.PORT) || 3002);
-
-console.log(`🚀 Manager server running on ${app.server?.hostname}:${app.server?.port}`);
+</html>

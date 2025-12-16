@@ -4,6 +4,7 @@
  */
 import { Elysia } from 'elysia';
 import { cors } from '@elysiajs/cors';
+import { auth } from '../../../lib/auth';
 import { configsRoutes } from './routes/configs';
 import { sessionsRoutes } from './routes/sessions';
 import { eventsRoutes } from './routes/events';
@@ -18,6 +19,8 @@ const app = new Elysia()
             maxAge: 86400,
         })
     )
+    // Mount Better Auth handler at /api/auth/*
+    .all('/api/auth/*', ({ request }) => auth.handler(request))
     .get('/', () => ({ message: 'Pairit lab API' }))
     .use(configsRoutes)
     .use(sessionsRoutes)

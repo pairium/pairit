@@ -1,17 +1,13 @@
 {
-    "name": "manager-server",
+    "name": "@pairit/auth",
     "version": "0.0.0",
     "private": true,
     "type": "module",
-    "scripts": {
-        "dev": "bun --watch src/index.ts",
-        "start": "bun src/index.ts",
-        "typecheck": "tsc --noEmit"
+    "exports": {
+        ".": "./index.ts"
     },
     "dependencies": {
-        "@elysiajs/cors": "^1.1.1",
         "better-auth": "^1.0.7",
-        "elysia": "^1.1.25",
         "mongodb": "^6.11.0"
     },
     "devDependencies": {

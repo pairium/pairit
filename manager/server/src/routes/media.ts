@@ -1,16 +1,22 @@
 /**
  * Media management routes for manager server
- * Integrates with lib/storage abstraction layer
- * POST /media/upload - Upload media (base64 → storage backend)
+ * POST /media/upload - Upload media file
  * GET /media - List media files
  * DELETE /media/:object - Delete media file
  */
 import { Elysia, t } from 'elysia';
+import { authMiddleware } from '../lib/auth-middleware';
 import { storage } from '../../../../lib/storage';
-import type { MediaUploadBody, MediaListItem } from '../types';
+import type { MediaListItem } from '../types';
 
 export const mediaRoutes = new Elysia({ prefix: '/media' })
-    .post('/upload', async ({ body, set }) => {
+    .use(authMiddleware)
+    .post('/upload', async ({ body, set, user }) => {
+        if (!user) {
+            set.status = 401;
+            return { error: 'unauthorized', message: 'Not authenticated' };
+        }
+
         let buffer: Buffer;
         try {
             buffer = Buffer.from(body.data, 'base64');
@@ -58,11 +64,16 @@ export const mediaRoutes = new Elysia({ prefix: '/media' })
             public: t.Optional(t.Boolean())
         })
     })
-    .get('/', async ({ query, set }) => {
+    .get('/', async ({ query, set, user }) => {
+        if (!user) {
+            set.status = 401;
+            return { error: 'unauthorized', message: 'Not authenticated' };
+        }
+
         try {
             const files = await storage.list(query.prefix);
 
-            const objects: MediaListItem[] = files.map((name) => ({
+            const objects: MediaListItem[] = files.map((name: string) => ({
                 name,
                 bucket: 'local',
                 size: undefined,
@@ -86,7 +97,12 @@ export const mediaRoutes = new Elysia({ prefix: '/media' })
             prefix: t.Optional(t.String())
         })
     })
-    .delete('/:object', async ({ params: { object }, set }) => {
+    .delete('/:object', async ({ params: { object }, set, user }) => {
+        if (!user) {
+            set.status = 401;
+            return { error: 'unauthorized', message: 'Not authenticated' };
+        }
+
         try {
             const exists = await storage.exists(object);
             if (!exists) {
@@ -109,3 +125,4 @@ export const mediaRoutes = new Elysia({ prefix: '/media' })
             object: t.String()
         })
     });
+

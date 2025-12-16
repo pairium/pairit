@@ -21,6 +21,10 @@ services:
       - MONGODB_URI=mongodb://mongodb:27017/pairit
       - STORAGE_BACKEND=local
       - STORAGE_PATH=/app/storage
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_BASE_URL=http://localhost:3001/api/auth
     depends_on:
       mongodb:
         condition: service_healthy
@@ -37,6 +41,10 @@ services:
       - MONGODB_URI=mongodb://mongodb:27017/pairit
       - STORAGE_BACKEND=local
       - STORAGE_PATH=/app/storage
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_BASE_URL=http://localhost:3002/api/auth
     depends_on:
       mongodb:
         condition: service_healthy

@@ -9,7 +9,8 @@
     "manager/server",
     "lab/*",
     "lab/server",
-    "lib/*"
+    "lib/*",
+    "lib/auth"
   ],
   "scripts": {
     "test": "bun test",

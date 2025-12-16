@@ -8,6 +8,7 @@ export type ConfigDocument = {
     checksum: string;
     metadata: Record<string, unknown> | null;
     config: unknown;
+    requireAuth?: boolean; // Optional auth for lab sessions
     createdAt?: Date;
     updatedAt: Date;
 };

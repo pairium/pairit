@@ -26,6 +26,7 @@ export type ConfigDocument = {
     checksum?: string;
     metadata?: Record<string, unknown> | null;
     config: unknown;
+    requireAuth?: boolean; // Optional auth for lab sessions
     createdAt?: Date | null;
     updatedAt?: Date | null;
 };
@@ -46,8 +47,10 @@ export type SessionDocument = {
     configId: string;
     config: Config;
     currentPageId: string;
-    user_state: Record<string, any>;
-    endedAt?: string | null;
+    user_state: Record<string, unknown>;
+    endedAt: string | null;
+    sessionToken?: string; // Unique token for link-based access (when requireAuth: false)
+    userId?: string | null; // User ID from Better Auth (null if no auth required)
     createdAt: Date;
     updatedAt: Date;
 };
