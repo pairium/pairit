@@ -506,7 +506,9 @@ curl -X POST http://localhost:3001/sessions/start \
 
 ---
 
-## Phase 4: Frontend Migration
+## Phase 4: Frontend Migration ✅
+
+**Status:** COMPLETED (December 2024)
 
 **Branch:** `modernization/phase-4-frontend`
 
@@ -594,11 +596,19 @@ bun run test:e2e
 ```
 
 **Exit Criteria:**
-- [ ] Frontend builds with Bun
-- [ ] Combined server serves both API and static assets
-- [ ] SPA routing works (direct URL access to `/:experimentId`)
-- [ ] Session flow works end-to-end in browser
-- [ ] Auth flow works in browser
+- [x] Frontend builds with Bun
+- [x] Combined server serves both API and static assets
+- [x] SPA routing works (direct URL access to `/:experimentId`)
+- [x] Session flow works end-to-end in browser
+- [x] Auth flow works in browser
+
+**Completion Notes:**
+- Migrated frontend to use Bun for building
+- Integrated frontend assets into Lab Server (Combined App)
+- Configured Elysia to serve static assets from `lab/app/dist` (using custom handlers for robustness)
+- Implemented SPA routing fallback (wildcard handlers)
+- Updated frontend API client to support both development (split) and production (combined) modes
+- Added Better Auth client to frontend
 
 ---
 
