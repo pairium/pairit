@@ -486,16 +486,23 @@ curl -X POST http://localhost:3001/sessions/start \
 ```
 
 **Exit Criteria:**
-- [ ] `/api/auth/*` routes respond
-- [ ] Google OAuth flow completes (manual test)
-- [ ] Protected routes reject unauthenticated requests
-- [ ] Protected routes accept authenticated requests
-- [ ] User records created in MongoDB
-- [ ] Config schema accepts `requireAuth` boolean field
-- [ ] Session creation generates unique token when `requireAuth: false`
-- [ ] Lab users can access sessions via unique link without login when auth is disabled
-- [ ] Lab users cannot access sessions without token or auth when `requireAuth: true`
-- [ ] Manager routes always require authentication regardless of config setting
+- [x] `/api/auth/*` routes respond
+- [x] Google OAuth flow completes (manual test)
+- [x] Protected routes reject unauthenticated requests
+- [x] Protected routes accept authenticated requests
+- [x] User records created in MongoDB
+- [x] Config schema accepts `requireAuth` boolean field
+- [x] Session creation generates unique token when `requireAuth: false`
+- [x] Lab users can access sessions via unique link without login when auth is disabled
+- [x] Lab users cannot access sessions without token or auth when `requireAuth: true`
+- [x] Manager routes always require authentication regardless of config setting
+
+**Completion Notes:**
+- Integrated Better Auth with MongoDB adapter in `lib/auth`
+- Implemented "Strict" `authMiddleware` for Manager Server (enforced on all routes)
+- Implemented "Hybrid" `optionalAuthMiddleware` for Lab Server (supports both authenticated users and anonymous token access)
+- Refactored all routes to use centralized middleware pattern
+- Verified flows with `test-auth.sh`, including anonymous session creation via POST body inspection
 
 ---
 
