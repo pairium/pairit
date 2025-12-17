@@ -6,8 +6,8 @@ import { readFile, writeFile, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import fetch, { RequestInit } from "node-fetch";
 import YAML from "yaml";
+import { login, getAuthHeaders } from "./auth.js";
 
 type ExperimentPage = {
   id: string;
@@ -26,6 +26,17 @@ program
   .name("pairit")
   .description("CLI for Pairit experiment configs")
   .version("0.1.0");
+
+program
+  .command("login")
+  .description("Login to Pairit Manager")
+  .action(async () => {
+    try {
+      await login();
+    } catch (error) {
+      reportCliError("Login failed", error);
+    }
+  });
 
 const configCommand = program
   .command("config")
@@ -449,10 +460,18 @@ async function resolvePath(configPath: string): Promise<string> {
   return absolute;
 }
 
-async function callFunctions(pathname: string, init: RequestInit): Promise<any> {
+async function callFunctions(pathname: string, init: RequestInit = {}): Promise<any> {
   const baseUrl = getFunctionsBaseUrl();
   const url = new URL(pathname, baseUrl).toString();
-  const response = await fetch(url, init);
+
+  // Inject auth headers
+  const authHeaders = await getAuthHeaders();
+  const headers = {
+    ...init.headers,
+    ...authHeaders
+  };
+
+  const response = await fetch(url, { ...init, headers });
 
   const text = await response.text();
   if (!response.ok) {
@@ -468,16 +487,11 @@ async function callFunctions(pathname: string, init: RequestInit): Promise<any> 
 }
 
 function getFunctionsBaseUrl(): string {
-  // const envUrl = process.env.PAIRIT_FUNCTIONS_BASE_URL;
-  const envUrl = "https://manager-pdxzcarxcq-uk.a.run.app";
-  if (envUrl) return envUrl;
-
-  const project = process.env.FIREBASE_CONFIG
-    ? JSON.parse(process.env.FIREBASE_CONFIG).projectId
-    : process.env.GCLOUD_PROJECT;
-
-  const projectId = project ?? "pairit-lab";
-  return `http://127.0.0.1:5001/${projectId}/us-east4/manager`;
+  if (process.env.PAIRIT_API_URL) {
+    return process.env.PAIRIT_API_URL;
+  }
+  // Default to local development server
+  return "http://localhost:3002";
 }
 
 async function promptConfirm(prompt: string): Promise<boolean> {

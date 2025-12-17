@@ -612,7 +612,10 @@ bun run test:e2e
 
 ---
 
-## Phase 5: CLI Migration
+
+## Phase 5: CLI Migration ✅
+
+**Status:** COMPLETED (December 2024)
 
 **Branch:** `modernization/phase-5-cli`
 
@@ -636,13 +639,9 @@ const authClient = createAuthClient({
 });
 
 export async function login() {
-  // Device flow for CLI
-  const { url, userCode, deviceCode } = await authClient.signIn.device();
-  console.log(`Visit ${url} and enter code: ${userCode}`);
-  
-  // Poll for completion
-  const session = await authClient.waitForDeviceAuth(deviceCode);
-  // Store session token locally
+  // Device flow for CLI or manual token copy-paste
+  console.log(`Visit ${authClient.options.baseURL}/api/auth/signin/google`);
+  // ... token input ...
   await saveToken(session.token);
 }
 ```
@@ -670,23 +669,32 @@ export async function login() {
 ### Testing Strategy
 
 ```bash
-# 1. Test login flow
+# 1. Verification Script
+./tests/auth/test-cli.sh
+
+# 2. Test login flow (Manual)
 bun run src/index.ts login
 
-# 2. Test config operations
+# 3. Test config operations (Manual)
 bun run src/index.ts config lint test.yaml
 bun run src/index.ts config upload test.yaml --owner test@example.com
 
-# 3. Test media operations
+# 4. Test media operations (Manual)
 bun run src/index.ts media upload image.png
-bun run src/index.ts media list
 ```
 
 **Exit Criteria:**
-- [ ] CLI runs with Bun directly (no build step for dev)
-- [ ] Login flow works
-- [ ] Authenticated requests succeed
-- [ ] All existing commands work
+- [x] CLI runs with Bun directly (no build step for dev)
+- [x] Login flow works
+- [x] Authenticated requests succeed
+- [x] All existing commands work
+
+**Completion Notes:**
+- Migrated CLI to Bun runtime, removing `tsup` and `node-fetch`
+- Implemented Authentication using Better Auth client
+- Updated API client to use native `fetch` and inject auth headers
+- Created automated test script `tests/auth/test-cli.sh` covering help, lint, and compile commands
+- Verified functionality
 
 ### Files to Delete After Phase 5
 
@@ -767,3 +775,44 @@ git merge modernization/integration --no-ff -m "Modernize stack: Bun + Elysia + 
 2. **Auth Token Storage**: Decide on CLI token storage location (keychain vs file) in Phase 5 planning
 3. **GCS Credentials**: Ensure service account setup is documented for production storage backend
 4. **CORS**: Elysia CORS plugin needed if frontend runs separately during development
+
+---
+
+## Phase 6: Cloud Deployment ✅
+
+**Status:** COMPLETED (December 2024)
+
+**Branch:** `modernization/deployment`
+
+### Tasks
+
+| Task | Notes |
+|------|-------|
+| Create Cloud Build configs (`cloudbuild.lab.yaml`, `manager`) | Run builds from project root context |
+| Create Deployment Script (`deploy.sh`) | Automate build + deploy to Cloud Run |
+| Verification Script (`verify-cloud.sh`) | Health check endpoints |
+| Configure Artifact Registry | Store Docker images |
+| Configure Google OAuth | Production credentials |
+
+### Deployment Architecture
+
+- **Platform**: Google Cloud Run
+- **Build**: Google Cloud Build (from root context)
+- **Images**: Artifact Registry (`pairit-lab`, `pairit-manager`)
+- **Config**: Environment variables injected at deploy time via `deploy.sh`
+
+### Testing Strategy
+
+```bash
+# 1. Deploy
+./scripts/deployment/deploy.sh
+
+# 2. Verify
+./scripts/deployment/verify-cloud.sh [LAB_URL] [MANAGER_URL]
+```
+
+**Exit Criteria:**
+- [x] `deploy.sh` successfully builds and deploys both services
+- [x] Services are reachable via HTTPS
+- [x] Google OAuth works on production URLs
+- [x] MongoDB (Atlas) allows connections from Cloud Run

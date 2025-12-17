@@ -1,0 +1,22 @@
+# .gcloudignore
+.git
+.gitignore
+node_modules
+dist
+.env
+.env.*
+.vscode
+.idea
+.DS_Store
+.firebase
+.firebaserc
+firebase.json
+firestore.rules
+database.rules.json
+logs
+docs
+coverage
+.nyc_output
+!package.json
+!lib/storage/package.json
+!lib/auth/package.json

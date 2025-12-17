@@ -3,20 +3,21 @@ WORKDIR /app
 
 # Install dependencies
 FROM base AS deps
-COPY package.json bun.lock* ./
+COPY package.json ./
 COPY lab/server/package.json ./lab/server/
+COPY lab/app/package.json ./lab/app/
 COPY manager/server/package.json ./manager/server/
-COPY lib/storage/package.json* ./lib/storage/
-COPY lib/auth/package.json* ./lib/auth/
+COPY lib/auth/package.json ./lib/auth/
 RUN bun install
 
 # Build the app
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/lab/server/node_modules ./lab/server/node_modules
+COPY --from=deps /app/lab/app/node_modules ./lab/app/node_modules
 COPY . .
-# Build frontend (if needed)
-# RUN cd lab/app && bun run build
+# Build frontend
+RUN bun run --filter "lab-app" build
 
 # Production image
 FROM base AS runner
@@ -24,6 +25,7 @@ ENV NODE_ENV=production
 
 COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/lab/server ./lab/server
+COPY --from=builder /app/lab/app/dist ./lab/app/dist
 COPY --from=builder /app/node_modules ./node_modules
 
 WORKDIR /app/lab/server

@@ -4,22 +4,21 @@
   "description": "Pairit experiment configuration CLI",
   "type": "module",
   "bin": {
-    "pairit": "dist/index.js"
+    "pairit": "src/index.ts"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --platform node --dts",
-    "dev": "tsup src/index.ts --format esm --platform node --watch",
+    "dev": "bun --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target node",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "better-auth": "^1.0.0",
     "commander": "^12.1.0",
-    "node-fetch": "^3.3.2",
     "yaml": "^2.6.0"
   },
   "devDependencies": {
+    "@types/bun": "latest",
     "@types/node": "^20.16.11",
-    "tsup": "^8.5.0",
     "typescript": "^5.9.3"
   }
 }
-
