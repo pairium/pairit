@@ -11,10 +11,9 @@ import { configsRoutes } from './routes/configs';
 import { sessionsRoutes } from './routes/sessions';
 import { eventsRoutes } from './routes/events';
 
-// Path to built frontend assets
-const distPath = resolve(import.meta.dir, '../../app/dist');
+// Use process.cwd() which is safer in Docker (WORKDIR /app/lab/server)
+const distPath = resolve(process.cwd(), '../app/dist');
 console.log('Serving static assets from:', distPath);
-
 
 const app = new Elysia()
     .use(
@@ -26,6 +25,25 @@ const app = new Elysia()
             maxAge: 86400,
         })
     )
+    .get('/debug-fs', async () => {
+        try {
+            const fs = await import('node:fs/promises');
+            const configsPath = `${distPath}/configs`;
+            const files = await fs.readdir(configsPath).catch(err => [`Error reading ${configsPath}: ${err.message}`]);
+            const rootFiles = await fs.readdir(distPath).catch(err => [`Error reading ${distPath}: ${err.message}`]);
+
+            return {
+                cwd: process.cwd(),
+                importMetaDir: import.meta.dir,
+                distPath,
+                configsError: null,
+                configs: files,
+                rootDist: rootFiles
+            };
+        } catch (e) {
+            return { error: e instanceof Error ? e.message : String(e) };
+        }
+    })
     // Mount Better Auth handler at /api/auth/*
     .all('/api/auth/*', ({ request }) => auth.handler(request))
 
@@ -34,15 +52,10 @@ const app = new Elysia()
     .use(sessionsRoutes)
     .use(eventsRoutes)
 
-    // Static Assets
-    // .use(staticPlugin({
-    //     assets: distPath,
-    //     prefix: '/'
-    // }))
-
     .get('/', () => Bun.file(`${distPath}/index.html`))
     .get('/favicon.ico', () => Bun.file(`${distPath}/favicon.ico`))
     .get('/assets/*', ({ params: { '*': path } }) => Bun.file(`${distPath}/assets/${path}`))
+    .get('/static-configs/*', ({ params: { '*': path } }) => Bun.file(`${distPath}/configs/${path}`))
 
     // Helper to catch client-side routes
     .get('*', () => Bun.file(`${distPath}/index.html`))

@@ -71,9 +71,33 @@ fi
 LAB_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/pairit-lab"
 MANAGER_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/pairit-manager"
 
-# 1. Build and Deploy Lab Server
-echo "🔨 Building Lab Server Image: $LAB_IMAGE"
-gcloud builds submit --config cloudbuild.lab.yaml --project "$PROJECT_ID" --substitutions=_IMAGE_NAME="$LAB_IMAGE" .
+# 1. Build and Deploy Manager Server
+echo "🔨 Building Manager Server Image: $MANAGER_IMAGE"
+gcloud builds submit --config cloudbuild.manager.yaml --project "$PROJECT_ID" --substitutions=_IMAGE_NAME="$MANAGER_IMAGE" .
+
+echo "📦 Deploying Manager Server..."
+DEPLOY_OUTPUT=$(gcloud run deploy pairit-manager \
+    --image "$MANAGER_IMAGE" \
+    --region "$REGION" \
+    --project "$PROJECT_ID" \
+    --set-env-vars="MONGODB_URI=$MONGODB_URI,STORAGE_BACKEND=gcs,STORAGE_PATH=${STORAGE_PATH:-pairit-media-prod},GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET,AUTH_SECRET=$AUTH_SECRET,AUTH_BASE_URL=${AUTH_BASE_URL},AUTH_TRUSTED_ORIGINS=${AUTH_TRUSTED_ORIGINS}" \
+    --allow-unauthenticated 2>&1)
+
+echo "$DEPLOY_OUTPUT"
+
+# Extract Service URL using list for consistency (always returns the new deterministic URL)
+MANAGER_URL=$(gcloud run services list --filter="SERVICE:pairit-manager" --project "$PROJECT_ID" --region "$REGION" --format="value(URL)")
+
+if [ -z "$MANAGER_URL" ]; then
+    echo "⚠️  Could not find Manager URL via list. Checking via describe as fallback..."
+    MANAGER_URL=$(gcloud run services describe pairit-manager --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)' 2>/dev/null)
+fi
+
+echo "🔗 Final Manager URL: $MANAGER_URL"
+
+# 2. Build and Deploy Lab Server
+echo "🔨 Building Lab Server Image: $LAB_IMAGE with MANAGER_URL=$MANAGER_URL"
+gcloud builds submit --config cloudbuild.lab.yaml --project "$PROJECT_ID" --substitutions=_IMAGE_NAME="$LAB_IMAGE",_MANAGER_URL="$MANAGER_URL" .
 
 echo "📦 Deploying Lab Server..."
 gcloud run deploy pairit-lab \
@@ -81,23 +105,6 @@ gcloud run deploy pairit-lab \
     --region "$REGION" \
     --project "$PROJECT_ID" \
     --set-env-vars="MONGODB_URI=$MONGODB_URI,STORAGE_BACKEND=gcs,GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET,AUTH_SECRET=$AUTH_SECRET,AUTH_BASE_URL=${AUTH_BASE_URL_LAB},AUTH_TRUSTED_ORIGINS=${AUTH_TRUSTED_ORIGINS_LAB}" \
-    --allow-unauthenticated
-
-# 2. Build and Deploy Manager Server
-echo "🔨 Building Manager Server Image: $MANAGER_IMAGE"
-gcloud builds submit --config cloudbuild.manager.yaml --project "$PROJECT_ID" --substitutions=_IMAGE_NAME="$MANAGER_IMAGE" .
-
-# Default globals if not set
-DEFAULT_URL="https://pairit-manager-${PROJECT_ID##*-}.us-central1.run.app"
-# Note: The above is a guess. Cloud Run URLs often contain random hashes. 
-# Better to rely on user configuring .env properly or updating post-deploy.
-
-echo "📦 Deploying Manager Server..."
-gcloud run deploy pairit-manager \
-    --image "$MANAGER_IMAGE" \
-    --region "$REGION" \
-    --project "$PROJECT_ID" \
-    --set-env-vars="MONGODB_URI=$MONGODB_URI,STORAGE_BACKEND=gcs,STORAGE_PATH=${STORAGE_PATH:-pairit-media-prod},GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET,AUTH_SECRET=$AUTH_SECRET,AUTH_BASE_URL=${AUTH_BASE_URL},AUTH_TRUSTED_ORIGINS=${AUTH_TRUSTED_ORIGINS}" \
     --allow-unauthenticated
 
 echo "✅ Deployment initiated!"

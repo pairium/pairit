@@ -195,7 +195,216 @@ const app = new Elysia()
     </script>
 </body>
 </html>`, { headers: { 'content-type': 'text/html' } }))
-    .get('/', () => ({ message: 'Pairit manager API' }))
+    .get('/', () => new Response(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pairit Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --slate-50: #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-600: #475569;
+            --slate-900: #0f172a;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            background-color: var(--slate-50);
+            color: var(--slate-900);
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--slate-200);
+            padding: 1rem 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .header-content {
+            max-width: 1024px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--slate-900);
+        }
+
+        .container {
+            max-width: 1024px;
+            margin: 0 auto;
+            padding: 6rem 1.5rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .hero {
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            margin-bottom: 1rem;
+            color: var(--slate-900);
+        }
+
+        .subtitle {
+            font-size: 1.125rem;
+            color: var(--slate-600);
+            max-width: 600px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid var(--slate-200);
+            border-radius: 1.5rem;
+            padding: 3rem;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 450px;
+            width: 100%;
+        }
+
+        .card:hover {
+            border-color: var(--slate-200);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .card h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card p {
+            color: var(--slate-600);
+            font-size: 1rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background-color: var(--slate-900);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #1e293b;
+        }
+
+        .footer {
+            border-top: 1px solid var(--slate-200);
+            padding: 1.5rem;
+            background: white;
+        }
+
+        .footer-content {
+            max-width: 1024px;
+            margin: 0 auto;
+            font-size: 0.75rem;
+            color: var(--slate-600);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M16 8l2 -2m0 0l-12 0m12 0l0 12m-2 -2l-2 2"></path><circle cx="12" cy="12" r="9"></circle></svg>
+                Pairit Manager
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <h1>Platform Admin</h1>
+            <p class="subtitle">Consolidated management for your experiments, media assets, and configurations.</p>
+        </section>
+
+        <div class="card">
+            <div>
+                <h2>
+                    <svg class="icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>
+                    Lab Environment
+                </h2>
+                <p>Switch to the researcher environment to preview or participate in active experiments.</p>
+            </div>
+            <a href="https://pairit-lab-823036187164.us-central1.run.app" class="btn btn-primary">Go to Lab</a>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <span>Pairit Manager · Management Console</span>
+            <span>&copy; 2025 Pairium AI</span>
+        </div>
+    </footer>
+</body>
+</html>`, { headers: { 'content-type': 'text/html' } }))
     .use(configsRoutes)
     .use(mediaRoutes)
     .listen(Number(process.env.PORT) || 3002);
