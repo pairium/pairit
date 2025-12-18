@@ -7,22 +7,42 @@ import { mongodbAdapter } from 'better-auth/adapters/mongodb';
 import { MongoClient } from 'mongodb';
 
 // Create MongoDB client for Better Auth
-const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/pairit';
-const client = new MongoClient(uri);
+const uri = process.env.MONGODB_URI || 'mongodb://READ_ENV_FAILED_AUTH:27017/pairit';
+const client = new MongoClient(uri, {
+    // @ts-ignore - Workaround for Bun TLS "subject" destructuring error
+    checkServerIdentity: () => undefined
+});
+
+// Ensure the client is connected
+client.connect().then(() => {
+    console.log('[Auth] Successfully connected to MongoDB');
+}).catch(err => {
+    console.error('[Auth] Failed to connect to MongoDB:', err);
+});
 
 // Extract database name from URI
+console.log('[Auth] Initializing with baseURL:', process.env.AUTH_BASE_URL);
 const dbName = new URL(uri).pathname.slice(1) || 'pairit';
+
+const authSecret = process.env.AUTH_SECRET || 'development-secret-change-in-production-long-enough';
+// Ensure secret is long enough (32+ chars)
+const finalSecret = authSecret.length < 32 ? authSecret.padEnd(32, '0') : authSecret;
 
 export const auth = betterAuth({
     database: mongodbAdapter(client.db(dbName)),
-    baseURL: process.env.AUTH_BASE_URL || 'http://localhost:3001',
-    secret: process.env.AUTH_SECRET || 'development-secret-change-in-production',
+    baseURL: process.env.AUTH_BASE_URL ? new URL(process.env.AUTH_BASE_URL).origin : 'http://localhost:3001',
+    basePath: '/api/auth',
+    secret: finalSecret,
+    trustedOrigins: [
+        ...(process.env.AUTH_TRUSTED_ORIGINS ? process.env.AUTH_TRUSTED_ORIGINS.split(',') : []),
+        process.env.AUTH_BASE_URL ? new URL(process.env.AUTH_BASE_URL).origin : 'http://localhost:3001'
+    ],
 
     // Enable email/password authentication
     emailAndPassword: {
         enabled: true,
         // Require email verification before allowing login
-        requireEmailVerification: false, // Set to true in production with email provider
+        requireEmailVerification: false,
     },
 
     // Configure Google OAuth

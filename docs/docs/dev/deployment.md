@@ -36,8 +36,17 @@ Key deployment files are organized as follows:
         *   `AUTH_SECRET`: Generate using `openssl rand -hex 32`.
         *   `GOOGLE_CLIENT_ID`: OAuth 2.0 Client ID. *Obtain from GCP Console > APIs & Services > Credentials.*
         *   `GOOGLE_CLIENT_SECRET`: OAuth 2.0 Client Secret. *Obtain from GCP Console > APIs & Services > Credentials.*
-        *   `STORAGE_BUCKET`: GCS Bucket name. *Obtain from GCP Console > Cloud Storage.*
-            > **Important**: The Cloud Run Service Account (default compute service account) must have `Storage Object Admin` role on this bucket to allow file uploads.
+        *   `GOOGLE_CLIENT_SECRET`: OAuth 2.0 Client Secret. *Obtain from GCP Console > APIs & Services > Credentials.*
+        *   `STORAGE_BACKEND`: Set to `gcs`.
+        *   `STORAGE_PATH`: GCS Bucket name (e.g., `pairit-media-prod`).
+        *   `AUTH_BASE_URL`: Full URL to auth endpoint (e.g., `https://[SERVICE_URL]/api/auth`).
+        *   `AUTH_TRUSTED_ORIGINS`: Comma-separated list of trusted origins (e.g., `https://[SERVICE_URL]`). *Required to prevent INVALID_ORIGIN errors.*
+
+    *   **Required Permissions**:
+        The Cloud Run Service Account (default: `[PROJECT_NUMBER]-compute@developer.gserviceaccount.com`) requires specific IAM roles:
+        1.  **Storage Object Admin** (`roles/storage.objectAdmin`) on the target GCS bucket.
+        2.  **Service Account Token Creator** (`roles/iam.serviceAccountTokenCreator`) on the Service Account itself (needed for signing public URLs).
+            *   *Note*: Ensure the `IAM Service Account Credentials API` (`iamcredentials.googleapis.com`) is enabled in the project.
 
 2.  **Google OAuth**:
     *   Configure your OAuth Concent Screen in GCP Console.

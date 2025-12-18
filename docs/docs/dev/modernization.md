@@ -634,13 +634,14 @@ bun run test:e2e
 // manager/cli/src/auth.ts
 import { createAuthClient } from "better-auth/client";
 
+const baseUrl = process.env.PAIRIT_API_URL || "http://localhost:3002";
 const authClient = createAuthClient({
-  baseURL: process.env.PAIRIT_API_URL || "http://localhost:3002",
+  baseURL: baseUrl,
 });
 
 export async function login() {
   // Device flow for CLI or manual token copy-paste
-  console.log(`Visit ${authClient.options.baseURL}/api/auth/signin/google`);
+  console.log(`Visit ${baseUrl}/login`);
   // ... token input ...
   await saveToken(session.token);
 }

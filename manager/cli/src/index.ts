@@ -468,8 +468,12 @@ async function callFunctions(pathname: string, init: RequestInit = {}): Promise<
   const authHeaders = await getAuthHeaders();
   const headers = {
     ...init.headers,
-    ...authHeaders
+    ...authHeaders,
+    "Origin": new URL(baseUrl).origin, // Satisfy Better Auth CSRF/Origin check
   };
+
+  // console.log('[Debug] Fetching:', url);
+  // console.log('[Debug] Headers:', JSON.stringify(headers, null, 2));
 
   const response = await fetch(url, { ...init, headers });
 

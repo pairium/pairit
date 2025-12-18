@@ -10,8 +10,11 @@ let db: Db | null = null;
 export async function connectDB(): Promise<Db> {
     if (db) return db;
 
-    const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/pairit';
-    client = new MongoClient(uri);
+    const uri = process.env.MONGODB_URI || 'mongodb://READ_ENV_FAILED_DB:27017/pairit';
+    client = new MongoClient(uri, {
+        // @ts-ignore - Workaround for Bun TLS "subject" destructuring error
+        checkServerIdentity: () => undefined
+    });
     await client.connect();
 
     // Extract database name from URI or use default

@@ -32,12 +32,23 @@ echo "🚀 Deploying to Project: $PROJECT_ID, Region: $REGION"
 # Priority: .env.production > .env (we are now in PROJECT_ROOT)
 if [ -f .env.production ]; then
     echo "📜 Sourcing .env.production..."
+    set -a
     source .env.production
+    set +a
 elif [ -f .env ]; then
     echo "📜 Sourcing .env..."
+    set -a
     source .env
+    set +a
 else
     echo "⚠️  No .env or .env.production file found in $PROJECT_ROOT. Ensure environment variables are set explicitly."
+fi
+
+# Debug: Redact and show MONGODB_URI
+if [ -n "$MONGODB_URI" ]; then
+    echo "🔍 MONGODB_URI is set (starts with ${MONGODB_URI:0:15}...)"
+else
+    echo "❌ MONGODB_URI is NOT set in the deployment shell!"
 fi
 
 # 0. Setup Artifact Registry
@@ -69,22 +80,30 @@ gcloud run deploy pairit-lab \
     --image "$LAB_IMAGE" \
     --region "$REGION" \
     --project "$PROJECT_ID" \
-    --set-env-vars="MONGODB_URI=$MONGODB_URI,STORAGE_BACKEND=gcs,GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET,AUTH_SECRET=$AUTH_SECRET,AUTH_BASE_URL=https://pairit-lab-823036187164.us-central1.run.app/api/auth" \
+    --set-env-vars="MONGODB_URI=$MONGODB_URI,STORAGE_BACKEND=gcs,GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET,AUTH_SECRET=$AUTH_SECRET,AUTH_BASE_URL=${AUTH_BASE_URL_LAB},AUTH_TRUSTED_ORIGINS=${AUTH_TRUSTED_ORIGINS_LAB}" \
     --allow-unauthenticated
 
 # 2. Build and Deploy Manager Server
 echo "🔨 Building Manager Server Image: $MANAGER_IMAGE"
 gcloud builds submit --config cloudbuild.manager.yaml --project "$PROJECT_ID" --substitutions=_IMAGE_NAME="$MANAGER_IMAGE" .
 
+# Default globals if not set
+DEFAULT_URL="https://pairit-manager-${PROJECT_ID##*-}.us-central1.run.app"
+# Note: The above is a guess. Cloud Run URLs often contain random hashes. 
+# Better to rely on user configuring .env properly or updating post-deploy.
+
 echo "📦 Deploying Manager Server..."
 gcloud run deploy pairit-manager \
     --image "$MANAGER_IMAGE" \
     --region "$REGION" \
     --project "$PROJECT_ID" \
-    --set-env-vars="MONGODB_URI=$MONGODB_URI,STORAGE_BACKEND=gcs,GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET,AUTH_SECRET=$AUTH_SECRET,AUTH_BASE_URL=https://pairit-manager-823036187164.us-central1.run.app/api/auth" \
+    --set-env-vars="MONGODB_URI=$MONGODB_URI,STORAGE_BACKEND=gcs,STORAGE_PATH=${STORAGE_PATH:-pairit-media-prod},GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET,AUTH_SECRET=$AUTH_SECRET,AUTH_BASE_URL=${AUTH_BASE_URL},AUTH_TRUSTED_ORIGINS=${AUTH_TRUSTED_ORIGINS}" \
     --allow-unauthenticated
 
 echo "✅ Deployment initiated!"
 echo "⚠️  IMPORTANT POST-DEPLOYMENT STEPS:"
-echo "1. Go to Cloud Console and update AUTH_BASE_URL env var for each service with their assigned URLs."
-echo "2. Update your Google OAuth Credentials authorized redirect URIs with the new URLs ending in /api/auth/callback/google"
+echo "1. Verify AUTH_BASE_URL and AUTH_TRUSTED_ORIGINS match your actual Cloud Run URL."
+echo "2. Update your Google OAuth Credentials authorized redirect URIs."
+echo "3. IAM Permissions Verify:"
+echo "   - Cloud Run Service Account must have 'roles/storage.objectAdmin' on bucket '${STORAGE_PATH:-pairit-media-prod}'."
+echo "   - Cloud Run Service Account must have 'roles/iam.serviceAccountTokenCreator' on itself."

@@ -427,3 +427,6 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Test media files
+tests/test-media-*.txt

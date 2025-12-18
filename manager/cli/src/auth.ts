@@ -6,9 +6,11 @@ import { join } from "node:path";
 const CONFIG_DIR = join(homedir(), ".pairit");
 const CREDENTIALS_FILE = join(CONFIG_DIR, "credentials.json");
 
+const BASE_URL = process.env.PAIRIT_API_URL || "http://localhost:3002";
+
 // Initialize auth client
 export const authClient = createAuthClient({
-    baseURL: process.env.PAIRIT_API_URL || "http://localhost:3002",
+    baseURL: BASE_URL,
 });
 
 export async function login() {
@@ -26,10 +28,18 @@ export async function login() {
     // Real implementation for CLI + OAuth usually requires opening a browser
     // and having a local callback server.
 
+    const loginUrl = `${BASE_URL}/login`;
     console.log(`
-Please visit: ${authClient.options.baseURL}/api/auth/signin/google
-Login, and then copy your 'better-auth.session_token' cookie value.
+Please visit: ${loginUrl}
+                                                                   
 `);
+
+    try {
+        const { default: open } = await import('open');
+        await open(loginUrl);
+    } catch (e) {
+        // ignore open errors
+    }
 
     const token = await prompt("Enter session token: ");
     if (!token) {
@@ -46,7 +56,7 @@ export async function getAuthHeaders(): Promise<HeadersInit> {
         const creds = await getCredentials();
         if (creds?.token) {
             return {
-                "Cookie": `better-auth.session_token=${creds.token}`
+                "Cookie": `better-auth.session_token=${creds.token}; __Secure-better-auth.session_token=${creds.token}`
             };
         }
     } catch (e) {

@@ -58,9 +58,10 @@ export const mediaRoutes = new Elysia({ prefix: '/media' })
         body: t.Object({
             object: t.String({ minLength: 1 }),
             data: t.String({ minLength: 1 }),
+            checksum: t.Optional(t.String()),
             bucket: t.Optional(t.String()),
-            contentType: t.Optional(t.String()),
-            metadata: t.Optional(t.Record(t.String(), t.Unknown())),
+            contentType: t.Optional(t.Union([t.String(), t.Null()])),
+            metadata: t.Optional(t.Union([t.Record(t.String(), t.Unknown()), t.Null()])),
             public: t.Optional(t.Boolean())
         })
     })
