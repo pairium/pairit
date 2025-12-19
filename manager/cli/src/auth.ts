@@ -16,19 +16,71 @@ export const authClient = createAuthClient({
 export async function login() {
     console.log("Initiating login...");
 
-    // NOTE: If better-auth generic client doesn't support device flow directly yet,
-    // we might need a workaround. For now, we'll try to use a manual copy-paste flow
-    // or a placeholder if the specific device flow API isn't available in this version.
-
-    // graceful fallback for demonstration if detailed SDK docs aren't handy:
-    // We will ask user to grab their session cookie/token from browser for now
-    // or use a simple credential prompt if we enabled email/pass (which we disabled).
-
-    // Since Phase 3 enabled Google OAuth, we need a browser flow.
-    // Real implementation for CLI + OAuth usually requires opening a browser
-    // and having a local callback server.
-
     const loginUrl = `${BASE_URL}/login`;
+
+    // Try automated loopback flow
+    try {
+        const { createServer } = await import("node:http");
+        const { default: open } = await import("open");
+
+        const server = createServer();
+        const port = await new Promise<number>((resolve, reject) => {
+            server.listen(0, "127.0.0.1", () => {
+                const address = server.address();
+                if (address && typeof address === 'object') {
+                    resolve(address.port);
+                } else {
+                    reject(new Error("Could not determine port"));
+                }
+            });
+        });
+
+        const redirectUri = `http://127.0.0.1:${port}`;
+        const targetUrl = `${loginUrl}?cli_redirect_uri=${encodeURIComponent(redirectUri)}`;
+
+        console.log("Opening browser for authentication...");
+        await open(targetUrl);
+
+        console.log(`Waiting for authentication at ${redirectUri}...`);
+
+        const token = await new Promise<string>((resolve, reject) => {
+            // Set 2 minute timeout
+            const timeout = setTimeout(() => {
+                server.close();
+                reject(new Error("Login timed out"));
+            }, 120000);
+
+            server.on("request", (req, res) => {
+                try {
+                    const url = new URL(req.url || "/", `http://${req.headers.host}`);
+                    const token = url.searchParams.get("token");
+
+                    if (token) {
+                        res.writeHead(200, { "Content-Type": "text/html" });
+                        res.end("<h1>Authenticated!</h1><p>You can close this window and return to the CLI.</p><script>window.close()</script>");
+                        clearTimeout(timeout);
+                        server.close();
+                        resolve(token);
+                    } else {
+                        res.writeHead(400);
+                        res.end("Missing token");
+                    }
+                } catch (e) {
+                    res.writeHead(500);
+                    res.end("Error processing request");
+                }
+            });
+        });
+
+        await saveCredentials({ token });
+        console.log("Successfully logged in!");
+        return;
+
+    } catch (error) {
+        console.warn("Automated login failed, falling back to manual entry:", error instanceof Error ? error.message : String(error));
+    }
+
+    // Fallback Manual Flow
     console.log(`
 Please visit: ${loginUrl}
                                                                    
@@ -58,9 +110,14 @@ export async function getAuthHeaders(): Promise<HeadersInit> {
             return { "Cookie": creds.cookie };
         }
         if (creds?.token) {
-            return {
-                "Authorization": `Bearer ${creds.token}`
+            const headers = {
+                "Cookie": `better-auth.session_token=${creds.token}; __Secure-better-auth.session_token=${creds.token}`,
+                "Authorization": `Bearer ${creds.token}`,
+                "Origin": BASE_URL,
+                "Referer": `${BASE_URL}/`
             };
+            // console.log("DEBUG: Auth Headers", JSON.stringify(headers, null, 2));
+            return headers;
         }
     } catch (e) {
         // ignore missing credentials

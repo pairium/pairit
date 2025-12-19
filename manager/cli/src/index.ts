@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import "dotenv/config";
 import { Command } from "commander";
 import { createHash } from "node:crypto";
 import { readFile, writeFile, stat } from "node:fs/promises";
@@ -81,7 +82,6 @@ configCommand
 configCommand
   .command("upload")
   .argument("<config>", "Path to YAML config")
-  .requiredOption("--owner <owner>", "Owner email or id")
   .option("--config-id <configId>", "Config id (defaults to hash)")
   .option("--metadata <json>", "Optional metadata JSON string")
   .description("Compile and upload config via Pairit Functions")
@@ -95,6 +95,8 @@ configCommand
       });
 
       console.log(`✓ Uploaded ${payload.configId} (${checksum})`);
+      const labUrl = getLabUrl();
+      console.log(`Survey Link: ${labUrl}/${payload.configId}`);
       console.log(JSON.stringify(response, null, 2));
     } catch (error) {
       reportCliError("Upload failed", error);
@@ -103,12 +105,10 @@ configCommand
 
 configCommand
   .command("list")
-  .option("--owner <owner>", "Filter by owner")
   .description("List configs from Pairit Functions")
   .action(async (options: ListOptions) => {
     try {
-      const params = options.owner ? `?owner=${encodeURIComponent(options.owner)}` : "";
-      const response = await callFunctions(`/configs${params}`, { method: "GET" });
+      const response = await callFunctions(`/configs`, { method: "GET" });
 
       const configs = Array.isArray(response.configs) ? response.configs : [];
       if (!configs.length) {
@@ -117,8 +117,10 @@ configCommand
       }
 
       configs.forEach((config: ConfigListEntry) => {
+        const metadata = config.metadata as Record<string, unknown> | undefined;
+        const filename = metadata?.originalFilename ? ` | file=${metadata.originalFilename}` : "";
         console.log(
-          `${config.configId} | owner=${config.owner} | checksum=${config.checksum} | updated=${config.updatedAt ?? "n/a"}`
+          `configId=${config.configId} | owner=${config.owner} | checksum=${config.checksum}${filename} | updated=${config.updatedAt ?? "n/a"}`
         );
       });
     } catch (error) {
@@ -245,13 +247,12 @@ program.parseAsync(process.argv).catch((err) => {
 });
 
 type UploadOptions = {
-  owner: string;
   configId?: string;
   metadata?: string;
 };
 
 type ListOptions = {
-  owner?: string;
+  // owner removed
 };
 
 type DeleteOptions = {
@@ -346,7 +347,6 @@ async function compileConfig(configPath: string): Promise<string> {
 
 type UploadPayload = {
   configId: string;
-  owner: string;
   checksum: string;
   metadata?: Record<string, unknown> | null;
   config: unknown;
@@ -366,12 +366,16 @@ async function buildUploadPayload(
 
   const metadata = options.metadata
     ? (JSON.parse(options.metadata) as Record<string, unknown>)
-    : undefined;
+    : {};
+
+  // Auto-populate original filename if not manually provided
+  if (!metadata.originalFilename) {
+    metadata.originalFilename = path.basename(configPath);
+  }
 
   return {
     payload: {
       configId,
-      owner: options.owner,
       checksum,
       metadata: metadata ?? null,
       config: parsed,
@@ -498,6 +502,14 @@ function getFunctionsBaseUrl(): string {
   return "http://localhost:3002";
 }
 
+function getLabUrl(): string {
+  if (process.env.PAIRIT_LAB_URL) {
+    return process.env.PAIRIT_LAB_URL;
+  }
+  // Default fallback
+  return "http://localhost:3000";
+}
+
 async function promptConfirm(prompt: string): Promise<boolean> {
   process.stdout.write(`${prompt} `);
   return new Promise((resolve) => {
@@ -522,4 +534,3 @@ function reportCliError(prefix: string, error: unknown) {
 
 export const __filename = fileURLToPath(import.meta.url);
 export const __dirname = path.dirname(__filename);
-

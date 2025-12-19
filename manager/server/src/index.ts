@@ -90,10 +90,31 @@ const app = new Elysia()
             AUTH_BASE_URL: process.env.AUTH_BASE_URL || 'MISSING'
         };
     })
-    .get('/login-success', ({ cookie }) => {
+    .get('/login-success', ({ query, cookie, set }) => {
         // Check for both standard and secure cookie names
-        const sessionToken = cookie['better-auth.session_token']?.value ||
-            cookie['__Secure-better-auth.session_token']?.value;
+        const sessionToken = (cookie['better-auth.session_token']?.value ||
+            cookie['__Secure-better-auth.session_token']?.value) as string | undefined;
+
+        // Handle CLI Loopback Flow
+        // If a CLI redirect URI is present (and safe), redirect the browser there with the token
+        const cliRedirect = query.cli_redirect_uri;
+        let redirectUrl: string | undefined;
+
+        if (sessionToken && cliRedirect && typeof cliRedirect === 'string') {
+            try {
+                const url = new URL(cliRedirect);
+                // Security: Only allow redirect to localhost/127.0.0.1 for CLI handoff
+                if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+                    url.searchParams.set('token', sessionToken);
+
+                    // Client-side redirect to avoid "Mixed Content" blocking (HTTPS -> HTTP)
+                    // We render the success page which then redirects via JS
+                    redirectUrl = url.toString();
+                }
+            } catch (e) {
+                // Ignore invalid URLs
+            }
+        }
 
         const tokenDisplay = sessionToken || 'Error: Session token not found. Please try logging in again.';
         const tokenColor = sessionToken ? '#f3f4f6' : '#fef2f2';
@@ -112,18 +133,31 @@ const app = new Elysia()
         button { background: #2563eb; color: white; border: none; padding: 10px 20px; font-size: 14px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
         button:hover { background: #1d4ed8; }
         button:disabled { background: #9ca3af; cursor: not-allowed; }
+        .redirect-notice { margin-top: 1rem; font-size: 0.875rem; color: #6b7280; }
+        a { color: #2563eb; text-decoration: none; }
     </style>
 </head>
 <body>
     <div class="card">
         <h1>Login Successful</h1>
+        ${redirectUrl ? `<p>Redirecting you back to the CLI...</p><p class="redirect-notice">If you are not redirected, <a href="${redirectUrl}">click here</a>.</p>` : ''}
+        
+        ${!redirectUrl ? `
         <p>You have successfully authenticated. Copy the session token below and paste it into your CLI.</p>
         <div id="token" class="token-box">${tokenDisplay}</div>
         <button onclick="copyToken()" id="copyBtn" ${!sessionToken ? 'disabled' : ''}>Copy Token</button>
+        ` : ''}
     </div>
 
     <script>
         const token = "${sessionToken || ''}";
+        const redirectUrl = "${redirectUrl || ''}";
+
+        if (redirectUrl) {
+            setTimeout(() => {
+                window.location.href = redirectUrl;
+            }, 1000);
+        }
         
         async function copyToken() {
             if (token) {
@@ -144,7 +178,11 @@ const app = new Elysia()
         }
     </script>
 </body>
-</html>`, { headers: { 'content-type': 'text/html' } });
+</html>`, {
+            headers: {
+                'Content-Type': 'text/html'
+            }
+        });
     })
     .get('/login', () => new Response(`<!DOCTYPE html>
 <html>
@@ -173,13 +211,23 @@ const app = new Elysia()
     <script>
         async function login() {
             try {
+                // Check if there is a CLI redirect URI in the current URL
+                const params = new URLSearchParams(window.location.search);
+                const cliRedirect = params.get('cli_redirect_uri');
+                
                 const origin = window.location.origin;
+                // Construct callback URL, passing through the CLI redirect if present
+                let callbackURL = origin + '/login-success';
+                if (cliRedirect) {
+                    callbackURL += '?cli_redirect_uri=' + encodeURIComponent(cliRedirect);
+                }
+
                 const res = await fetch(origin + '/api/auth/sign-in/social', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         provider: 'google',
-                        callbackURL: origin + '/login-success' 
+                        callbackURL: callbackURL
                     })
                 });
                 const data = await res.json();
