@@ -12,6 +12,7 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@pairit/html": "workspace:*",
     "better-auth": "^1.0.0",
     "commander": "^12.1.0",
     "dotenv": "^17.2.3",

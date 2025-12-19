@@ -2,6 +2,7 @@ import { createAuthClient } from "better-auth/client";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { renderCliSuccessPage } from "@pairit/html";
 
 const CONFIG_DIR = join(homedir(), ".pairit");
 const CREDENTIALS_FILE = join(CONFIG_DIR, "credentials.json");
@@ -57,7 +58,7 @@ export async function login() {
 
                     if (token) {
                         res.writeHead(200, { "Content-Type": "text/html" });
-                        res.end("<h1>Authenticated!</h1><p>You can close this window and return to the CLI.</p><script>window.close()</script>");
+                        res.end(renderCliSuccessPage());
                         clearTimeout(timeout);
                         server.close();
                         resolve(token);

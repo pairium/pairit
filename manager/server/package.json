@@ -10,6 +10,7 @@
     },
     "dependencies": {
         "@elysiajs/cors": "^1.1.1",
+        "@pairit/html": "workspace:*",
         "better-auth": "^1.0.7",
         "elysia": "^1.1.25",
         "mongodb": "^6.12.0"

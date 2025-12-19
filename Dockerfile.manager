@@ -7,11 +7,13 @@ COPY package.json ./
 COPY lab/server/package.json ./lab/server/
 COPY manager/server/package.json ./manager/server/
 COPY lib/auth/package.json ./lib/auth/
+COPY lib/html/package.json ./lib/html/
 RUN bun install
 
 # Build the app
 FROM base AS builder
 COPY . .
+COPY lib/html/package.json ./lib/html/
 RUN bun install
 
 # Production image
