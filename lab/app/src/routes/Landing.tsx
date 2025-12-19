@@ -99,7 +99,7 @@ export function Landing() {
               </p>
               <div className="flex gap-3">
                 <a
-                  href={import.meta.env.VITE_MANAGER_URL || "https://pairit-manager-823036187164.us-central1.run.app"}
+                  href={import.meta.env.VITE_MANAGER_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={ghostButton}

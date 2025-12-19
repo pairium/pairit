@@ -54,9 +54,12 @@ Please visit: ${loginUrl}
 export async function getAuthHeaders(): Promise<HeadersInit> {
     try {
         const creds = await getCredentials();
+        if (creds?.cookie) {
+            return { "Cookie": creds.cookie };
+        }
         if (creds?.token) {
             return {
-                "Cookie": `better-auth.session_token=${creds.token}; __Secure-better-auth.session_token=${creds.token}`
+                "Authorization": `Bearer ${creds.token}`
             };
         }
     } catch (e) {
@@ -65,12 +68,12 @@ export async function getAuthHeaders(): Promise<HeadersInit> {
     return {};
 }
 
-async function saveCredentials(creds: { token: string }) {
+async function saveCredentials(creds: { token?: string; cookie?: string }) {
     await mkdir(CONFIG_DIR, { recursive: true });
     await writeFile(CREDENTIALS_FILE, JSON.stringify(creds, null, 2));
 }
 
-async function getCredentials(): Promise<{ token: string } | null> {
+async function getCredentials(): Promise<{ token?: string; cookie?: string } | null> {
     try {
         const data = await readFile(CREDENTIALS_FILE, "utf8");
         return JSON.parse(data);

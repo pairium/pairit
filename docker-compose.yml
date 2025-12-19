@@ -15,6 +15,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.lab
+      args:
+        VITE_MANAGER_URL: http://localhost:3002
     ports:
       - "3001:3001"
     environment:

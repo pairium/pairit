@@ -806,10 +806,10 @@ git merge modernization/integration --no-ff -m "Modernize stack: Bun + Elysia + 
 
 ```bash
 # 1. Deploy
-./scripts/deployment/deploy.sh
+./scripts/cloud/deploy.sh
 
 # 2. Verify
-./scripts/deployment/verify-cloud.sh [LAB_URL] [MANAGER_URL]
+./scripts/test.sh cloud
 ```
 
 **Exit Criteria:**

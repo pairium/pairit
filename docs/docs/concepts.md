@@ -63,7 +63,7 @@ The `data` field is flexible and component-specific:
 
 #### Storage
 
-Events are stored in a top-level Firestore collection called `events`, with auto-generated document IDs. This allows efficient querying by session, config, page, or component type.
+Events are stored in a top-level MongoDB collection called `events`, with auto-generated document IDs. This allows efficient querying by session, config, page, or component type.
 
 #### Extensibility
 

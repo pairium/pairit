@@ -13,9 +13,9 @@ RUN bun install
 # Build the app
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/lab/server/node_modules ./lab/server/node_modules
-COPY --from=deps /app/lab/app/node_modules ./lab/app/node_modules
+
 COPY . .
+RUN bun install
 # Build frontend
 ARG VITE_MANAGER_URL
 ENV VITE_MANAGER_URL=$VITE_MANAGER_URL

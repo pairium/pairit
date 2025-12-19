@@ -11,9 +11,8 @@ RUN bun install
 
 # Build the app
 FROM base AS builder
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/manager/server/node_modules ./manager/server/node_modules
 COPY . .
+RUN bun install
 
 # Production image
 FROM base AS runner

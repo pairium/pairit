@@ -49,9 +49,9 @@ user_state:
 2) Validate, simulate, or publish with the CLI
 
 ```zsh
-pairit lint your_experiment.yaml
-pairit simulate your_experiment.yaml
-pairit publish your_experiment.yaml --owner you@example.com
+pairit config lint your_experiment.yaml
+pairit config compile your_experiment.yaml
+pairit config upload your_experiment.yaml --owner you@example.com
 ```
 
 3) Share the experiment link with participants
