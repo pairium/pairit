@@ -1,5 +1,0 @@
-steps:
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', '$_IMAGE_NAME', '--build-arg', 'VITE_MANAGER_URL=$_MANAGER_URL', '-f', 'Dockerfile.lab', '.']
-images:
-  - '$_IMAGE_NAME'

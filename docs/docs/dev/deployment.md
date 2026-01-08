@@ -33,14 +33,17 @@ Key deployment files are organized as follows:
 1.  **Environment Variables**:
     *   **Cloud**: Create a `.env.production` file in the root directory (use `scripts/cloud/env.production.template` as a reference).
     *   **Local**: Create a `.env.local` file (use `env.local.template`).
+        *   Note: If running with native Bun (`bun dev`), you must also create `lab/server/.env.local` with `AUTH_BASE_URL="http://localhost:3001/api/auth"`.
     *   Required variables (see references):
+        *   `NODE_ENV`: `development` or `production`. Controls CORS and debug endpoints.
         *   `PROJECT_ID`: GCP Project ID.
         *   `MONGODB_URI`: Production/Local connection string.
         *   `AUTH_SECRET`: Random 32-char string.
         *   `GOOGLE_CLIENT_ID` / `SECRET`: OAuth credentials.
         *   `STORAGE_BACKEND`: `gcs` (cloud) or `local`.
         *   `STORAGE_PATH`: GCS Bucket name or local path.
-        *   `AUTH_BASE_URL` / `TRUSTED_ORIGINS`: Service URLs.
+        *   `PAIRIT_LAB_URL`: Lab service URL (for manager homepage link)
+        *   `CORS_ORIGINS`: Comma-separated allowed origins. Ignored if `NODE_ENV=development` (allows `*`).
 
 ## Deployment
 

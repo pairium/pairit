@@ -1,4 +1,3 @@
-import { createAuthClient } from "better-auth/client";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -8,11 +7,6 @@ const CONFIG_DIR = join(homedir(), ".pairit");
 const CREDENTIALS_FILE = join(CONFIG_DIR, "credentials.json");
 
 const BASE_URL = process.env.PAIRIT_API_URL || "http://localhost:3002";
-
-// Initialize auth client
-export const authClient = createAuthClient({
-    baseURL: BASE_URL,
-});
 
 export async function login() {
     console.log("Initiating login...");
@@ -111,16 +105,12 @@ export async function getAuthHeaders(): Promise<HeadersInit> {
             return { "Cookie": creds.cookie };
         }
         if (creds?.token) {
-            const headers = {
-                "Cookie": `better-auth.session_token=${creds.token}; __Secure-better-auth.session_token=${creds.token}`,
-                "Authorization": `Bearer ${creds.token}`,
-                "Origin": BASE_URL,
-                "Referer": `${BASE_URL}/`
+            // Both cookie names needed: standard for HTTP, __Secure- for HTTPS
+            return {
+                "Cookie": `better-auth.session_token=${creds.token}; __Secure-better-auth.session_token=${creds.token}`
             };
-            // console.log("DEBUG: Auth Headers", JSON.stringify(headers, null, 2));
-            return headers;
         }
-    } catch (e) {
+    } catch {
         // ignore missing credentials
     }
     return {};

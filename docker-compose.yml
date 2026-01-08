@@ -20,6 +20,7 @@ services:
     ports:
       - "3001:3001"
     environment:
+      - NODE_ENV=development
       - MONGODB_URI=mongodb://mongodb:27017/pairit
       - STORAGE_BACKEND=local
       - STORAGE_PATH=/app/storage
@@ -40,6 +41,7 @@ services:
     ports:
       - "3002:3002"
     environment:
+      - NODE_ENV=development
       - MONGODB_URI=mongodb://mongodb:27017/pairit
       - STORAGE_BACKEND=local
       - STORAGE_PATH=/app/storage

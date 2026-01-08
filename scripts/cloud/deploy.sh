@@ -73,15 +73,46 @@ MANAGER_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/pairit-manager"
 
 # 1. Build and Deploy Manager Server
 echo "🔨 Building Manager Server Image: $MANAGER_IMAGE"
-gcloud builds submit --config cloudbuild.manager.yaml --project "$PROJECT_ID" --substitutions=_IMAGE_NAME="$MANAGER_IMAGE" .
+CLOUDBUILD_MANAGER=$(mktemp)
+cat > "$CLOUDBUILD_MANAGER" <<EOF
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', '\$_IMAGE', '-f', 'Dockerfile.manager', '.']
+images:
+- '\$_IMAGE'
+EOF
 
-echo "📦 Deploying Manager Server..."
-DEPLOY_OUTPUT=$(gcloud run deploy pairit-manager \
-    --image "$MANAGER_IMAGE" \
-    --region "$REGION" \
+gcloud builds submit \
+    --config "$CLOUDBUILD_MANAGER" \
+    --substitutions=_IMAGE="$MANAGER_IMAGE" \
     --project "$PROJECT_ID" \
-    --set-env-vars="MONGODB_URI=$MONGODB_URI,STORAGE_BACKEND=gcs,STORAGE_PATH=${STORAGE_PATH:-pairit-media-prod},GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET,AUTH_SECRET=$AUTH_SECRET,AUTH_BASE_URL=${AUTH_BASE_URL},AUTH_TRUSTED_ORIGINS=${AUTH_TRUSTED_ORIGINS}" \
-    --allow-unauthenticated 2>&1)
+    .
+rm "$CLOUDBUILD_MANAGER"
+
+# Prepare env vars with ++ delimiter to avoid comma conflicts
+    MANAGER_ENV="NODE_ENV=production"
+    MANAGER_ENV="$MANAGER_ENV++MONGODB_URI=$MONGODB_URI"
+    MANAGER_ENV="$MANAGER_ENV++STORAGE_BACKEND=gcs"
+    MANAGER_ENV="$MANAGER_ENV++STORAGE_PATH=${STORAGE_PATH:-pairit-media-prod}"
+    MANAGER_ENV="$MANAGER_ENV++GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"
+    MANAGER_ENV="$MANAGER_ENV++GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET"
+    MANAGER_ENV="$MANAGER_ENV++AUTH_SECRET=$AUTH_SECRET"
+    MANAGER_ENV="$MANAGER_ENV++AUTH_BASE_URL=${AUTH_BASE_URL}"
+    MANAGER_ENV="$MANAGER_ENV++AUTH_TRUSTED_ORIGINS=${AUTH_TRUSTED_ORIGINS}"
+    MANAGER_ENV="$MANAGER_ENV++PAIRIT_LAB_URL=${PAIRIT_LAB_URL}"
+    MANAGER_ENV="$MANAGER_ENV++CORS_ORIGINS=${CORS_ORIGINS}"
+
+    echo "📦 Deploying Manager Server..."
+    if ! DEPLOY_OUTPUT=$(gcloud run deploy pairit-manager \
+        --image "$MANAGER_IMAGE" \
+        --region "$REGION" \
+        --project "$PROJECT_ID" \
+        --set-env-vars "^++^$MANAGER_ENV" \
+        --allow-unauthenticated 2>&1); then
+        echo "❌ Manager Deployment Failed!"
+        echo "$DEPLOY_OUTPUT"
+        exit 1
+    fi
 
 echo "$DEPLOY_OUTPUT"
 
@@ -97,15 +128,45 @@ echo "🔗 Final Manager URL: $MANAGER_URL"
 
 # 2. Build and Deploy Lab Server
 echo "🔨 Building Lab Server Image: $LAB_IMAGE with MANAGER_URL=$MANAGER_URL"
-gcloud builds submit --config cloudbuild.lab.yaml --project "$PROJECT_ID" --substitutions=_IMAGE_NAME="$LAB_IMAGE",_MANAGER_URL="$MANAGER_URL" .
+CLOUDBUILD_LAB=$(mktemp)
+cat > "$CLOUDBUILD_LAB" <<EOF
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', '\$_IMAGE', '-f', 'Dockerfile.lab', '--build-arg', 'VITE_MANAGER_URL=\$_VITE_MANAGER_URL', '.']
+images:
+- '\$_IMAGE'
+EOF
 
-echo "📦 Deploying Lab Server..."
-gcloud run deploy pairit-lab \
-    --image "$LAB_IMAGE" \
-    --region "$REGION" \
+gcloud builds submit \
+    --config "$CLOUDBUILD_LAB" \
+    --substitutions=_IMAGE="$LAB_IMAGE",_VITE_MANAGER_URL="$MANAGER_URL" \
     --project "$PROJECT_ID" \
-    --set-env-vars="MONGODB_URI=$MONGODB_URI,STORAGE_BACKEND=gcs,GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET,AUTH_SECRET=$AUTH_SECRET,AUTH_BASE_URL=${AUTH_BASE_URL_LAB},AUTH_TRUSTED_ORIGINS=${AUTH_TRUSTED_ORIGINS_LAB}" \
-    --allow-unauthenticated
+    .
+rm "$CLOUDBUILD_LAB"
+
+# Prepare env vars with ++ delimiter
+    LAB_ENV="NODE_ENV=production"
+    LAB_ENV="$LAB_ENV++MONGODB_URI=$MONGODB_URI"
+    LAB_ENV="$LAB_ENV++STORAGE_BACKEND=gcs"
+    LAB_ENV="$LAB_ENV++GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"
+    LAB_ENV="$LAB_ENV++GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET"
+    LAB_ENV="$LAB_ENV++AUTH_SECRET=$AUTH_SECRET"
+    LAB_ENV="$LAB_ENV++AUTH_BASE_URL=${AUTH_BASE_URL_LAB}"
+    LAB_ENV="$LAB_ENV++AUTH_TRUSTED_ORIGINS=${AUTH_TRUSTED_ORIGINS_LAB}"
+    LAB_ENV="$LAB_ENV++CORS_ORIGINS=${CORS_ORIGINS_LAB}"
+
+    echo "📦 Deploying Lab Server..."
+    if ! LAB_DEPLOY_OUTPUT=$(gcloud run deploy pairit-lab \
+        --image "$LAB_IMAGE" \
+        --region "$REGION" \
+        --project "$PROJECT_ID" \
+        --set-env-vars "^++^$LAB_ENV" \
+        --allow-unauthenticated 2>&1); then
+        echo "❌ Lab Deployment Failed!"
+        echo "$LAB_DEPLOY_OUTPUT"
+        exit 1
+    fi
+echo "$LAB_DEPLOY_OUTPUT"
 
 echo "✅ Deployment initiated!"
 echo "⚠️  IMPORTANT POST-DEPLOYMENT STEPS:"

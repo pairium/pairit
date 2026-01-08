@@ -47,24 +47,61 @@ This monorepo hosts the Pairit stack.
    bun install
    ```
 
-2. Start local stack (Services + MongoDB):
+2. Configure environment variables:
    ```bash
+   # Copy template for local development
+   cp env.local.template .env.local
+   # Edit .env.local with your values (Google OAuth, etc.)
+
+   # For Lab Server (requires different AUTH_BASE_URL for native development)
+   cp .env.local lab/server/.env.local
+   # Update lab/server/.env.local: AUTH_BASE_URL="http://localhost:3001/api/auth"
+   ```
+
+3. Choose a development mode:
+
+   **Option A: Docker-based (Full stack in containers)**
+   ```bash
+   # Quick start (uses existing images)
    docker compose up -d
+   
+   # Or with rebuild (recommended after code changes)
+   ./scripts/local/deploy.sh
    ```
    - Lab Server: http://localhost:3001
    - Manager Server: http://localhost:3002
    - MongoDB: localhost:27017
 
-3. Development Mode (Monorepo):
+   To stop all services:
    ```bash
-   # Run dev for all packages (lab, manager, cli)
-   bun run dev
+   docker compose down
    ```
    
-   Or individually:
-   - Lab Server: `cd lab/server && bun run dev`
-   - Manager Server: `cd manager/server && bun run dev`
-   - CLI: `cd manager/cli && bun run dev`
+   Data persists in Docker volumes. To fully reset:
+   ```bash
+   docker compose down -v
+   ```
+
+   **Option B: Native Bun (For hot-reload development)**
+   ```bash
+   # Start only MongoDB in Docker
+   docker compose up -d mongodb
+   
+   # Run servers locally with hot reload
+   bun run dev
+   ```
+   - Lab app (Vite): http://localhost:3000
+   - Lab server: http://localhost:3001
+   - Manager server: http://localhost:3002
+   
+   Or run individually using workspace filters:
+   ```bash
+   bun run --filter lab-app dev      # Frontend only
+   bun run --filter lab-server dev   # Lab API only
+   bun run --filter manager-server dev  # Manager API only
+   ```
+   
+   ⚠️ **Do not mix**: Running both Docker services and `bun run dev` causes port conflicts (3001/3002).
 
 ## Deployment
 
@@ -72,12 +109,21 @@ The stack is containerized using Docker and deployed via Google Cloud Build / Ru
 
 ### Environment Variables
 
-See `.env.example` (create it if missing) for required environment variables:
-- `MONGODB_URI`
-- `STORAGE_BACKEND` (local/gcs)
-- `GOOGLE_APPLICATION_CREDENTIALS` (if using GCS)
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (for Auth)
-- `AUTH_SECRET` (for Better Auth)
+**For local development:**
+1. Copy `env.local.template` to `.env.local`
+2. Edit `.env.local` with your values (Google OAuth credentials, etc.)
+
+**For cloud deployment:**
+Create `.env.production` with production values (see `scripts/cloud/env.production.template` if available).
+
+**Required variables:**
+- `MONGODB_URI` - MongoDB connection string
+- `STORAGE_BACKEND` - `local` or `gcs`
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - For OAuth authentication
+- `AUTH_SECRET` - Better Auth secret (32+ characters)
+- `AUTH_BASE_URL` - Base URL for auth endpoints
+- `PAIRIT_LAB_URL` - Lab service URL (for manager homepage link)
+- `CORS_ORIGINS` - Comma-separated allowed origins, or `*` for all (production should restrict)
 
 ## Deployment to Google Cloud
 

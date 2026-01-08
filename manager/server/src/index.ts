@@ -9,10 +9,14 @@ import { configsRoutes } from './routes/configs';
 import { mediaRoutes } from './routes/media';
 import { renderPage } from '@pairit/html';
 
+const IS_DEV = process.env.NODE_ENV === 'development';
+const ALLOWED_ORIGINS = process.env.CORS_ORIGINS?.split(',').map(s => s.trim()) || ['*'];
+const LAB_URL = process.env.PAIRIT_LAB_URL || 'http://localhost:3001';
+
 const app = new Elysia()
     .use(
         cors({
-            origin: '*',
+            origin: IS_DEV ? '*' : ALLOWED_ORIGINS,
             methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
             allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
             exposeHeaders: ['Content-Type'],
@@ -57,7 +61,11 @@ const app = new Elysia()
                 message: error instanceof Error ? error.message : String(error)
             };
         }
-    })
+    });
+
+// Debug endpoints only available in non-production
+if (IS_DEV) {
+    app
     .get('/db-test', async () => {
         try {
             const { connectDB } = await import('./lib/db');
@@ -90,7 +98,10 @@ const app = new Elysia()
             GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? 'SET' : 'MISSING',
             AUTH_BASE_URL: process.env.AUTH_BASE_URL || 'MISSING'
         };
-    })
+        });
+}
+
+app
     .get('/login-success', ({ query, cookie, set }) => {
         // Check for both standard and secure cookie names
         const sessionToken = (cookie['better-auth.session_token']?.value ||
@@ -231,7 +242,7 @@ const app = new Elysia()
                 </h2>
                 <p>Switch to the researcher environment to preview or participate in active experiments.</p>
             </div>
-            <a href="https://pairit-lab-823036187164.us-central1.run.app" class="btn btn-primary">Go to Lab</a>
+            <a href="${LAB_URL}" class="btn btn-primary">Go to Lab</a>
         </div>`;
 
         return new Response(renderPage({
