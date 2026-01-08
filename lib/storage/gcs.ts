@@ -2,7 +2,7 @@
  * Google Cloud Storage Backend
  */
 import { Storage } from "@google-cloud/storage";
-import type { StorageBackend } from "./types";
+import type { SignedUpload, StorageBackend } from "./types";
 
 export class GCSStorage implements StorageBackend {
     private bucket;
@@ -62,5 +62,25 @@ export class GCSStorage implements StorageBackend {
             expires: Date.now() + expiresInSeconds * 1000,
         });
         return url;
+    }
+
+    async getUploadUrl(key: string, options?: { expiresInSeconds?: number; contentType?: string }): Promise<SignedUpload> {
+        const expiresInSeconds = options?.expiresInSeconds ?? 900;
+        const file = this.bucket.file(key);
+        const [url] = await file.getSignedUrl({
+            action: "write",
+            expires: Date.now() + expiresInSeconds * 1000,
+            contentType: options?.contentType,
+            version: "v4",
+        });
+
+        const headers = options?.contentType ? { "Content-Type": options.contentType } : undefined;
+
+        return {
+            url,
+            method: "PUT",
+            headers,
+            expiresAt: new Date(Date.now() + expiresInSeconds * 1000).toISOString(),
+        };
     }
 }

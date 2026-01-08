@@ -1,14 +1,20 @@
 /**
  * Event logging routes for lab server
  * POST /sessions/:id/events - Log user interaction events
+ *
+ * Security Model (Qualtrics-style):
+ * - Session UUID serves as authorization (128-bit, cryptographically secure)
+ * - Only someone who started the session knows the UUID
+ * - No additional auth check needed beyond session existence
  */
 import { Elysia, t } from 'elysia';
 import { getEventsCollection, getSessionsCollection } from '../lib/db';
-import type { Event, EventDocument } from '../types';
+import type { EventDocument } from '../types';
 
 export const eventsRoutes = new Elysia()
     .post('/sessions/:id/events', async ({ params: { id: sessionId }, body, set }) => {
-        // Verify session exists
+        // Session existence = authorization (Qualtrics model)
+        // The cryptographic UUID prevents enumeration/guessing
         const sessionsCollection = await getSessionsCollection();
         const session = await sessionsCollection.findOne({ id: sessionId });
         if (!session) {

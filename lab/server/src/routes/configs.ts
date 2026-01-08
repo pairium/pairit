@@ -4,8 +4,10 @@
  */
 import { Elysia, t } from 'elysia';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { resolve } from 'node:path';
 import { getConfigsCollection } from '../lib/db';
+
+const IS_DEV = process.env.NODE_ENV === 'development';
 import type { Config, ConfigDocument } from '../types';
 
 function isPage(value: unknown): value is { id: string; end?: boolean; components?: unknown[] } {
@@ -78,29 +80,38 @@ async function loadConfig(configId: string): Promise<{ config: Config; doc: Conf
         }
     }
 
-    // Fallback: try to load from local configs directory (for development)
-    try {
-        const configsDir = join(process.cwd(), '../app/public/configs');
-        const configPath = join(configsDir, `${configId}.json`);
-        const configContent = await readFile(configPath, 'utf8');
-        const raw = JSON.parse(configContent);
-        const config = coerceConfig(raw);
-        if (config) {
-            return {
-                config,
-                doc: {
-                    configId,
-                    owner: 'local',
-                    checksum: undefined,
-                    metadata: null,
-                    config: raw,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                },
-            };
+    // Fallback: try to load from local configs directory (development only)
+    if (IS_DEV) {
+        try {
+            const configsDir = resolve(process.cwd(), '../app/public/configs');
+            const configPath = resolve(configsDir, `${configId}.json`);
+
+            // Prevent path traversal attacks
+            if (!configPath.startsWith(configsDir)) {
+                console.warn(`[Config] Path traversal attempt blocked: ${configId}`);
+                return null;
+            }
+
+            const configContent = await readFile(configPath, 'utf8');
+            const raw = JSON.parse(configContent);
+            const config = coerceConfig(raw);
+            if (config) {
+                return {
+                    config,
+                    doc: {
+                        configId,
+                        owner: 'local',
+                        checksum: undefined,
+                        metadata: null,
+                        config: raw,
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                    },
+                };
+            }
+        } catch (error) {
+            console.log(`Local config fallback failed for ${configId}:`, error);
         }
-    } catch (error) {
-        console.log(`Local config fallback failed for ${configId}:`, error);
     }
 
     return null;

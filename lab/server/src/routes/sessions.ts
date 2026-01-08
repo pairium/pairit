@@ -10,10 +10,12 @@ import type { Session, SessionDocument, Config } from '../types';
 
 // Import the loadConfig function (duplicated from configs.ts for now)
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { resolve } from 'node:path';
 import { getConfigsCollection } from '../lib/db';
 
-import { randomBytes } from 'crypto';
+const IS_DEV = process.env.NODE_ENV === 'development';
+
+import { randomUUID } from 'crypto';
 
 import { deriveAuthContext } from '../lib/auth-middleware';
 
@@ -55,21 +57,31 @@ async function loadConfig(configId: string): Promise<{ config: Config } | null> 
         const config = coerceConfig(data.config);
         if (config) return { config };
     }
-    try {
-        const configsDir = join(process.cwd(), '../app/public/configs');
-        const configPath = join(configsDir, `${configId}.json`);
-        const configContent = await readFile(configPath, 'utf8');
-        const raw = JSON.parse(configContent);
-        const config = coerceConfig(raw);
-        if (config) return { config };
-    } catch (error) {
-        console.log(`Local config fallback failed for ${configId}:`, error);
+    // Fallback: local configs directory (development only)
+    if (IS_DEV) {
+        try {
+            const configsDir = resolve(process.cwd(), '../app/public/configs');
+            const configPath = resolve(configsDir, `${configId}.json`);
+
+            // Prevent path traversal attacks
+            if (!configPath.startsWith(configsDir)) {
+                console.warn(`[Config] Path traversal attempt blocked: ${configId}`);
+                return null;
+            }
+
+            const configContent = await readFile(configPath, 'utf8');
+            const raw = JSON.parse(configContent);
+            const config = coerceConfig(raw);
+            if (config) return { config };
+        } catch (error) {
+            console.log(`Local config fallback failed for ${configId}:`, error);
+        }
     }
     return null;
 }
 
 function uid(): string {
-    return Math.random().toString(36).slice(2, 10);
+    return randomUUID();
 }
 
 async function loadSession(sessionId: string): Promise<Session | null> {
@@ -88,7 +100,7 @@ async function loadSession(sessionId: string): Promise<Session | null> {
     };
 }
 
-async function saveSession(session: Session & { sessionToken?: string; userId?: string | null }): Promise<void> {
+async function saveSession(session: Session & { userId?: string | null }): Promise<void> {
     const collection = await getSessionsCollection();
     const now = new Date();
     const doc: SessionDocument = {
@@ -98,7 +110,6 @@ async function saveSession(session: Session & { sessionToken?: string; userId?: 
         currentPageId: session.currentPageId,
         user_state: session.user_state,
         endedAt: session.endedAt ?? null,
-        sessionToken: session.sessionToken,
         userId: session.userId ?? null,
         createdAt: session.createdAt ?? now,
         updatedAt: now,
@@ -121,59 +132,41 @@ export const sessionsRoutes = new Elysia({ prefix: '/sessions' })
 
         const { config } = loaded;
 
-
-
-        let userId: string | null = null;
-        if (requireAuth && user) {
-            userId = user.id;
-        }
-
-        // Generate unique session token for shareable links (when auth not required)
-        const sessionToken = !requireAuth ? randomBytes(32).toString('hex') : undefined;
+        // For authenticated configs, store the user ID
+        const userId = (requireAuth && user) ? user.id : null;
 
         const id = uid();
-        const session: Session & { sessionToken?: string; userId?: string | null } = {
+        const session: Session & { userId?: string | null } = {
             id,
             configId: body.configId,
             config,
             currentPageId: config.initialPageId,
             user_state: {},
-            sessionToken,
             userId,
         };
         await saveSession(session);
         const page = config.pages[session.currentPageId];
 
-        const response: any = {
+        return {
             sessionId: id,
             configId: body.configId,
             currentPageId: session.currentPageId,
             page,
         };
-
-        // Include shareable link if auth is not required
-        if (!requireAuth && sessionToken) {
-            response.sessionToken = sessionToken;
-            response.shareableLink = `${process.env.PUBLIC_URL || 'http://localhost:3001'}/${body.configId}?token=${sessionToken}`;
-        }
-
-        return response;
     }, {
         body: t.Object({
             configId: t.String({ minLength: 1 })
         })
     })
-    .get('/:id', async ({ params: { id }, query, set }) => {
+    .get('/:id', async ({ params: { id }, set }) => {
         const session = await loadSession(id);
         if (!session) {
             set.status = 404;
             return { error: 'not_found' };
         }
 
-        // Auth already validated by middleware
-        // If requireAuth is true, middleware ensures we have a user session or valid token (unlikely for strict auth)
-        // Actually, for strict auth, middleware ensures Better Auth session.
-        // For hybrid, middleware allows token.
+        // Session existence = authorization (Qualtrics model)
+        // Only someone who started the session knows the UUID
 
         const page = session.config.pages[session.currentPageId];
         return {
@@ -186,19 +179,16 @@ export const sessionsRoutes = new Elysia({ prefix: '/sessions' })
     }, {
         params: t.Object({
             id: t.String()
-        }),
-        query: t.Object({
-            token: t.Optional(t.String())
         })
     })
-    .post('/:id/advance', async ({ params: { id }, body, query, set }) => {
+    .post('/:id/advance', async ({ params: { id }, body, set }) => {
         const session = await loadSession(id);
         if (!session) {
             set.status = 404;
             return { error: 'not_found' };
         }
 
-        // Auth handled by middleware
+        // Session existence = authorization (Qualtrics model)
 
         session.currentPageId = body.target;
 
@@ -222,8 +212,5 @@ export const sessionsRoutes = new Elysia({ prefix: '/sessions' })
         }),
         body: t.Object({
             target: t.String({ minLength: 1 })
-        }),
-        query: t.Object({
-            token: t.Optional(t.String())
         })
     });

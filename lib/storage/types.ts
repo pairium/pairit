@@ -37,7 +37,22 @@ export interface StorageBackend {
      * Get a signed URL for direct access (for GCS) or a local file path
      */
     getUrl(key: string, expiresInSeconds?: number): Promise<string>;
+
+    /**
+     * Get a signed URL for direct uploads when supported by the backend
+     */
+    getUploadUrl?(
+        key: string,
+        options?: { expiresInSeconds?: number; contentType?: string }
+    ): Promise<SignedUpload>;
 }
+
+export type SignedUpload = {
+    url: string;
+    method: "PUT";
+    headers?: Record<string, string>;
+    expiresAt?: string;
+};
 
 export interface StorageOptions {
     backend: "local" | "gcs";

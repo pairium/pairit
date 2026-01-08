@@ -394,6 +394,16 @@ type MediaUploadPayload = {
   public?: boolean;
 };
 
+type SignedUploadResponse = {
+  bucket: string;
+  object: string;
+  uploadUrl: string;
+  method: string;
+  headers?: Record<string, string> | null;
+  expiresAt?: string | null;
+  publicUrl?: string;
+};
+
 async function uploadMedia(
   filePath: string,
   options: MediaUploadOptions
@@ -405,6 +415,7 @@ async function uploadMedia(
   const defaultObject = `${toBase64Url(hashBuffer.subarray(0, 12))}${path.extname(resolved)}`;
   const object = options.object ?? defaultObject;
   const shouldBePublic = typeof options.public === "boolean" ? options.public : true;
+  const maxInlineBytes = getInlineMediaLimit();
 
   let metadata: Record<string, unknown> | undefined;
   if (options.metadata) {
@@ -415,6 +426,17 @@ async function uploadMedia(
         `Invalid metadata JSON: ${error instanceof Error ? error.message : String(error)}`
       );
     }
+  }
+
+  if (fileBuffer.length > maxInlineBytes) {
+    const signedResponse = await requestSignedUpload({
+      bucket: options.bucket,
+      object,
+      contentType: options.contentType,
+      public: shouldBePublic,
+    });
+    await uploadViaSignedUrl(fileBuffer, signedResponse);
+    return { object, checksum, response: signedResponse };
   }
 
   const payload: MediaUploadPayload = {
@@ -434,6 +456,40 @@ async function uploadMedia(
   });
 
   return { object, checksum, response };
+}
+
+async function requestSignedUpload(input: {
+  bucket?: string;
+  object: string;
+  contentType?: string;
+  public?: boolean;
+}): Promise<SignedUploadResponse> {
+  const response = await callFunctions("/media/upload-url", {
+    method: "POST",
+    body: JSON.stringify({
+      bucket: input.bucket,
+      object: input.object,
+      contentType: input.contentType ?? null,
+      public: input.public,
+    }),
+    headers: { "Content-Type": "application/json" },
+  });
+
+  return response as SignedUploadResponse;
+}
+
+async function uploadViaSignedUrl(fileBuffer: Buffer, signed: SignedUploadResponse): Promise<void> {
+  const headers = signed.headers ?? undefined;
+  const body = new Uint8Array(fileBuffer);
+  const res = await fetch(signed.uploadUrl, {
+    method: signed.method || "PUT",
+    headers: headers ?? undefined,
+    body,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Signed upload failed: HTTP ${res.status} ${text}`);
+  }
 }
 
 function toBase64Url(buffer: Buffer): string {
@@ -508,6 +564,12 @@ function getLabUrl(): string {
   }
   // Default fallback
   return "http://localhost:3000";
+}
+
+function getInlineMediaLimit(): number {
+  const fromEnv = Number(process.env.PAIRIT_MAX_INLINE_MEDIA_BYTES);
+  if (Number.isFinite(fromEnv) && fromEnv > 0) return fromEnv;
+  return 5 * 1024 * 1024;
 }
 
 async function promptConfirm(prompt: string): Promise<boolean> {

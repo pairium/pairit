@@ -11,8 +11,12 @@ import { mediaRoutes } from './routes/media';
 import { renderPage } from '@pairit/html';
 
 const IS_DEV = process.env.NODE_ENV === 'development';
-const ALLOWED_ORIGINS = process.env.CORS_ORIGINS?.split(',').map(s => s.trim()) || ['*'];
+const RAW_CORS_ORIGINS = process.env.CORS_ORIGINS;
+const ALLOWED_ORIGINS = RAW_CORS_ORIGINS ? RAW_CORS_ORIGINS.split(',').map(s => s.trim()).filter(Boolean) : [];
 const LAB_URL = process.env.PAIRIT_LAB_URL || 'http://localhost:3001';
+if (!IS_DEV && ALLOWED_ORIGINS.length === 0) {
+    console.warn('[CORS] CORS_ORIGINS not set; disabling cross-origin access in production');
+}
 
 // Authorization code store for CLI login flow
 // Codes expire after 60 seconds and can only be used once

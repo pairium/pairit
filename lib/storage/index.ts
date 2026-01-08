@@ -5,11 +5,11 @@
  */
 import { LocalStorage } from "./local";
 import { GCSStorage } from "./gcs";
-import type { StorageBackend, StorageOptions } from "./types";
+import type { SignedUpload, StorageBackend, StorageOptions } from "./types";
 
 export { LocalStorage } from "./local";
 export { GCSStorage } from "./gcs";
-export type { StorageBackend, StorageOptions } from "./types";
+export type { SignedUpload, StorageBackend, StorageOptions } from "./types";
 
 /**
  * Create a storage backend based on configuration or environment variables.

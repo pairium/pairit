@@ -11,7 +11,11 @@ import { sessionsRoutes } from './routes/sessions';
 import { eventsRoutes } from './routes/events';
 
 const IS_DEV = process.env.NODE_ENV === 'development';
-const ALLOWED_ORIGINS = process.env.CORS_ORIGINS?.split(',').map(s => s.trim()) || ['*'];
+const RAW_CORS_ORIGINS = process.env.CORS_ORIGINS;
+const ALLOWED_ORIGINS = RAW_CORS_ORIGINS ? RAW_CORS_ORIGINS.split(',').map(s => s.trim()).filter(Boolean) : [];
+if (!IS_DEV && ALLOWED_ORIGINS.length === 0) {
+    console.warn('[CORS] CORS_ORIGINS not set; disabling cross-origin access in production');
+}
 
 // Use process.cwd() which is safer in Docker (WORKDIR /app/lab/server)
 const distPath = resolve(process.cwd(), '../app/dist');
@@ -20,7 +24,11 @@ console.log('Serving static assets from:', distPath);
 const app = new Elysia()
     .use(
         cors({
-            origin: IS_DEV ? '*' : ALLOWED_ORIGINS,
+            // In dev, allow specific origins for credentials to work (can't use * with credentials)
+            origin: IS_DEV
+                ? ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001']
+                : ALLOWED_ORIGINS,
+            credentials: true, // Allow cookies for Better Auth sessions
             methods: ['GET', 'POST', 'OPTIONS'],
             allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
             exposeHeaders: ['Content-Type'],

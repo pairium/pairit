@@ -59,7 +59,9 @@ export async function connectDB(): Promise<Db> {
         const uri = getMongoUri();
         const options = buildClientOptions();
 
-        client = new MongoClient(uri, options);
+        if (!client) {
+            client = new MongoClient(uri, options);
+        }
         await client.connect();
 
         // Extract database name from URI or use default

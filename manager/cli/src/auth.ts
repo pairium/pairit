@@ -5,6 +5,10 @@ import { renderCliSuccessPage } from "@pairit/html";
 
 const CONFIG_DIR = join(homedir(), ".pairit");
 const CREDENTIALS_FILE = join(CONFIG_DIR, "credentials.json");
+const CREDENTIALS_BACKEND = process.env.PAIRIT_CREDENTIALS_BACKEND || "keychain";
+const KEYCHAIN_SERVICE = "pairit-cli";
+const KEYCHAIN_ACCOUNT = "default";
+const KEYTAR_MODULE_SPECIFIER = "keytar";
 
 const BASE_URL = process.env.PAIRIT_API_URL || "http://localhost:3002";
 
@@ -146,11 +150,33 @@ export async function getAuthHeaders(): Promise<HeadersInit> {
 }
 
 async function saveCredentials(creds: { token?: string; cookie?: string }) {
+    if (CREDENTIALS_BACKEND !== "file") {
+        const keytar = await loadKeytar();
+        if (keytar) {
+            await keytar.setPassword(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT, JSON.stringify(creds));
+            return;
+        }
+    }
+
     await mkdir(CONFIG_DIR, { recursive: true });
-    await writeFile(CREDENTIALS_FILE, JSON.stringify(creds, null, 2));
+    await writeFile(CREDENTIALS_FILE, JSON.stringify(creds, null, 2), { mode: 0o600 });
 }
 
 async function getCredentials(): Promise<{ token?: string; cookie?: string } | null> {
+    if (CREDENTIALS_BACKEND !== "file") {
+        const keytar = await loadKeytar();
+        if (keytar) {
+            const stored = await keytar.getPassword(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT);
+            if (stored) {
+                try {
+                    return JSON.parse(stored) as { token?: string; cookie?: string };
+                } catch {
+                    return null;
+                }
+            }
+        }
+    }
+
     try {
         const data = await readFile(CREDENTIALS_FILE, "utf8");
         return JSON.parse(data);
@@ -172,4 +198,27 @@ async function prompt(question: string): Promise<string> {
             resolve(answer.trim());
         });
     });
+}
+
+async function loadKeytar(): Promise<{
+    setPassword: (service: string, account: string, password: string) => Promise<void>;
+    getPassword: (service: string, account: string) => Promise<string | null>;
+} | null> {
+    try {
+        // Avoid static resolution/bundling of optional native dependency.
+        const runtimeImport = new Function("s", "return import(s)") as (s: string) => Promise<unknown>;
+        const mod = await runtimeImport(KEYTAR_MODULE_SPECIFIER);
+        if (mod && typeof mod === "object" && "default" in mod) {
+            return (mod as { default: unknown }).default as {
+                setPassword: (service: string, account: string, password: string) => Promise<void>;
+                getPassword: (service: string, account: string) => Promise<string | null>;
+            };
+        }
+        return mod as {
+            setPassword: (service: string, account: string, password: string) => Promise<void>;
+            getPassword: (service: string, account: string) => Promise<string | null>;
+        };
+    } catch {
+        return null;
+    }
 }

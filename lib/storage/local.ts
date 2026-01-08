@@ -99,4 +99,8 @@ export class LocalStorage implements StorageBackend {
         const fullPath = this.getFullPath(key);
         return `file://${fullPath}`;
     }
+
+    async getUploadUrl(): Promise<never> {
+        throw new Error("not_supported");
+    }
 }

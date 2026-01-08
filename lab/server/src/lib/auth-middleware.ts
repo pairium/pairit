@@ -1,6 +1,10 @@
 /**
- * Optional auth middleware for lab server
- * Validates session token OR Better Auth session based on config requirements
+ * Auth middleware for lab server
+ * Checks config requireAuth setting and validates Better Auth session when required
+ *
+ * Security Model (Qualtrics-style):
+ * - requireAuth: false → Anyone can start sessions, session UUID = authorization
+ * - requireAuth: true  → Must have valid Better Auth session to start
  */
 import { Elysia } from 'elysia';
 import { auth } from '../../../../lib/auth';
@@ -13,7 +17,6 @@ import type { User } from '../../../../lib/auth';
 export type AuthContext = {
     requireAuth: boolean;
     user: User | null;
-    sessionId?: string;
 };
 
 /**
@@ -21,28 +24,26 @@ export type AuthContext = {
  */
 export async function deriveAuthContext({ request, params }: {
     request: Request;
-    params: Record<string, string | undefined>;
+    params?: Record<string, string | undefined>;
 }): Promise<AuthContext> {
-    // Extract configId from params or body
     const url = new URL(request.url);
-    const sessionId = params.id as string | undefined;
+    const sessionId = params?.id as string | undefined;
 
-    // If we have a session ID, get the config from the session
+    // Determine configId from session or request body
     let configId: string | undefined;
     if (sessionId) {
         const sessionsCollection = await getSessionsCollection();
         const sessionDoc = await sessionsCollection.findOne({ id: sessionId });
         configId = sessionDoc?.configId;
     } else if (request.method === 'POST' && url.pathname.endsWith('/sessions/start')) {
-        // Try to look for configId in body (only for /sessions/start)
         try {
             const cloned = request.clone();
             const body = await cloned.json();
             if (body && typeof body === 'object' && 'configId' in body) {
                 configId = body.configId;
             }
-        } catch (e) {
-            // Ignore body parsing errors (might not be JSON)
+        } catch {
+            // Ignore body parsing errors
         }
     }
 
@@ -53,27 +54,8 @@ export async function deriveAuthContext({ request, params }: {
         const requireAuth = config?.requireAuth ?? true;
 
         if (!requireAuth) {
-            // Check for session token in query params
-            const sessionToken = url.searchParams.get('token');
-
-            if (sessionToken && sessionId) {
-                const sessionsCollection = await getSessionsCollection();
-                const session = await sessionsCollection.findOne({
-                    id: sessionId,
-                    sessionToken,
-                });
-
-                if (session) {
-                    // Valid session token - no auth required
-                    return {
-                        requireAuth: false,
-                        user: null,
-                        sessionId: session.id,
-                    };
-                }
-            }
-
-            // No auth required and no session - allow anonymous
+            // Public config - allow anonymous access
+            // Session UUID itself serves as authorization (Qualtrics model)
             return {
                 requireAuth: false,
                 user: null,
@@ -81,16 +63,12 @@ export async function deriveAuthContext({ request, params }: {
         }
     }
 
-    // Fallback to regular auth (required)
-    const sessionData = await auth.api.getSession({ headers: request.headers });
-
-    if (!sessionData) {
-        throw new Error('Unauthorized');
-    }
+    // Auth required - attempt Better Auth session lookup (optional for Qualtrics model)
+    const sessionData = await auth.api.getSession({ headers: request.headers }).catch(() => null);
 
     return {
         requireAuth: true,
-        user: sessionData.user,
+        user: sessionData?.user ?? null,
     };
 }
 

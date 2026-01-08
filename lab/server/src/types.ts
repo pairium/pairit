@@ -49,8 +49,7 @@ export type SessionDocument = {
     currentPageId: string;
     user_state: Record<string, unknown>;
     endedAt: string | null;
-    sessionToken?: string; // Unique token for link-based access (when requireAuth: false)
-    userId?: string | null; // User ID from Better Auth (null if no auth required)
+    userId?: string | null; // User ID from Better Auth (null for anonymous/public sessions)
     createdAt: Date;
     updatedAt: Date;
 };
