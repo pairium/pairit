@@ -2,8 +2,9 @@
  * Manager Server Entry Point
  * Elysia app with config and media management
  */
-import { Elysia } from 'elysia';
+import { Elysia, t } from 'elysia';
 import { cors } from '@elysiajs/cors';
+import { randomBytes } from 'crypto';
 import { auth } from '../../../lib/auth';
 import { configsRoutes } from './routes/configs';
 import { mediaRoutes } from './routes/media';
@@ -12,6 +13,35 @@ import { renderPage } from '@pairit/html';
 const IS_DEV = process.env.NODE_ENV === 'development';
 const ALLOWED_ORIGINS = process.env.CORS_ORIGINS?.split(',').map(s => s.trim()) || ['*'];
 const LAB_URL = process.env.PAIRIT_LAB_URL || 'http://localhost:3001';
+
+// Authorization code store for CLI login flow
+// Codes expire after 60 seconds and can only be used once
+const AUTH_CODE_EXPIRY_MS = 60 * 1000;
+const authCodeStore = new Map<string, { token: string; expiresAt: number }>();
+
+function generateAuthCode(token: string): string {
+    const code = randomBytes(32).toString('hex');
+    authCodeStore.set(code, {
+        token,
+        expiresAt: Date.now() + AUTH_CODE_EXPIRY_MS
+    });
+    // Clean up expired codes periodically
+    setTimeout(() => authCodeStore.delete(code), AUTH_CODE_EXPIRY_MS);
+    return code;
+}
+
+function exchangeAuthCode(code: string): string | null {
+    const entry = authCodeStore.get(code);
+    if (!entry) return null;
+
+    // Delete immediately - codes are single-use
+    authCodeStore.delete(code);
+
+    // Check expiry
+    if (Date.now() > entry.expiresAt) return null;
+
+    return entry.token;
+}
 
 const app = new Elysia()
     .use(
@@ -102,13 +132,26 @@ if (IS_DEV) {
 }
 
 app
-    .get('/login-success', ({ query, cookie, set }) => {
+    // Endpoint to exchange authorization code for session token (CLI use)
+    .post('/api/cli/exchange', async ({ body, set }) => {
+        const token = exchangeAuthCode(body.code);
+        if (!token) {
+            set.status = 400;
+            return { error: 'invalid_code', message: 'Invalid or expired authorization code' };
+        }
+        return { token };
+    }, {
+        body: t.Object({
+            code: t.String({ minLength: 1 })
+        })
+    })
+    .get('/login-success', ({ query, cookie }) => {
         // Check for both standard and secure cookie names
         const sessionToken = (cookie['better-auth.session_token']?.value ||
             cookie['__Secure-better-auth.session_token']?.value) as string | undefined;
 
         // Handle CLI Loopback Flow
-        // If a CLI redirect URI is present (and safe), redirect the browser there with the token
+        // If a CLI redirect URI is present (and safe), generate an auth code and redirect
         const cliRedirect = query.cli_redirect_uri;
         let redirectUrl: string | undefined;
 
@@ -117,7 +160,9 @@ app
                 const url = new URL(cliRedirect);
                 // Security: Only allow redirect to localhost/127.0.0.1 for CLI handoff
                 if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
-                    url.searchParams.set('token', sessionToken);
+                    // Generate a short-lived authorization code instead of exposing the session token
+                    const authCode = generateAuthCode(sessionToken);
+                    url.searchParams.set('code', authCode);
 
                     // Client-side redirect to avoid "Mixed Content" blocking (HTTPS -> HTTP)
                     // We render the success page which then redirects via JS
@@ -128,8 +173,6 @@ app
             }
         }
 
-        const tokenDisplay = sessionToken || 'Error: Session token not found. Please try logging in again.';
-
         const content = `
         <div class="card">
             <h1>
@@ -138,7 +181,7 @@ app
                 </svg>
                 Login Successful
             </h1>
-            
+
             ${redirectUrl ? `
                 <p>Redirecting you back to the CLI...</p>
                 <div style="margin-top: 1rem; font-size: 0.875rem; color: var(--slate-600);">
@@ -154,7 +197,7 @@ app
 
         const scriptContent = `
         <script>
-            const redirectUrl = "${redirectUrl || ''}";
+            const redirectUrl = ${JSON.stringify(redirectUrl || '')};
 
             if (redirectUrl) {
                 setTimeout(() => {

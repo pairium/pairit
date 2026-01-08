@@ -4,29 +4,71 @@
  */
 import { betterAuth } from 'better-auth';
 import { mongodbAdapter } from 'better-auth/adapters/mongodb';
-import { MongoClient } from 'mongodb';
+import { MongoClient, type MongoClientOptions } from 'mongodb';
 
-// Create MongoDB client for Better Auth
-const uri = process.env.MONGODB_URI || 'mongodb://READ_ENV_FAILED_AUTH:27017/pairit';
-const client = new MongoClient(uri, {
-    // @ts-ignore - Workaround for Bun TLS "subject" destructuring error
-    checkServerIdentity: () => undefined
-});
+const IS_DEV = process.env.NODE_ENV === 'development';
+const DEV_MONGODB_URI = 'mongodb://localhost:27017/pairit';
+const DEV_AUTH_SECRET = 'development-secret-do-not-use-in-production-32chars';
+
+// Validate required environment variables in production
+function getMongoUri(): string {
+    const uri = process.env.MONGODB_URI;
+    if (!uri) {
+        if (IS_DEV) {
+            console.warn('[Auth] MONGODB_URI not set, using development default');
+            return DEV_MONGODB_URI;
+        }
+        throw new Error('MONGODB_URI environment variable is required in production');
+    }
+    return uri;
+}
+
+function getAuthSecret(): string {
+    const secret = process.env.AUTH_SECRET;
+    if (!secret) {
+        if (IS_DEV) {
+            console.warn('[Auth] AUTH_SECRET not set, using insecure development default');
+            return DEV_AUTH_SECRET;
+        }
+        throw new Error('AUTH_SECRET environment variable is required in production');
+    }
+    if (secret.length < 32) {
+        if (IS_DEV) {
+            console.warn('[Auth] AUTH_SECRET is less than 32 characters, this is insecure');
+            return secret.padEnd(32, '0');
+        }
+        throw new Error('AUTH_SECRET must be at least 32 characters in production');
+    }
+    return secret;
+}
+
+const uri = getMongoUri();
+const finalSecret = getAuthSecret();
+
+// Configure MongoDB client options
+// Note: checkServerIdentity bypass is only for development due to Bun TLS issues
+const mongoOptions: MongoClientOptions = {};
+if (IS_DEV) {
+    // Workaround for Bun TLS "subject" destructuring error in development only
+    // TODO: Remove when Bun fixes this issue
+    (mongoOptions as any).checkServerIdentity = () => undefined;
+}
+
+const client = new MongoClient(uri, mongoOptions);
 
 // Ensure the client is connected
 client.connect().then(() => {
     console.log('[Auth] Successfully connected to MongoDB');
 }).catch(err => {
     console.error('[Auth] Failed to connect to MongoDB:', err);
+    if (!IS_DEV) {
+        process.exit(1); // Exit in production if DB connection fails
+    }
 });
 
 // Extract database name from URI
 console.log('[Auth] Initializing with baseURL:', process.env.AUTH_BASE_URL);
 const dbName = new URL(uri).pathname.slice(1) || 'pairit';
-
-const authSecret = process.env.AUTH_SECRET || 'development-secret-change-in-production-long-enough';
-// Ensure secret is long enough (32+ chars)
-const finalSecret = authSecret.length < 32 ? authSecret.padEnd(32, '0') : authSecret;
 
 export const auth = betterAuth({
     database: mongodbAdapter(client.db(dbName)),

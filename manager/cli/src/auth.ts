@@ -8,6 +8,28 @@ const CREDENTIALS_FILE = join(CONFIG_DIR, "credentials.json");
 
 const BASE_URL = process.env.PAIRIT_API_URL || "http://localhost:3002";
 
+/**
+ * Exchange an authorization code for a session token
+ */
+async function exchangeCodeForToken(code: string): Promise<string> {
+    const response = await fetch(`${BASE_URL}/api/cli/exchange`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: "Unknown error" }));
+        throw new Error(`Failed to exchange code: ${error.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (!data.token) {
+        throw new Error("No token in exchange response");
+    }
+    return data.token;
+}
+
 export async function login() {
     console.log("Initiating login...");
 
@@ -38,7 +60,8 @@ export async function login() {
 
         console.log(`Waiting for authentication at ${redirectUri}...`);
 
-        const token = await new Promise<string>((resolve, reject) => {
+        // Receive authorization code (not the token directly for security)
+        const authCode = await new Promise<string>((resolve, reject) => {
             // Set 2 minute timeout
             const timeout = setTimeout(() => {
                 server.close();
@@ -48,17 +71,17 @@ export async function login() {
             server.on("request", (req, res) => {
                 try {
                     const url = new URL(req.url || "/", `http://${req.headers.host}`);
-                    const token = url.searchParams.get("token");
+                    const code = url.searchParams.get("code");
 
-                    if (token) {
+                    if (code) {
                         res.writeHead(200, { "Content-Type": "text/html" });
                         res.end(renderCliSuccessPage());
                         clearTimeout(timeout);
                         server.close();
-                        resolve(token);
+                        resolve(code);
                     } else {
                         res.writeHead(400);
-                        res.end("Missing token");
+                        res.end("Missing authorization code");
                     }
                 } catch (e) {
                     res.writeHead(500);
@@ -66,6 +89,10 @@ export async function login() {
                 }
             });
         });
+
+        // Exchange the authorization code for a session token
+        console.log("Exchanging authorization code for token...");
+        const token = await exchangeCodeForToken(authCode);
 
         await saveCredentials({ token });
         console.log("Successfully logged in!");
@@ -78,7 +105,9 @@ export async function login() {
     // Fallback Manual Flow
     console.log(`
 Please visit: ${loginUrl}
-                                                                   
+
+After logging in, you will see a success page. The CLI will handle authentication automatically.
+If automatic login fails, you may need to check your network connection or try again.
 `);
 
     try {
@@ -88,7 +117,7 @@ Please visit: ${loginUrl}
         // ignore open errors
     }
 
-    const token = await prompt("Enter session token: ");
+    const token = await prompt("Enter session token (from browser): ");
     if (!token) {
         console.error("No token provided");
         process.exit(1);

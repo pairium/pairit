@@ -164,8 +164,6 @@ Unified test runner for both environments:
 - [x] cli auth (Better Auth)
 - [ ] make app & docs look nice like [shadcn](https://ui.shadcn.com/)
    - [ ] consolidate styles
-- [ ] make app & docs look nice like [shadcn](https://ui.shadcn.com/)
-   - [ ] consolidate styles
 
 ### Backlog/Completed Modernization
 - [x] unify lab app (Bun + Hono serving both API and frontend) -> Implemented with Elysia + Static Plugin

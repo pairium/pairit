@@ -2,16 +2,26 @@
  * Local Filesystem Storage Backend
  */
 import { mkdir, readFile, writeFile, unlink, readdir, access, stat } from "node:fs/promises";
-import { join, dirname, relative } from "node:path";
+import { join, dirname, relative, resolve, sep } from "node:path";
 import type { StorageBackend } from "./types";
 
 export class LocalStorage implements StorageBackend {
-    constructor(private basePath: string) { }
+    private resolvedBasePath: string;
+
+    constructor(private basePath: string) {
+        this.resolvedBasePath = resolve(basePath);
+    }
 
     private getFullPath(key: string): string {
-        // Prevent path traversal attacks
-        const normalized = key.replace(/\.\./g, "").replace(/^\/+/, "");
-        return join(this.basePath, normalized);
+        // Resolve to absolute path - this normalizes .. sequences
+        const fullPath = resolve(this.resolvedBasePath, key);
+
+        // Verify result is still inside basePath to prevent path traversal attacks
+        if (!fullPath.startsWith(this.resolvedBasePath + sep) && fullPath !== this.resolvedBasePath) {
+            throw new Error('Path traversal attempt detected');
+        }
+
+        return fullPath;
     }
 
     async put(key: string, data: Buffer | Uint8Array | string): Promise<void> {
