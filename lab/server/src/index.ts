@@ -62,8 +62,22 @@ app
 
     .get('/', () => Bun.file(`${distPath}/index.html`))
     .get('/favicon.ico', () => Bun.file(`${distPath}/favicon.ico`))
-    .get('/assets/*', ({ params: { '*': path } }) => Bun.file(`${distPath}/assets/${path}`))
-    .get('/static-configs/*', ({ params: { '*': path } }) => Bun.file(`${distPath}/configs/${path}`))
+    .get('/assets/*', ({ params: { '*': path }, set }) => {
+        const fullPath = resolve(distPath, 'assets', path);
+        if (!fullPath.startsWith(resolve(distPath, 'assets'))) {
+            set.status = 403;
+            return 'Forbidden';
+        }
+        return Bun.file(fullPath);
+    })
+    .get('/static-configs/*', ({ params: { '*': path }, set }) => {
+        const fullPath = resolve(distPath, 'configs', path);
+        if (!fullPath.startsWith(resolve(distPath, 'configs'))) {
+            set.status = 403;
+            return 'Forbidden';
+        }
+        return Bun.file(fullPath);
+    })
 
     // Helper to catch client-side routes
     .get('*', () => Bun.file(`${distPath}/index.html`))

@@ -23,8 +23,8 @@ export const optionalAuthMiddleware = new Elysia({ name: 'optional-auth-middlewa
             const sessionsCollection = await getSessionsCollection();
             const sessionDoc = await sessionsCollection.findOne({ id: sessionId });
             configId = sessionDoc?.configId;
-        } else if (request.method === 'POST') {
-            // Try to look for configId in body (e.g. /sessions/start)
+        } else if (request.method === 'POST' && url.pathname.endsWith('/sessions/start')) {
+            // Try to look for configId in body (only for /sessions/start)
             try {
                 const cloned = request.clone();
                 const body = await cloned.json();
