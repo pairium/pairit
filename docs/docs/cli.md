@@ -9,7 +9,7 @@ pairit config lint your_experiment.yaml # Validate YAML and run lints
 pairit config compile your_experiment.yaml # Parse and compile to canonical JSON
 ```
 
-Publish / manage on Firestore
+Publish / manage configs (stored in MongoDB via the Manager Server API)
 
 ```zsh
 pairit config upload your_experiment.yaml --owner alice@example.com
@@ -49,13 +49,12 @@ pairit media list --prefix onboarding/
 pairit media delete onboarding/hero.png
 ```
 
-## Firestore layout
+## Database layout (MongoDB)
 
-Published configs live under `configs/{configId}` with metadata and a checksum. Runs create:
-- `sessions/{sessionId}` → `{ currentPageId, user_state, user_group, endedAt? }`
-- `groups/{groupId}` when matchmaking succeeds (shared state across participants)
-- `events/{eventId}` (optional audit trail)
+Published configs live in the `configs` collection (keyed by `configId`) with metadata and a checksum. Runs create:
+- `sessions` documents (keyed by `id`) → `{ configId, currentPageId, user_state, endedAt?, createdAt, updatedAt, userId? }`
+- `events` documents → `{ sessionId, configId, pageId, componentType, componentId, type, timestamp, data, createdAt }`
 
-Chat transcripts stream through RTDB at `chats/{chat_group_id}`. Use `pairit config get <configId>` to download a compiled config snapshot for auditing or debugging. Media objects live in Google Cloud Storage buckets configured for the deployment; `pairit media *` commands proxy uploads and deletes via the manager service so the CLI never requires direct GCP credentials. Bucket selection happens in the backend (via `PAIRIT_MEDIA_BUCKET`); use `--bucket <name>` only when overriding that default. Uploads are public unless you pass `--private` when calling `pairit media upload`.
+Use `pairit config get <configId>` to download a compiled config snapshot for auditing or debugging (where supported). Media objects live in the configured storage backend (local filesystem for dev, Google Cloud Storage in prod); `pairit media *` commands proxy uploads and deletes via the manager service so the CLI never requires direct GCP credentials.
 
 

@@ -28,7 +28,7 @@ export function renderPage(page, context) {
 Key points:
 - Page nodes are normalized at compile time so the renderer always receives `{ componentType, props }` pairs for shorthand helpers like `text` or `buttons`.
 - `parseProps` applies runtime-only defaults (for example, filling in optional arrays) and surfaces schema validation errors early.
-- The default entry must exist so unknown component types raise an explicit `missing_component` error rather than crashing.
+- The default entry exists so unknown component types render an explicit “missing renderer” placeholder rather than crashing.
 - Custom components use the `component` host. The host reads the component id from props, checks the registry for a matching implementation, and enforces the contract declared in the config (`propsSchema`, events, capabilities).
 
 ## Routing context
@@ -70,7 +70,7 @@ export const UserStoreContext = React.createContext({
 });
 ```
 
-The compiler validates assignment targets against the schema declared in the config. At runtime `assign` and `bulkAssign` are the only safe mutation APIs exposed to components. The store implementation persists changes to Firestore and feeds expression evaluation so routing decisions can depend on updated answers or matchmaking outcomes.
+The compiler validates assignment targets against the schema declared in the config. At runtime `assign` and `bulkAssign` are the only safe mutation APIs exposed to components. The store implementation persists changes to MongoDB (via the Lab Server API) and feeds expression evaluation so routing decisions can depend on updated answers or matchmaking outcomes.
 
 
 ## Local vs remote config loading
@@ -90,9 +90,9 @@ Flow:
 
 Environment:
 
-- Set `VITE_API_URL` in `lab/app/.env.local` (dev) or `.env.production` (prod) to point at your lab Functions base URL.
-  - Example (emulator): `VITE_API_URL=http://127.0.0.1:5001/pairit-lab/us-east4/lab`
-  - Example (deployed): `VITE_API_URL=https://<your-lab-function-host>`
+- Set `VITE_API_URL` in `lab/app/.env.local` (dev) or `.env.production` (prod) to point at your Lab Server base URL.
+  - Example (native dev): `VITE_API_URL=http://localhost:3001`
+  - Example (deployed): `VITE_API_URL=https://<your-lab-service-host>`
 
 Local files:
 

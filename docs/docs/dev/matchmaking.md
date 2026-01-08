@@ -2,6 +2,8 @@
 
 Optionally enable backfill to form groups using ghost seats when necessary.
 
+> Note: Matchmaking is **not yet implemented** in the current Bun/Elysia + MongoDB stack in this repo. This page is a design note for the intended behavior.
+
 Config extension
 
 ```yaml
@@ -20,7 +22,7 @@ Auditing
 - When a ghost seat is used, emit a `backfilled` event and persist the flag alongside the group record.
 
 Runtime behavior
-- Entering a `matchmaking` page enqueues the session in the specified pool (`matchmaking/{poolId}` in RTDB).
+- Entering a `matchmaking` page enqueues the session in the specified pool (implementation TBD).
 - Matching policy: FIFO by arrival time, fill groups of `num_users`.
 - Timeout policy: configurable per pool (`timeoutSeconds`), defaulting to 120 seconds.
 - On `match`, the runtime writes `$.user_group.chat_group_id` and `groupId`, then advances using routing defined on the button action.

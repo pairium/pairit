@@ -7,11 +7,11 @@ All data is stored in MongoDB.
 ### Core Collections
 
 -   **`configs`**: Published experiment configurations.
-    -   Schema: `{ configId, owner, config, checksum, metadata, requireAuth }`
+    -   Schema: `{ configId, owner, config, checksum, metadata, requireAuth, createdAt, updatedAt }`
 -   **`sessions`**: Participant experimentation sessions (application state).
-    -   Schema: `{ id, configId, currentPageId, user_state, sessionToken, userId, ... }`
+    -   Schema: `{ id, configId, config, currentPageId, user_state, userId?, endedAt?, createdAt, updatedAt }`
 -   **`events`**: Audit events and telemetry.
-    -   Schema: `{ id, sessionId, type, payload, timestamp }`
+    -   Schema: `{ sessionId, configId, pageId, componentType, componentId, type, timestamp, data, createdAt }`
 
 ### Authentication (Better Auth)
 

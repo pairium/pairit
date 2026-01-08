@@ -102,7 +102,7 @@ When configuring the OAuth Consent Screen and Credentials:
 
 ## Deployment Script Internals (`deploy.sh`)
 
-The `scripts/deployment/deploy.sh` script automates several manual steps:
+The `scripts/cloud/deploy.sh` script automates several manual steps:
 1.  **Context Switching**: It changes directory to the project root to run builds, ensuring the full monorepo context is available.
 2.  **Artifact Registry**: Checks for and creates the `pairit-repo` repository if it doesn't exist.
 3.  **Dynamic Envs**: It injects the *actual* Cloud Run URLs into `AUTH_BASE_URL` environment variables during deployment. This prevents the "redirect mismatch" errors common with authentication.

@@ -33,9 +33,7 @@ const ConfigSchema = Type.Object({
 Authentication is handled by [Better Auth](https://www.better-auth.com/).
 
 -   **Manager Routes**: All routes are protected by `authMiddleware`, which verifies the session cookie or bearer token.
--   **Lab Routes**: Routes use `optionalAuthMiddleware`.
-    -   If `requireAuth: true` (config default), users must be signed in via Google OAuth.
-    -   If `requireAuth: false`, users can access sessions via a unique `token` query parameter without login (anonymous session).
+-   **Lab Routes**: Routes derive an auth context (`requireAuth`, `user`) from the config’s `requireAuth` flag. When auth is required, the server will attempt to read a Better Auth session (cookies) and can attach `userId` to sessions when available.
 
 ## Endpoints
 
@@ -43,14 +41,13 @@ Authentication is handled by [Better Auth](https://www.better-auth.com/).
 
 #### Sessions
 -   `POST /sessions/start`: Start a new session.
-    -   Body: `{ configId, participantId? }`
-    -   Return: `{ sessionId, sessionToken, shareableLink, ... }`
+    -   Body: `{ configId }`
+    -   Return: `{ sessionId, configId, currentPageId, page }`
 -   `GET /sessions/:id`: Get session state.
-    -   Auth: Requires valid session token or authenticated user.
 -   `POST /sessions/:id/advance`: Trigger an action.
-    -   Body: `{ event: { type, payload } }`
-    -   Return: `{ newNode, ... }`
--   `GET /sessions/:id/events`: List past events for the session.
+    -   Body: `{ target }`
+    -   Return: `{ sessionId, configId, currentPageId, page, endedAt }`
+-   `POST /sessions/:id/events`: Log a user interaction event.
 
 #### Configs
 -   `GET /configs/:configId`: Fetch a specific experiment configuration.
@@ -69,12 +66,12 @@ Authentication is handled by [Better Auth](https://www.better-auth.com/).
 -   `GET /media`: List media objects.
 -   `DELETE /media/:object`: Delete a media object.
 
-## Live Updates (SSE)
+## Live Updates (SSE) -- Planned
 
 -   `GET /sessions/:sessionId/stream`: Server-Sent Events for session updates (matchmaking, timeouts).
 -   `GET /chat/:groupId/stream`: SSE for chat messages.
 
-## AI Agents
+## AI Agents  -- Planned
 
 -   `POST /agents/:agentId/call`: Server-side invocation of LLM agents. Keys are kept secure on the server.
 
