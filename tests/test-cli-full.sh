@@ -87,6 +87,9 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
+# Generate unique config ID for this test run to avoid ownership conflicts
+TEST_CONFIG_ID="test-$(date +%s)-$(head -c 4 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 8)"
+
 log_info "> Linting..."
 run_pairit pairit config lint "$CONFIG_FILE" > /dev/null
 log_success "✓ Lint passed"
@@ -95,9 +98,9 @@ log_info "> Compiling..."
 run_pairit pairit config compile "$CONFIG_FILE" > /dev/null
 log_success "✓ Compile passed"
 
-log_info "> Uploading (Owner: test-user)..."
+log_info "> Uploading config with ID: $TEST_CONFIG_ID..."
 set +e
-UPLOAD_OUT=$(run_pairit pairit config upload "$CONFIG_FILE" --owner test-user)
+UPLOAD_OUT=$(run_pairit pairit config upload "$CONFIG_FILE" --config-id "$TEST_CONFIG_ID")
 UPLOAD_STATUS=$?
 set -e
 
@@ -122,7 +125,7 @@ log_success "Uploaded Config ID: $CONFIG_ID"
 
 log_info "> Listing..."
 set +e
-LIST_OUT=$(run_pairit pairit config list --owner test-user)
+LIST_OUT=$(run_pairit pairit config list)
 LIST_STATUS=$?
 set -e
 
