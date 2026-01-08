@@ -17,15 +17,43 @@ const LAB_URL = process.env.PAIRIT_LAB_URL || 'http://localhost:3001';
 // Authorization code store for CLI login flow
 // Codes expire after 60 seconds and can only be used once
 const AUTH_CODE_EXPIRY_MS = 60 * 1000;
+const AUTH_CODE_MAX_SIZE = 1000; // Maximum number of pending auth codes
 const authCodeStore = new Map<string, { token: string; expiresAt: number }>();
 
+/**
+ * Evict expired codes and enforce size limit
+ * Called before adding new codes to prevent unbounded growth
+ */
+function evictExpiredCodes(): void {
+    const now = Date.now();
+    for (const [code, entry] of authCodeStore) {
+        if (now > entry.expiresAt) {
+            authCodeStore.delete(code);
+        }
+    }
+
+    // If still over limit, remove oldest entries (FIFO - Map maintains insertion order)
+    if (authCodeStore.size >= AUTH_CODE_MAX_SIZE) {
+        const toDelete = authCodeStore.size - AUTH_CODE_MAX_SIZE + 1;
+        let deleted = 0;
+        for (const code of authCodeStore.keys()) {
+            if (deleted >= toDelete) break;
+            authCodeStore.delete(code);
+            deleted++;
+        }
+    }
+}
+
 function generateAuthCode(token: string): string {
+    // Evict expired codes and enforce size limit before adding new one
+    evictExpiredCodes();
+
     const code = randomBytes(32).toString('hex');
     authCodeStore.set(code, {
         token,
         expiresAt: Date.now() + AUTH_CODE_EXPIRY_MS
     });
-    // Clean up expired codes periodically
+    // Clean up this specific code after expiry
     setTimeout(() => authCodeStore.delete(code), AUTH_CODE_EXPIRY_MS);
     return code;
 }
@@ -106,7 +134,7 @@ if (IS_DEV) {
             return {
                 status: 'ok',
                 databaseName: database.databaseName,
-                collections: collections.map(c => c.name)
+                collections: collections.map((c: { name: string }) => c.name)
             };
         } catch (error) {
             console.error('[DB Test Error]:', error);

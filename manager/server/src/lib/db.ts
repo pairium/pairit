@@ -1,39 +1,14 @@
 /**
  * MongoDB connection for manager server
+ * Uses shared @pairit/db module for singleton connection
  */
-import { MongoClient, Db, Collection } from 'mongodb';
+import { Collection } from 'mongodb';
+import { connectDB } from '@pairit/db';
 import type { ConfigDocument } from '../types';
 
-let client: MongoClient | null = null;
-let db: Db | null = null;
-
-export async function connectDB(): Promise<Db> {
-    if (db) return db;
-
-    const uri = process.env.MONGODB_URI || 'mongodb://READ_ENV_FAILED_DB:27017/pairit';
-    client = new MongoClient(uri, {
-        // @ts-ignore - Workaround for Bun TLS "subject" destructuring error
-        checkServerIdentity: () => undefined
-    });
-    await client.connect();
-
-    // Extract database name from URI or use default
-    const dbName = new URL(uri).pathname.slice(1) || 'pairit';
-    db = client.db(dbName);
-
-    console.log(`Connected to MongoDB: ${dbName}`);
-    return db;
-}
+export { connectDB, closeDB } from '@pairit/db';
 
 export async function getConfigsCollection(): Promise<Collection<ConfigDocument>> {
     const database = await connectDB();
     return database.collection<ConfigDocument>('configs');
-}
-
-export async function closeDB(): Promise<void> {
-    if (client) {
-        await client.close();
-        client = null;
-        db = null;
-    }
 }

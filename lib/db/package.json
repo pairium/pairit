@@ -1,5 +1,5 @@
 {
-    "name": "@pairit/auth",
+    "name": "@pairit/db",
     "version": "0.0.0",
     "private": true,
     "type": "module",
@@ -7,8 +7,6 @@
         ".": "./index.ts"
     },
     "dependencies": {
-        "@pairit/db": "workspace:*",
-        "better-auth": "^1.0.7",
         "mongodb": "^6.12.0"
     },
     "devDependencies": {

@@ -15,7 +15,7 @@ import { getConfigsCollection } from '../lib/db';
 
 import { randomBytes } from 'crypto';
 
-import { optionalAuthMiddleware } from '../lib/auth-middleware';
+import { deriveAuthContext } from '../lib/auth-middleware';
 
 function isPage(value: unknown): value is { id: string; end?: boolean; components?: unknown[] } {
     if (!value || typeof value !== 'object') return false;
@@ -111,7 +111,7 @@ async function saveSession(session: Session & { sessionToken?: string; userId?: 
 }
 
 export const sessionsRoutes = new Elysia({ prefix: '/sessions' })
-    .use(optionalAuthMiddleware)
+    .derive(({ request, params }) => deriveAuthContext({ request, params }))
     .post('/start', async ({ body, set, requireAuth, user }) => {
         const loaded = await loadConfig(body.configId);
         if (!loaded) {

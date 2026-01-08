@@ -4,24 +4,10 @@
  */
 import { betterAuth } from 'better-auth';
 import { mongodbAdapter } from 'better-auth/adapters/mongodb';
-import { MongoClient, type MongoClientOptions } from 'mongodb';
+import { getClient, getDbName } from '@pairit/db';
 
 const IS_DEV = process.env.NODE_ENV === 'development';
-const DEV_MONGODB_URI = 'mongodb://localhost:27017/pairit';
 const DEV_AUTH_SECRET = 'development-secret-do-not-use-in-production-32chars';
-
-// Validate required environment variables in production
-function getMongoUri(): string {
-    const uri = process.env.MONGODB_URI;
-    if (!uri) {
-        if (IS_DEV) {
-            console.warn('[Auth] MONGODB_URI not set, using development default');
-            return DEV_MONGODB_URI;
-        }
-        throw new Error('MONGODB_URI environment variable is required in production');
-    }
-    return uri;
-}
 
 function getAuthSecret(): string {
     const secret = process.env.AUTH_SECRET;
@@ -42,19 +28,11 @@ function getAuthSecret(): string {
     return secret;
 }
 
-const uri = getMongoUri();
 const finalSecret = getAuthSecret();
 
-// Configure MongoDB client options
-// Note: checkServerIdentity bypass is only for development due to Bun TLS issues
-const mongoOptions: MongoClientOptions = {};
-if (IS_DEV) {
-    // Workaround for Bun TLS "subject" destructuring error in development only
-    // TODO: Remove when Bun fixes this issue
-    (mongoOptions as any).checkServerIdentity = () => undefined;
-}
-
-const client = new MongoClient(uri, mongoOptions);
+// Use shared MongoDB client from @pairit/db
+const client = getClient();
+const dbName = getDbName();
 
 // Ensure the client is connected
 client.connect().then(() => {
@@ -66,9 +44,7 @@ client.connect().then(() => {
     }
 });
 
-// Extract database name from URI
 console.log('[Auth] Initializing with baseURL:', process.env.AUTH_BASE_URL);
-const dbName = new URL(uri).pathname.slice(1) || 'pairit';
 
 export const auth = betterAuth({
     database: mongodbAdapter(client.db(dbName)),
