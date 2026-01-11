@@ -1,0 +1,45 @@
+# Dependencies
+node_modules
+
+# Git
+.git
+.gitignore
+
+# Build outputs
+dist
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Firebase (legacy)
+.firebase
+.firebaserc
+firebase.json
+firestore.rules
+database.rules.json
+
+# Logs
+*.log
+logs
+
+# Documentation
+docs
+README.md
+*.md
+!package.json
+
+# Tests
+*.test.ts
+*.spec.ts
+coverage
+.nyc_output

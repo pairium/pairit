@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
+import "dotenv/config";
 import { Command } from "commander";
 import { createHash } from "node:crypto";
 import { readFile, writeFile, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import fetch, { RequestInit } from "node-fetch";
 import YAML from "yaml";
+import { login, getAuthHeaders } from "./auth.js";
 
 type ExperimentPage = {
   id: string;
@@ -26,6 +27,17 @@ program
   .name("pairit")
   .description("CLI for Pairit experiment configs")
   .version("0.1.0");
+
+program
+  .command("login")
+  .description("Login to Pairit Manager")
+  .action(async () => {
+    try {
+      await login();
+    } catch (error) {
+      reportCliError("Login failed", error);
+    }
+  });
 
 const configCommand = program
   .command("config")
@@ -70,7 +82,6 @@ configCommand
 configCommand
   .command("upload")
   .argument("<config>", "Path to YAML config")
-  .requiredOption("--owner <owner>", "Owner email or id")
   .option("--config-id <configId>", "Config id (defaults to hash)")
   .option("--metadata <json>", "Optional metadata JSON string")
   .description("Compile and upload config via Pairit Functions")
@@ -84,6 +95,8 @@ configCommand
       });
 
       console.log(`✓ Uploaded ${payload.configId} (${checksum})`);
+      const labUrl = getLabUrl();
+      console.log(`Survey Link: ${labUrl}/${payload.configId}`);
       console.log(JSON.stringify(response, null, 2));
     } catch (error) {
       reportCliError("Upload failed", error);
@@ -92,12 +105,10 @@ configCommand
 
 configCommand
   .command("list")
-  .option("--owner <owner>", "Filter by owner")
   .description("List configs from Pairit Functions")
   .action(async (options: ListOptions) => {
     try {
-      const params = options.owner ? `?owner=${encodeURIComponent(options.owner)}` : "";
-      const response = await callFunctions(`/configs${params}`, { method: "GET" });
+      const response = await callFunctions(`/configs`, { method: "GET" });
 
       const configs = Array.isArray(response.configs) ? response.configs : [];
       if (!configs.length) {
@@ -106,8 +117,10 @@ configCommand
       }
 
       configs.forEach((config: ConfigListEntry) => {
+        const metadata = config.metadata as Record<string, unknown> | undefined;
+        const filename = metadata?.originalFilename ? ` | file=${metadata.originalFilename}` : "";
         console.log(
-          `${config.configId} | owner=${config.owner} | checksum=${config.checksum} | updated=${config.updatedAt ?? "n/a"}`
+          `configId=${config.configId} | owner=${config.owner} | checksum=${config.checksum}${filename} | updated=${config.updatedAt ?? "n/a"}`
         );
       });
     } catch (error) {
@@ -234,13 +247,12 @@ program.parseAsync(process.argv).catch((err) => {
 });
 
 type UploadOptions = {
-  owner: string;
   configId?: string;
   metadata?: string;
 };
 
 type ListOptions = {
-  owner?: string;
+  // owner removed
 };
 
 type DeleteOptions = {
@@ -335,7 +347,6 @@ async function compileConfig(configPath: string): Promise<string> {
 
 type UploadPayload = {
   configId: string;
-  owner: string;
   checksum: string;
   metadata?: Record<string, unknown> | null;
   config: unknown;
@@ -355,12 +366,16 @@ async function buildUploadPayload(
 
   const metadata = options.metadata
     ? (JSON.parse(options.metadata) as Record<string, unknown>)
-    : undefined;
+    : {};
+
+  // Auto-populate original filename if not manually provided
+  if (!metadata.originalFilename) {
+    metadata.originalFilename = path.basename(configPath);
+  }
 
   return {
     payload: {
       configId,
-      owner: options.owner,
       checksum,
       metadata: metadata ?? null,
       config: parsed,
@@ -379,6 +394,16 @@ type MediaUploadPayload = {
   public?: boolean;
 };
 
+type SignedUploadResponse = {
+  bucket: string;
+  object: string;
+  uploadUrl: string;
+  method: string;
+  headers?: Record<string, string> | null;
+  expiresAt?: string | null;
+  publicUrl?: string;
+};
+
 async function uploadMedia(
   filePath: string,
   options: MediaUploadOptions
@@ -390,6 +415,7 @@ async function uploadMedia(
   const defaultObject = `${toBase64Url(hashBuffer.subarray(0, 12))}${path.extname(resolved)}`;
   const object = options.object ?? defaultObject;
   const shouldBePublic = typeof options.public === "boolean" ? options.public : true;
+  const maxInlineBytes = getInlineMediaLimit();
 
   let metadata: Record<string, unknown> | undefined;
   if (options.metadata) {
@@ -400,6 +426,17 @@ async function uploadMedia(
         `Invalid metadata JSON: ${error instanceof Error ? error.message : String(error)}`
       );
     }
+  }
+
+  if (fileBuffer.length > maxInlineBytes) {
+    const signedResponse = await requestSignedUpload({
+      bucket: options.bucket,
+      object,
+      contentType: options.contentType,
+      public: shouldBePublic,
+    });
+    await uploadViaSignedUrl(fileBuffer, signedResponse);
+    return { object, checksum, response: signedResponse };
   }
 
   const payload: MediaUploadPayload = {
@@ -419,6 +456,40 @@ async function uploadMedia(
   });
 
   return { object, checksum, response };
+}
+
+async function requestSignedUpload(input: {
+  bucket?: string;
+  object: string;
+  contentType?: string;
+  public?: boolean;
+}): Promise<SignedUploadResponse> {
+  const response = await callFunctions("/media/upload-url", {
+    method: "POST",
+    body: JSON.stringify({
+      bucket: input.bucket,
+      object: input.object,
+      contentType: input.contentType ?? null,
+      public: input.public,
+    }),
+    headers: { "Content-Type": "application/json" },
+  });
+
+  return response as SignedUploadResponse;
+}
+
+async function uploadViaSignedUrl(fileBuffer: Buffer, signed: SignedUploadResponse): Promise<void> {
+  const headers = signed.headers ?? undefined;
+  const body = new Uint8Array(fileBuffer);
+  const res = await fetch(signed.uploadUrl, {
+    method: signed.method || "PUT",
+    headers: headers ?? undefined,
+    body,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Signed upload failed: HTTP ${res.status} ${text}`);
+  }
 }
 
 function toBase64Url(buffer: Buffer): string {
@@ -449,10 +520,22 @@ async function resolvePath(configPath: string): Promise<string> {
   return absolute;
 }
 
-async function callFunctions(pathname: string, init: RequestInit): Promise<any> {
+async function callFunctions(pathname: string, init: RequestInit = {}): Promise<any> {
   const baseUrl = getFunctionsBaseUrl();
   const url = new URL(pathname, baseUrl).toString();
-  const response = await fetch(url, init);
+
+  // Inject auth headers
+  const authHeaders = await getAuthHeaders();
+  const headers = {
+    ...init.headers,
+    ...authHeaders,
+    "Origin": new URL(baseUrl).origin, // Satisfy Better Auth CSRF/Origin check
+  };
+
+  // console.log('[Debug] Fetching:', url);
+  // console.log('[Debug] Headers:', JSON.stringify(headers, null, 2));
+
+  const response = await fetch(url, { ...init, headers });
 
   const text = await response.text();
   if (!response.ok) {
@@ -468,16 +551,25 @@ async function callFunctions(pathname: string, init: RequestInit): Promise<any> 
 }
 
 function getFunctionsBaseUrl(): string {
-  // const envUrl = process.env.PAIRIT_FUNCTIONS_BASE_URL;
-  const envUrl = "https://manager-pdxzcarxcq-uk.a.run.app";
-  if (envUrl) return envUrl;
+  if (process.env.PAIRIT_API_URL) {
+    return process.env.PAIRIT_API_URL;
+  }
+  // Default to local development server
+  return "http://localhost:3002";
+}
 
-  const project = process.env.FIREBASE_CONFIG
-    ? JSON.parse(process.env.FIREBASE_CONFIG).projectId
-    : process.env.GCLOUD_PROJECT;
+function getLabUrl(): string {
+  if (process.env.PAIRIT_LAB_URL) {
+    return process.env.PAIRIT_LAB_URL;
+  }
+  // Default fallback
+  return "http://localhost:3000";
+}
 
-  const projectId = project ?? "pairit-lab";
-  return `http://127.0.0.1:5001/${projectId}/us-east4/manager`;
+function getInlineMediaLimit(): number {
+  const fromEnv = Number(process.env.PAIRIT_MAX_INLINE_MEDIA_BYTES);
+  if (Number.isFinite(fromEnv) && fromEnv > 0) return fromEnv;
+  return 5 * 1024 * 1024;
 }
 
 async function promptConfirm(prompt: string): Promise<boolean> {
@@ -504,4 +596,3 @@ function reportCliError(prefix: string, error: unknown) {
 
 export const __filename = fileURLToPath(import.meta.url);
 export const __dirname = path.dirname(__filename);
-

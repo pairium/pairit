@@ -1,0 +1,30 @@
+FROM oven/bun:1 AS base
+WORKDIR /app
+
+# Install dependencies
+FROM base AS deps
+COPY package.json ./
+COPY lab/server/package.json ./lab/server/
+COPY manager/server/package.json ./manager/server/
+COPY lib/auth/package.json ./lib/auth/
+COPY lib/db/package.json ./lib/db/
+COPY lib/html/package.json ./lib/html/
+RUN bun install
+
+# Build the app
+FROM base AS builder
+COPY . .
+COPY lib/html/package.json ./lib/html/
+RUN bun install
+
+# Production image
+FROM base AS runner
+ENV NODE_ENV=production
+
+COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/manager/server ./manager/server
+COPY --from=builder /app/node_modules ./node_modules
+
+WORKDIR /app/manager/server
+EXPOSE 3002
+CMD ["bun", "run", "src/index.ts"]

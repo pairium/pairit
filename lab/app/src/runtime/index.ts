@@ -12,7 +12,9 @@ export async function loadConfig(configId: string): Promise<CompiledConfig | nul
   if (cached) return cached
 
   try {
-    const response = await fetch(`/configs/${configId}.json`)
+    // In dev (Vite), files are at /configs/. In prod (Server), they are at /static-configs/.
+    const basePath = import.meta.env.DEV ? '/configs' : '/static-configs'
+    const response = await fetch(`${basePath}/${configId}.json`)
     if (!response.ok) return null
     const raw = (await response.json()) as unknown
     const normalized = normalizeConfig(raw)

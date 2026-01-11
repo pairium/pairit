@@ -99,12 +99,12 @@ export function Landing() {
               </p>
               <div className="flex gap-3">
                 <a
-                  href="https://console.firebase.google.com/project/pairit-lab/overview"
+                  href={import.meta.env.VITE_MANAGER_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={ghostButton}
                 >
-                  <CircuitBoard className="h-4 w-4" /> Pairit
+                  <CircuitBoard className="h-4 w-4" /> Manager
                 </a>
               </div>
             </CardContent>
@@ -127,7 +127,7 @@ export function Landing() {
                   <CardDescription>{description}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Link to="/$experimentId" params={{ experimentId: id }} className={buttonBase}>
+                  <Link to="/$experimentId" params={{ experimentId: id }} search={{ view: true }} className={buttonBase}>
                     Open {id}
                   </Link>
                 </CardContent>

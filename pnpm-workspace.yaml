@@ -1,7 +1,0 @@
-packages:
-  - manager/*
-  - lab/*
-
-onlyBuiltDependencies:
-  - '@tailwindcss/oxide'
-  - protobufjs

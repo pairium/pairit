@@ -6,8 +6,7 @@ Registry entry shape
 - capabilities: allowlist for built-in affordances (e.g., clipboard, fileUpload)
 
 Runtime behavior
-- Frontend must error with missing_component when id not implemented
-- Record resolved implementation version for audit
-- unknownEvents policy defaults to error
+- Current runtime registers renderers by `component.type` and renders a “missing renderer” placeholder (with a warning) when no renderer is registered.
+- Stricter enforcement (e.g. `missing_component`, contract/version auditing, unknown-events policies) is not yet implemented end-to-end in the current stack.
 
 

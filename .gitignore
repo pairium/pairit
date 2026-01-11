@@ -41,7 +41,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/ - removed to allow lib/storage/ to be tracked
 lib64/
 parts/
 sdist/
@@ -256,6 +256,9 @@ count.txt
 .nitro
 .tanstack
 
+# Storage directory (user uploads and local storage backend)
+storage/
+
 # General
 .DS_Store
 __MACOSX/
@@ -424,3 +427,6 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Test media files
+tests/test-media-*.txt

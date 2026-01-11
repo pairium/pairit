@@ -8,7 +8,7 @@
 
 ### Events
 
-All component interactions in the lab runtime generate events that are stored in Firestore. This event-based architecture provides a component-agnostic way to track user interactions, collect research data, and enable analytics.
+All component interactions in the lab runtime generate events that are stored in MongoDB (the `events` collection). This event-based architecture provides a component-agnostic way to track user interactions, collect research data, and enable analytics.
 
 #### Event Structure
 
@@ -63,7 +63,7 @@ The `data` field is flexible and component-specific:
 
 #### Storage
 
-Events are stored in a top-level Firestore collection called `events`, with auto-generated document IDs. This allows efficient querying by session, config, page, or component type.
+Events are stored in a top-level MongoDB collection called `events`, with auto-generated document IDs. This allows efficient querying by session, config, page, or component type.
 
 #### Extensibility
 

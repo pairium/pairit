@@ -24,6 +24,10 @@ export default function App() {
   useEffect(() => {
     let canceled = false;
     async function bootstrap() {
+      // Check for view-only mode
+      const searchParams = new URLSearchParams(window.location.search);
+      const isViewMode = searchParams.get('view') === 'true' || searchParams.get('mode') === 'view';
+
       if (!experimentId) {
         setError('Missing experiment ID');
         setMode(null);
@@ -53,6 +57,26 @@ export default function App() {
       } catch (error) {
         console.error('Local config load failed', error);
         if (canceled) return;
+      }
+
+      // VIEW MODE: Frontend-only, no backend session
+      if (isViewMode) {
+        if (localConfig) {
+          console.log('Loading in VIEW mode - no backend session');
+          const initialPageId = localConfig.initialPageId;
+          const initialPage = localConfig.pages[initialPageId] ?? null;
+          setMode('local');
+          setCompiledConfig(localConfig);
+          setCurrentPageId(initialPageId);
+          setSessionId(null); // No session ID
+          setPage(initialPage);
+          setEndRedirectUrl(initialPage?.endRedirectUrl ?? null);
+          setEndedAt(initialPage?.end ? new Date().toISOString() : null);
+        } else {
+          setError(`Config not found: ${experimentId}`);
+        }
+        if (!canceled) setLoading(false);
+        return;
       }
 
       // Try to create a remote session (works even with local config for event testing)

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pairit Auth Test</title>
+    <style>
+        body { font-family: system-ui, sans-serif; padding: 2rem; max-width: 600px; margin: 0 auto; text-align: center; }
+        button { background: #4285f4; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #357abd; }
+        pre { background: #f5f5f5; padding: 10px; text-align: left; overflow-x: auto; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <h1>Pairit Authentication Test</h1>
+    <p>Use this page to initiate the Google OAuth flow for testing.</p>
+    
+    <div id="login-section">
+        <button onclick="login()">Sign in with Google</button>
+    </div>
+
+    <div id="result-section" class="hidden">
+        <h3>Login Successful?</h3>
+        <p>If you were redirected back here (or to the callback URL) and see a session token cookie, copy it!</p>
+        <p>Your session token should be in the Cookies for <code>localhost</code>.</p>
+    </div>
+
+    <script>
+        async function login() {
+            try {
+                const res = await fetch('http://localhost:3002/api/auth/sign-in/social', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        provider: 'google',
+                        callbackURL: 'http://localhost:3002/api/auth/callback/google' 
+                    })
+                });
+                const data = await res.json();
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    alert('Error: ' + JSON.stringify(data));
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>
