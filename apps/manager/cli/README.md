@@ -26,7 +26,7 @@ bun run src/index.ts --help
 ### Link locally (optional)
 
 ```bash
-cd manager/cli
+cd apps/manager/cli
 bun link
 # in another dir
 bun link pairit-cli
@@ -54,13 +54,13 @@ Add `--private` if you need to keep an object private. Use `--bucket <name>` onl
 # Point to local manager server (default is http://localhost:3002)
 export PAIRIT_API_URL=http://localhost:3002
 
-bun run manager/cli/src/index.ts config upload configs/simple-survey-basic.yaml --owner you@example.com
-bun run manager/cli/src/index.ts config list
-bun run manager/cli/src/index.ts config delete 2f3c4d5e... --force
+bun run apps/manager/cli/src/index.ts config upload configs/simple-survey-basic.yaml --owner you@example.com
+bun run apps/manager/cli/src/index.ts config list
+bun run apps/manager/cli/src/index.ts config delete 2f3c4d5e... --force
 
-bun run manager/cli/src/index.ts media upload assets/logo.png
-bun run manager/cli/src/index.ts media list
-bun run manager/cli/src/index.ts media delete onboarding/logo.png --force
+bun run apps/manager/cli/src/index.ts media upload assets/logo.png
+bun run apps/manager/cli/src/index.ts media list
+bun run apps/manager/cli/src/index.ts media delete onboarding/logo.png --force
 ```
 
 `config compile` writes `configs/simple-survey-basic.json` next to the source YAML. `config upload` defaults the config id to a 16-character base64url string derived from the SHA-256 hash of the compiled JSON (unless `--config-id` overrides it).
@@ -70,7 +70,7 @@ All hosted commands require the manager service to be reachable (Cloud Run deplo
 ## Development
 
 ```bash
-cd manager/cli
+cd apps/manager/cli
 bun run dev
 bun run lint
 ```

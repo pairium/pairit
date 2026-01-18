@@ -5,7 +5,7 @@
 import { Elysia, t } from 'elysia';
 import { cors } from '@elysiajs/cors';
 import { randomBytes } from 'crypto';
-import { auth } from '../../../lib/auth';
+import { auth } from '@pairit/auth';
 import { configsRoutes } from './routes/configs';
 import { mediaRoutes } from './routes/media';
 import { renderPage } from '@pairit/html';

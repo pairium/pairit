@@ -12,7 +12,7 @@
   "scripts": {
     "test": "bun test",
     "build": "bun run --filter '*' build",
-    "dev": "bun run --filter 'lab-*' --filter 'manager-server' dev",
+    "dev": "bun run --filter '@pairit/lab-*' --filter '@pairit/manager-server' dev",
     "emulators": "echo 'Deprecated: use docker compose up'"
   },
   "devDependencies": {

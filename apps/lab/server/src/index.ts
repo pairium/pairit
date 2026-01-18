@@ -5,7 +5,7 @@
 import { Elysia } from 'elysia';
 import { cors } from '@elysiajs/cors';
 import { resolve } from 'node:path';
-import { auth } from '../../../lib/auth';
+import { auth } from '@pairit/auth';
 import { configsRoutes } from './routes/configs';
 import { sessionsRoutes } from './routes/sessions';
 import { eventsRoutes } from './routes/events';

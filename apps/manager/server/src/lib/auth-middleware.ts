@@ -3,8 +3,8 @@
  * Validates Better Auth session on all protected routes
  */
 import { Elysia } from 'elysia';
-import { auth } from '../../../../lib/auth';
-import type { User, Session } from '../../../../lib/auth';
+import { auth } from '@pairit/auth';
+import type { User, Session } from '@pairit/auth';
 
 export const authMiddleware = (app: Elysia) => app
     .derive(async ({ request }): Promise<{

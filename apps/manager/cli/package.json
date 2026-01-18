@@ -1,5 +1,5 @@
 {
-  "name": "pairit-cli",
+  "name": "@pairit/cli",
   "version": "0.1.0",
   "description": "Pairit experiment configuration CLI",
   "type": "module",

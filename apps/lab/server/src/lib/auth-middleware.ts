@@ -7,9 +7,9 @@
  * - requireAuth: true  → Must have valid Better Auth session to start
  */
 import { Elysia } from 'elysia';
-import { auth } from '../../../../lib/auth';
+import { auth } from '@pairit/auth';
 import { getConfigsCollection, getSessionsCollection } from '../lib/db';
-import type { User } from '../../../../lib/auth';
+import type { User } from '@pairit/auth';
 
 /**
  * Context type added by the auth middleware

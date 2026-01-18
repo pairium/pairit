@@ -1,6 +1,6 @@
 {
-    "name": "lab-server",
-    "version": "0.0.0",
+    "name": "@pairit/lab-server",
+    "version": "0.1.0",
     "private": true,
     "type": "module",
     "scripts": {
@@ -11,6 +11,7 @@
     "dependencies": {
         "@elysiajs/cors": "^1.1.1",
         "@elysiajs/static": "^1.4.7",
+        "@pairit/auth": "workspace:*",
         "@pairit/db": "workspace:*",
         "better-auth": "^1.0.7",
         "elysia": "^1.1.25",
