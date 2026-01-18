@@ -13,7 +13,7 @@ docs
 coverage
 .nyc_output
 !package.json
-!lib/auth/package.json
-!lib/db/package.json
-!lib/html/package.json
-!lib/storage/package.json
+!packages/auth/package.json
+!packages/db/package.json
+!packages/html/package.json
+!packages/storage/package.json

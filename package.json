@@ -5,9 +5,9 @@
   "type": "module",
   "private": true,
   "workspaces": [
-    "manager/*",
-    "lab/*",
-    "lib/*"
+    "apps/lab/*",
+    "apps/manager/*",
+    "packages/*"
   ],
   "scripts": {
     "test": "bun test",
