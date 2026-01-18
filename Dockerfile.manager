@@ -9,6 +9,7 @@ COPY manager/server/package.json ./manager/server/
 COPY lib/auth/package.json ./lib/auth/
 COPY lib/db/package.json ./lib/db/
 COPY lib/html/package.json ./lib/html/
+COPY lib/storage/package.json ./lib/storage/
 RUN bun install
 
 # Build the app

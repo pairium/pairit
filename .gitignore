@@ -257,7 +257,7 @@ count.txt
 .tanstack
 
 # Storage directory (user uploads and local storage backend)
-storage/
+/storage/
 
 # General
 .DS_Store
