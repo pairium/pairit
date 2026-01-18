@@ -23,7 +23,7 @@ services:
       - NODE_ENV=development
       - MONGODB_URI=mongodb://mongodb:27017/pairit
       - STORAGE_BACKEND=local
-      - STORAGE_PATH=/app/storage
+      - STORAGE_PATH=/app/.storage
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - AUTH_SECRET=${AUTH_SECRET}
@@ -32,7 +32,7 @@ services:
       mongodb:
         condition: service_healthy
     volumes:
-      - ./storage:/app/storage
+      - ./.storage:/app/.storage
 
   manager-server:
     build:
@@ -44,7 +44,7 @@ services:
       - NODE_ENV=development
       - MONGODB_URI=mongodb://mongodb:27017/pairit
       - STORAGE_BACKEND=local
-      - STORAGE_PATH=/app/storage
+      - STORAGE_PATH=/app/.storage
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - AUTH_SECRET=${AUTH_SECRET}
@@ -53,7 +53,7 @@ services:
       mongodb:
         condition: service_healthy
     volumes:
-      - ./storage:/app/storage
+      - ./.storage:/app/.storage
 
 volumes:
   mongodb_data:

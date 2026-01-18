@@ -90,14 +90,14 @@ Flow:
 
 Environment:
 
-- Set `VITE_API_URL` in `lab/app/.env.local` (dev) or `.env.production` (prod) to point at your Lab Server base URL.
+- Set `VITE_API_URL` in `apps/lab/app/.env.local` (dev) or `.env.production` (prod) to point at your Lab Server base URL.
   - Example (native dev): `VITE_API_URL=http://localhost:3001`
   - Example (deployed): `VITE_API_URL=https://<your-lab-service-host>`
 
 Local files:
 
-- Vite serves files from `lab/app/public`. Place configs under `lab/app/public/configs/` so they resolve at `/configs/{id}.json`.
-  - Example: `lab/app/public/configs/survey-showcase.json` → `/:experimentId=survey-showcase` loads in local mode.
+- Vite serves files from `apps/lab/app/public`. Place configs under `apps/lab/app/public/configs/` so they resolve at `/configs/{id}.json`.
+  - Example: `apps/lab/app/public/configs/survey-showcase.json` → `/:experimentId=survey-showcase` loads in local mode.
 
 Troubleshooting:
 

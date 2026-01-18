@@ -24,7 +24,7 @@ Key deployment files are organized as follows:
 │   ├── cloud/
 │   │   └── deploy.sh         # Cloud Run deployment
 │   └── test.sh               # Unified verification & test runner
-└── tests/
+└── scripts/tests/
     └── verify-health.sh      # Health check script
 ```
 
@@ -33,7 +33,7 @@ Key deployment files are organized as follows:
 1.  **Environment Variables**:
     *   **Cloud**: Create a `.env.production` file in the root directory (use `scripts/cloud/env.production.template` as a reference).
     *   **Local**: Create a `.env.local` file (use `env.local.template`).
-        *   Note: If running with native Bun (`bun dev`), you must also create `lab/server/.env.local` with `AUTH_BASE_URL="http://localhost:3001/api/auth"`.
+        *   Note: If running with native Bun (`bun dev`), you must also create `apps/lab/server/.env.local` with `AUTH_BASE_URL="http://localhost:3001/api/auth"`.
     *   Required variables (see references):
         *   `NODE_ENV`: `development` or `production`. Controls CORS and debug endpoints.
         *   `PROJECT_ID`: GCP Project ID.
@@ -84,14 +84,14 @@ After deployment, verify the services are healthy and run integration tests usin
 
 ### 1. Monorepo Dependency Management
 The project uses a **Bun Monorepo** structure. However, for Docker builds to work correctly with Cloud Run, we made specific configurations:
-- **Hoisted Dependencies**: Critical shared dependencies like `better-auth` and `mongodb` are defined in the **root** `package.json`. This ensures they are consistently installed and available to all workspace packages (`lab/server`, `manager/server`, `lib/auth`) during the Docker build process, preventing runtime "Cannot find package" errors.
-- **Workspaces**: Defined as wildcards (e.g., `lab/*`, `manager/*`) in `package.json`.
+- **Workspace Dependencies**: Shared dependencies like `better-auth` and `mongodb` are defined in their respective workspace packages (`apps/lab/server`, `apps/manager/server`, `packages/auth`) for clear dependency ownership.
+- **Workspaces**: Defined as `apps/lab/*`, `apps/manager/*`, and `packages/*` in `package.json`.
 
 ### 2. Docker Build Context
 We use **Google Cloud Build** (`cloudbuild.yaml` files) instead of simple `docker build` commands.
-- **Reason**: The servers depend on code in `lib/auth`. To copy these files into the Docker image, the build context must be the **project root**.
-- **Mechanism**: The deployment script triggers Cloud Build from the root context, allowing `Dockerfile`s to `COPY lib/auth` and other shared resources.
-- **Frontend Build**: The `Dockerfile.lab` includes a step to build the frontend (`lab/app`) and copy the static assets (`dist`) to the final image, where they are served by the Lab Server.
+- **Reason**: The servers depend on code in `packages/auth`. To copy these files into the Docker image, the build context must be the **project root**.
+- **Mechanism**: The deployment script triggers Cloud Build from the root context, allowing `Dockerfile`s to `COPY packages/` and other shared resources.
+- **Frontend Build**: The `Dockerfile.lab` includes a step to build the frontend (`apps/lab/app`) and copy the static assets (`dist`) to the final image, where they are served by the Lab Server.
 
 ### 3. Google OAuth Configuration Details
 When configuring the OAuth Consent Screen and Credentials:

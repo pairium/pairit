@@ -10,12 +10,8 @@ ENV=${1:-local}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Colors
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
+# Load shared utilities
+source "$SCRIPT_DIR/common.sh"
 
 echo -e "${BLUE}🧪 Starting Test Suite for Environment: ${YELLOW}$ENV${NC}"
 
@@ -73,7 +69,7 @@ fi
 # 1. Health Verification
 echo ""
 echo -e "${BLUE}1. verifying Health...${NC}"
-"$PROJECT_ROOT/tests/verify-health.sh" "$PAIRIT_LAB_URL" "$PAIRIT_API_URL"
+"$PROJECT_ROOT/scripts/tests/verify-health.sh" "$PAIRIT_LAB_URL" "$PAIRIT_API_URL"
 
 # 2. Integration Tests
 echo ""
@@ -86,11 +82,11 @@ TEST_EMAIL="test-${ENV}-$(date +%s)@example.com"
 TEST_PW="TestPassword123!"
 
 echo "   Bootstrapping auth for $TEST_EMAIL..."
-"$PROJECT_ROOT/tests/setup-cli-auth.sh" "$PAIRIT_API_URL" "$TEST_EMAIL" "$TEST_PW"
+"$PROJECT_ROOT/scripts/tests/setup-cli-auth.sh" "$PAIRIT_API_URL" "$TEST_EMAIL" "$TEST_PW"
 
 # Run the full CLI test suite
 # test-cli-full.sh reads PAIRIT_API_URL from env
-"$PROJECT_ROOT/tests/test-cli-full.sh"
+"$PROJECT_ROOT/scripts/tests/test-cli-full.sh"
 
 echo ""
 echo -e "${GREEN}🎉 All Tests Passed for $ENV!${NC}"
