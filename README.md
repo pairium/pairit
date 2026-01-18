@@ -4,16 +4,20 @@ This monorepo hosts the Pairit stack.
 
 ## Repository Structure
 
-- `docs/`
-- `lab/`: Participant-facing app
-  - `app/`: Vite + React frontend
-  - `server/`: Elysia + Bun backend
-- `manager/`: Experimenter-facing tools
-  - `cli/`: CLI for managing experiments
-  - `server/`: Elysia + Bun backend
-- `lib/`: Shared libraries
+- `apps/`: Deployable applications
+  - `lab/`: Participant-facing app
+    - `app/`: Vite + React frontend
+    - `server/`: Elysia + Bun backend
+  - `manager/`: Experimenter-facing tools
+    - `cli/`: CLI for managing experiments
+    - `server/`: Elysia + Bun backend
+- `packages/`: Shared libraries
   - `storage/`: Storage abstraction (Local/GCS)
   - `auth/`: Authentication configuration
+  - `db/`: Database utilities
+  - `html/`: HTML utilities
+- `scripts/`: Deployment and test scripts
+- `docs/`: Documentation (MkDocs)
 
 ## Prerequisites
 
@@ -26,7 +30,7 @@ This monorepo hosts the Pairit stack.
 ### Experimenters
 
 1. Review the experimenter docs in `docs/` or at [pairit-lab-docs.web.app](https://pairit-lab-docs.web.app), starting with `docs/docs/quickstart.md` for a YAML template.
-2. Use the CLI to validate or publish your config (see `manager/cli/README.md`):
+2. Use the CLI to validate or publish your config (see `apps/manager/cli/README.md`):
 
    ```bash
    # Login first
@@ -54,8 +58,8 @@ This monorepo hosts the Pairit stack.
    # Edit .env.local with your values (Google OAuth, etc.)
 
    # For Lab Server (requires different AUTH_BASE_URL for native development)
-   cp .env.local lab/server/.env.local
-   # Update lab/server/.env.local: AUTH_BASE_URL="http://localhost:3001/api/auth"
+   cp .env.local apps/lab/server/.env.local
+   # Update apps/lab/server/.env.local: AUTH_BASE_URL="http://localhost:3001/api/auth"
    ```
 
 3. Choose a development mode:
@@ -64,7 +68,7 @@ This monorepo hosts the Pairit stack.
    ```bash
    # Quick start (uses existing images)
    docker compose up -d
-   
+
    # Or with rebuild (recommended after code changes)
    ./scripts/local/deploy.sh
    ```
@@ -76,7 +80,7 @@ This monorepo hosts the Pairit stack.
    ```bash
    docker compose down
    ```
-   
+
    Data persists in Docker volumes. To fully reset:
    ```bash
    docker compose down -v
@@ -86,21 +90,21 @@ This monorepo hosts the Pairit stack.
    ```bash
    # Start only MongoDB in Docker
    docker compose up -d mongodb
-   
+
    # Run servers locally with hot reload
    bun run dev
    ```
    - Lab app (Vite): http://localhost:3000
    - Lab server: http://localhost:3001
    - Manager server: http://localhost:3002
-   
+
    Or run individually using workspace filters:
    ```bash
    bun run --filter lab-app dev      # Frontend only
    bun run --filter lab-server dev   # Lab API only
    bun run --filter manager-server dev  # Manager API only
    ```
-   
+
    ⚠️ **Do not mix**: Running both Docker services and `bun run dev` causes port conflicts (3001/3002).
 
 ## Deployment
@@ -141,11 +145,3 @@ We use Google Cloud Run for a serverless, scalable deployment.
 Unified test runner for both environments:
 - **Local**: `./scripts/test.sh local` (verifies health + runs integration tests)
 - **Cloud**: `./scripts/test.sh cloud` (discovers URLs + runs integration tests against prod)
-
-
-
-### Backlog/Completed Modernization
-- [x] unify lab app (Bun + Hono serving both API and frontend) -> Implemented with Elysia + Static Plugin
-- [x] remove Firebase Functions dependency -> Migrated to Dockerized Elysia servers
-- [x] single Docker deployment -> `docker-compose.yml` created
-

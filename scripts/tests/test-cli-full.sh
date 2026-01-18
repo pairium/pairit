@@ -80,7 +80,7 @@ log_success "✓ Created $TEST_MEDIA"
 log_info "---------------------------------------------------"
 log_info "2. Testing Config Management..."
 
-CONFIG_FILE="lab/app/public/configs/simple-survey.yaml"
+CONFIG_FILE="apps/lab/app/public/configs/simple-survey.yaml"
 
 if [ ! -f "$CONFIG_FILE" ]; then
     log_error "Error: Config file $CONFIG_FILE not found."

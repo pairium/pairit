@@ -2,8 +2,8 @@
 
 The backend is built with [ElysiaJS](https://elysiajs.com/) and runs on [Bun](https://bun.sh/). It consists of two services:
 
-1.  **Lab Server** (`lab/server`): Handles participant sessions, events, and delivering experiments.
-2.  **Manager Server** (`manager/server`): Handles experiment configuration management, media uploads, and administrative tasks.
+1.  **Lab Server** (`apps/lab/server`): Handles participant sessions, events, and delivering experiments.
+2.  **Manager Server** (`apps/manager/server`): Handles experiment configuration management, media uploads, and administrative tasks.
 
 ## Architecture
 

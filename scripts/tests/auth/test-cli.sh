@@ -6,15 +6,15 @@ set -e
 
 # Get the project root directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 echo "Building CLI..."
-cd "$PROJECT_ROOT/manager/cli"
+cd "$PROJECT_ROOT/apps/manager/cli"
 bun install
 bun run build
 cd "$PROJECT_ROOT"
 
-CLI="$PROJECT_ROOT/manager/cli/dist/index.js"
+CLI="$PROJECT_ROOT/apps/manager/cli/dist/index.js"
 
 echo "Testing CLI..."
 
