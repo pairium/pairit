@@ -5,13 +5,11 @@ set -e
 # Verifies the health and basic functionality of deployed services (local or cloud)
 # Usage: ./verify-health.sh [LAB_URL] [MANAGER_URL]
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
+
 LAB_URL=$1
 MANAGER_URL=$2
-
-# Colors
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-NC='\033[0m'
 
 if [ -z "$LAB_URL" ] || [ -z "$MANAGER_URL" ]; then
     echo "Usage: ./verify-health.sh [LAB_URL] [MANAGER_URL]"

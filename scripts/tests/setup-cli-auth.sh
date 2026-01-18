@@ -53,8 +53,6 @@ CONFIG_DIR="$HOME/.pairit"
 CREDENTIALS_FILE="$CONFIG_DIR/credentials.json"
 
 mkdir -p "$CONFIG_DIR"
-# Use Python to verify JSON string escaping if needed, but for cookies usually simple
-# We'll use python to write JSON safely
-python3 -c "import sys, json; print(json.dumps({'cookie': sys.argv[1]}))" "$COOKIES" > "$CREDENTIALS_FILE"
+node -e "console.log(JSON.stringify({cookie: process.argv[1]}))" "$COOKIES" > "$CREDENTIALS_FILE"
 
 echo "✅ Auth configured! Token saved to $CREDENTIALS_FILE"

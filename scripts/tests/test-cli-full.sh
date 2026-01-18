@@ -1,15 +1,10 @@
 #!/bin/bash
 set -e
 
-# Colors
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
 
-# Ensure CLI hits the Cloud Run instance
-# Ensure CLI hits the Cloud Run instance
+# Ensure CLI hits the configured API
 if [ -z "$PAIRIT_API_URL" ] && [ -f .env ]; then
     # Load from .env if not set
     set -a
@@ -18,14 +13,9 @@ if [ -z "$PAIRIT_API_URL" ] && [ -f .env ]; then
 fi
 
 if [ -z "$PAIRIT_API_URL" ]; then
-    echo "Error: PAIRIT_API_URL is not set. Please set it or create a .env file."
+    log_error "Error: PAIRIT_API_URL is not set. Please set it or create a .env file."
     exit 1
 fi
-
-log_info() { echo -e "${BLUE}$1${NC}"; }
-log_success() { echo -e "${GREEN}$1${NC}"; }
-log_warn() { echo -e "${YELLOW}$1${NC}"; }
-log_error() { echo -e "${RED}$1${NC}"; }
 
 # Wrapper function to handle 401s
 run_pairit() {

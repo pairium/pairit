@@ -4,15 +4,12 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../../common.sh"
+
 echo "🧪 Phase 3 Authentication Tests"
 echo "================================"
 echo ""
-
-# Colors for output
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
 
 # Base URLs
 API_URL="${PAIRIT_API_URL:-http://localhost:3002}"
@@ -27,16 +24,6 @@ fi
 
 echo "Target Manager: $API_URL"
 echo "Target Lab:     $LAB_URL"
-
-pass() {
-    echo -e "${GREEN}✓${NC} $1"
-    ((PASSED++)) || true
-}
-
-fail() {
-    echo -e "${RED}✗${NC} $1"
-    ((FAILED++)) || true
-}
 
 # Test 1: Check auth providers available
 echo "Test 1: Checking auth endpoints..."
@@ -380,6 +367,26 @@ if echo "$RESPONSE" | grep -q "shareableLink"; then
 else
     fail "No shareable link in response"
 fi
+
+# ============================================
+# Cleanup
+# ============================================
+echo ""
+echo "========================================="
+echo "Cleanup"
+echo "========================================="
+echo ""
+
+echo "Cleaning up test configs..."
+curl -s -X DELETE $API_URL/configs/test-auth \
+    -H "Origin: $API_URL" \
+    -H "User-Agent: $UA" \
+    -H "$COOKIE_HEADER" > /dev/null 2>&1 || true
+curl -s -X DELETE $API_URL/configs/test-no-auth \
+    -H "Origin: $API_URL" \
+    -H "User-Agent: $UA" \
+    -H "$COOKIE_HEADER" > /dev/null 2>&1 || true
+echo "✓ Test configs cleaned up"
 
 echo ""
 echo "================================"
