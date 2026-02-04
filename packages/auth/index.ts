@@ -48,12 +48,13 @@ console.log('[Auth] Initializing with baseURL:', process.env.AUTH_BASE_URL);
 
 export const auth = betterAuth({
     database: mongodbAdapter(client.db(dbName)),
-    baseURL: process.env.AUTH_BASE_URL ? new URL(process.env.AUTH_BASE_URL).origin : 'http://localhost:3001',
+    baseURL: process.env.AUTH_BASE_URL ? new URL(process.env.AUTH_BASE_URL).origin : 'http://localhost:3000',
     basePath: '/api/auth',
     secret: finalSecret,
     trustedOrigins: [
         ...(process.env.AUTH_TRUSTED_ORIGINS ? process.env.AUTH_TRUSTED_ORIGINS.split(',') : []),
-        process.env.AUTH_BASE_URL ? new URL(process.env.AUTH_BASE_URL).origin : 'http://localhost:3001'
+        process.env.AUTH_BASE_URL ? new URL(process.env.AUTH_BASE_URL).origin : 'http://localhost:3001',
+        ...(IS_DEV ? ['http://localhost:3000'] : []),
     ],
 
     // Enable email/password authentication

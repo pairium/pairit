@@ -12,24 +12,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 echo "📂 Project Root: $PROJECT_ROOT"
 cd "$PROJECT_ROOT"
 
-# Default configuration
-DEFAULT_PROJECT_ID="pairit-lab-staging"
-DEFAULT_REGION="us-central1"
-
-PROJECT_ID=${1:-$(gcloud config get-value project || echo "$DEFAULT_PROJECT_ID")}
-REGION=${2:-$DEFAULT_REGION}
-REPO_NAME="pairit-repo"
-
-if [ -z "$PROJECT_ID" ]; then
-    echo "Error: No Google Cloud Project ID found."
-    echo "Usage: ./deploy.sh [PROJECT_ID] [REGION]"
-    exit 1
-fi
-
-echo "🚀 Deploying to Project: $PROJECT_ID, Region: $REGION"
-
-# Read vars from .env for injection
-# Priority: .env.production > .env (we are now in PROJECT_ROOT)
+# Read vars from .env first (PROJECT_ID and secrets come from here)
 if [ -f .env.production ]; then
     echo "📜 Sourcing .env.production..."
     set -a
@@ -41,8 +24,36 @@ elif [ -f .env ]; then
     source .env
     set +a
 else
-    echo "⚠️  No .env or .env.production file found in $PROJECT_ROOT. Ensure environment variables are set explicitly."
+    echo "❌ No .env or .env.production file found in $PROJECT_ROOT"
+    exit 1
 fi
+
+# Configuration (args override .env)
+PROJECT_ID=${1:-$PROJECT_ID}
+REGION=${2:-${REGION:-us-central1}}
+REPO_NAME="pairit-repo"
+
+if [ -z "$PROJECT_ID" ]; then
+    echo "❌ PROJECT_ID not set in .env and not provided as argument"
+    echo "Usage: ./deploy.sh [PROJECT_ID] [REGION]"
+    exit 1
+fi
+
+echo "🚀 Deploying to Project: $PROJECT_ID, Region: $REGION"
+
+# Get project number to compute deterministic Cloud Run URLs
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+if [ -z "$PROJECT_NUMBER" ]; then
+    echo "❌ Could not get project number for $PROJECT_ID"
+    exit 1
+fi
+
+# Compute Cloud Run URLs (deterministic: service-projectnumber.region.run.app)
+MANAGER_SERVICE_URL="https://pairit-manager-${PROJECT_NUMBER}.${REGION}.run.app"
+LAB_SERVICE_URL="https://pairit-lab-${PROJECT_NUMBER}.${REGION}.run.app"
+
+echo "📍 Manager URL: $MANAGER_SERVICE_URL"
+echo "📍 Lab URL: $LAB_SERVICE_URL"
 
 # Debug: Redact and show MONGODB_URI
 if [ -n "$MONGODB_URI" ]; then
@@ -97,9 +108,9 @@ MANAGER_ENV="$MANAGER_ENV++STORAGE_PATH=${STORAGE_PATH:-pairit-media-prod}"
 MANAGER_ENV="$MANAGER_ENV++GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"
 MANAGER_ENV="$MANAGER_ENV++GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET"
 MANAGER_ENV="$MANAGER_ENV++AUTH_SECRET=$AUTH_SECRET"
-MANAGER_ENV="$MANAGER_ENV++AUTH_BASE_URL=${AUTH_BASE_URL}"
-MANAGER_ENV="$MANAGER_ENV++AUTH_TRUSTED_ORIGINS=${AUTH_TRUSTED_ORIGINS}"
-MANAGER_ENV="$MANAGER_ENV++PAIRIT_LAB_URL=${PAIRIT_LAB_URL}"
+MANAGER_ENV="$MANAGER_ENV++AUTH_BASE_URL=${MANAGER_SERVICE_URL}/api/auth"
+MANAGER_ENV="$MANAGER_ENV++AUTH_TRUSTED_ORIGINS=${MANAGER_SERVICE_URL}"
+MANAGER_ENV="$MANAGER_ENV++PAIRIT_LAB_URL=${LAB_SERVICE_URL}"
 MANAGER_ENV="$MANAGER_ENV++CORS_ORIGINS=${CORS_ORIGINS}"
 
 echo "📦 Deploying Manager Server..."
@@ -151,8 +162,8 @@ LAB_ENV="$LAB_ENV++STORAGE_BACKEND=gcs"
 LAB_ENV="$LAB_ENV++GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"
 LAB_ENV="$LAB_ENV++GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET"
 LAB_ENV="$LAB_ENV++AUTH_SECRET=$AUTH_SECRET"
-LAB_ENV="$LAB_ENV++AUTH_BASE_URL=${AUTH_BASE_URL_LAB}"
-LAB_ENV="$LAB_ENV++AUTH_TRUSTED_ORIGINS=${AUTH_TRUSTED_ORIGINS_LAB}"
+LAB_ENV="$LAB_ENV++AUTH_BASE_URL=${LAB_SERVICE_URL}/api/auth"
+LAB_ENV="$LAB_ENV++AUTH_TRUSTED_ORIGINS=${LAB_SERVICE_URL}"
 LAB_ENV="$LAB_ENV++CORS_ORIGINS=${CORS_ORIGINS_LAB}"
 
 echo "📦 Deploying Lab Server..."

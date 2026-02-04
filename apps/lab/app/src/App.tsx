@@ -3,7 +3,9 @@ import { useParams } from '@tanstack/react-router';
 
 import Header from './components/Header';
 import { Button } from '@components/ui/Button';
-import { advance, startSession } from './lib/api';
+import { Login } from '@components/Auth/Login';
+import { advance, startSession, AuthRequiredError } from './lib/api';
+import { useSession } from './lib/auth-client';
 import { loadConfig } from './runtime';
 import { PageRenderer } from './runtime/renderer';
 import type { CompiledConfig } from './runtime/config';
@@ -11,6 +13,8 @@ import type { Page } from './runtime/types';
 
 export default function App() {
   const { experimentId } = useParams({ from: '/$experimentId' });
+  const { data: session, isPending: authLoading } = useSession();
+  const isAuthenticated = !!session?.user;
   const [mode, setMode] = useState<'local' | 'remote' | null>(null);
   const [compiledConfig, setCompiledConfig] = useState<CompiledConfig | null>(null);
   const [, setCurrentPageId] = useState<string | null>(null);
@@ -20,10 +24,14 @@ export default function App() {
   const [endRedirectUrl, setEndRedirectUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [authRequired, setAuthRequired] = useState(false);
 
   useEffect(() => {
     let canceled = false;
     async function bootstrap() {
+      // Wait for auth state to be determined before making API calls
+      if (authLoading) return;
+
       // Check for view-only mode
       const searchParams = new URLSearchParams(window.location.search);
       const isViewMode = searchParams.get('view') === 'true' || searchParams.get('mode') === 'view';
@@ -37,6 +45,7 @@ export default function App() {
         setPage(null);
         setEndedAt(null);
         setEndRedirectUrl(null);
+        setAuthRequired(false);
         return;
       }
       setMode(null);
@@ -46,6 +55,7 @@ export default function App() {
       setPage(null);
       setEndedAt(null);
       setEndRedirectUrl(null);
+      setAuthRequired(false);
       setLoading(true);
       setError(null);
 
@@ -111,6 +121,13 @@ export default function App() {
         if (canceled) return;
         console.error('Remote session start failed:', e);
 
+        // Handle auth-required experiments
+        if (e instanceof AuthRequiredError) {
+          setAuthRequired(true);
+          setLoading(false);
+          return;
+        }
+
         // Fall back to pure local mode if no backend available
         if (localConfig) {
           console.log('Loading in LOCAL mode - no events will be submitted (backend unavailable)');
@@ -134,7 +151,7 @@ export default function App() {
     return () => {
       canceled = true;
     };
-  }, [experimentId]);
+  }, [experimentId, isAuthenticated, authLoading]);
 
   async function onAction(a: { type: 'go_to'; target: string }) {
     if (mode === 'local' && compiledConfig) {
@@ -207,6 +224,16 @@ export default function App() {
 
         {loading && (
           <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">Loading…</div>
+        )}
+
+        {!loading && authRequired && !isAuthenticated && (
+          <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-8 text-center">
+            <div className="text-lg font-medium">Sign in to continue</div>
+            <div className="text-sm text-slate-500">This experiment requires authentication.</div>
+            <div className="flex justify-center">
+              <Login />
+            </div>
+          </div>
         )}
 
         {!loading && page && !endedAt && <PageRenderer page={page} onAction={onAction} sessionId={sessionId} />}

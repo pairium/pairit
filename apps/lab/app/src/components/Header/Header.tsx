@@ -1,4 +1,5 @@
 import type { CompiledConfig } from '@app/runtime/config'
+import { Login, Logout, useAuth } from '@components/Auth'
 
 type HeaderProps = {
   mode: 'local' | 'remote' | null
@@ -8,6 +9,8 @@ type HeaderProps = {
 }
 
 export default function Header({ mode, sessionId, compiledConfig, experimentId }: HeaderProps) {
+  const { user, isLoading, isAuthenticated } = useAuth()
+
   const status =
     mode === 'remote'
       ? sessionId
@@ -23,7 +26,19 @@ export default function Header({ mode, sessionId, compiledConfig, experimentId }
     <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
       <div className="mx-auto flex w-full max-w-4xl items-center justify-between px-6 py-4">
         <div className="text-lg font-semibold tracking-tight">Pairit Lab</div>
-        <div className="text-sm text-slate-500">{status}</div>
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-slate-500">{status}</div>
+          {!isLoading && (
+            isAuthenticated ? (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-slate-700">{user?.name || user?.email}</span>
+                <Logout />
+              </div>
+            ) : (
+              <Login />
+            )
+          )}
+        </div>
       </div>
     </header>
   )

@@ -2,6 +2,20 @@
 
 Monorepo for a behavioral science experiment platform. Participants run experiments in the **lab**, experimenters manage them via the **manager**.
 
+## Local Development
+
+Prerequisites:
+- MongoDB running locally (`brew services start mongodb-community`)
+- `.env` file in project root with Google OAuth credentials
+
+```bash
+# Start dev with env vars loaded (required for auth to work)
+source .env && bun run dev
+
+# Test auth-required flow without a requireAuth config
+FORCE_AUTH=true source .env && bun run dev
+```
+
 ## Commands
 
 ```bash

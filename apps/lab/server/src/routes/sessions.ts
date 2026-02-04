@@ -14,6 +14,7 @@ import { resolve } from 'node:path';
 import { getConfigsCollection } from '../lib/db';
 
 const IS_DEV = process.env.NODE_ENV === 'development';
+const FORCE_AUTH = process.env.FORCE_AUTH === 'true';
 
 import { randomUUID } from 'crypto';
 
@@ -124,6 +125,12 @@ async function saveSession(session: Session & { userId?: string | null }): Promi
 export const sessionsRoutes = new Elysia({ prefix: '/sessions' })
     .derive(({ request, params }) => deriveAuthContext({ request, params }))
     .post('/start', async ({ body, set, requireAuth, user }) => {
+        // Enforce auth requirement (FORCE_AUTH=true bypasses config check for testing)
+        if ((requireAuth || FORCE_AUTH) && !user) {
+            set.status = 401;
+            return { error: 'authentication_required' };
+        }
+
         const loaded = await loadConfig(body.configId);
         if (!loaded) {
             set.status = 404;

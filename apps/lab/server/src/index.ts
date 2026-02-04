@@ -66,30 +66,33 @@ app
     // API Routes
     .use(configsRoutes)
     .use(sessionsRoutes)
-    .use(eventsRoutes)
+    .use(eventsRoutes);
 
-    .get('/', () => Bun.file(`${distPath}/index.html`))
-    .get('/favicon.ico', () => Bun.file(`${distPath}/favicon.ico`))
-    .get('/assets/*', ({ params: { '*': path }, set }) => {
-        const fullPath = resolve(distPath, 'assets', path);
-        if (!fullPath.startsWith(resolve(distPath, 'assets'))) {
-            set.status = 403;
-            return 'Forbidden';
-        }
-        return Bun.file(fullPath);
-    })
-    .get('/static-configs/*', ({ params: { '*': path }, set }) => {
-        const fullPath = resolve(distPath, 'configs', path);
-        if (!fullPath.startsWith(resolve(distPath, 'configs'))) {
-            set.status = 403;
-            return 'Forbidden';
-        }
-        return Bun.file(fullPath);
-    })
+// Static file serving (production only - in dev, Vite handles this)
+if (!IS_DEV) {
+    app
+        .get('/', () => Bun.file(`${distPath}/index.html`))
+        .get('/favicon.ico', () => Bun.file(`${distPath}/favicon.ico`))
+        .get('/assets/*', ({ params: { '*': path }, set }) => {
+            const fullPath = resolve(distPath, 'assets', path);
+            if (!fullPath.startsWith(resolve(distPath, 'assets'))) {
+                set.status = 403;
+                return 'Forbidden';
+            }
+            return Bun.file(fullPath);
+        })
+        .get('/static-configs/*', ({ params: { '*': path }, set }) => {
+            const fullPath = resolve(distPath, 'configs', path);
+            if (!fullPath.startsWith(resolve(distPath, 'configs'))) {
+                set.status = 403;
+                return 'Forbidden';
+            }
+            return Bun.file(fullPath);
+        })
+        // SPA catch-all for client-side routes
+        .get('*', () => Bun.file(`${distPath}/index.html`));
+}
 
-    // Helper to catch client-side routes
-    .get('*', () => Bun.file(`${distPath}/index.html`))
-
-    .listen(Number(process.env.PORT) || 3001);
+app.listen(Number(process.env.PORT) || 3001);
 
 console.log(`🚀 Lab server running on ${app.server?.hostname}:${app.server?.port}`);

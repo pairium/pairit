@@ -3,6 +3,13 @@ import type { Page } from '../runtime/types'
 
 const baseUrl = import.meta.env.VITE_API_URL || "";
 
+export class AuthRequiredError extends Error {
+    constructor() {
+        super('Authentication required');
+        this.name = 'AuthRequiredError';
+    }
+}
+
 type StartResponse = { sessionId: string; configId: string; currentPageId: string; page: Page };
 type GetResponse = { sessionId: string; currentPageId: string; page: Page; endedAt: string | null };
 type AdvanceResponse = GetResponse;
@@ -15,6 +22,9 @@ export async function startSession(configId: string): Promise<StartResponse> {
     credentials: 'include', // Include cookies for Better Auth
     body: JSON.stringify({ configId }),
   });
+  if (r.status === 401) {
+    throw new AuthRequiredError();
+  }
   if (!r.ok) throw new Error('Failed to start session');
   return r.json();
 }
