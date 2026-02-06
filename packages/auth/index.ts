@@ -31,18 +31,9 @@ function getAuthSecret(): string {
 const finalSecret = getAuthSecret();
 
 // Use shared MongoDB client from @pairit/db
+// Connection happens lazily on first auth operation via Better Auth's MongoDB adapter
 const client = getClient();
 const dbName = getDbName();
-
-// Ensure the client is connected
-client.connect().then(() => {
-    console.log('[Auth] Successfully connected to MongoDB');
-}).catch(err => {
-    console.error('[Auth] Failed to connect to MongoDB:', err);
-    if (!IS_DEV) {
-        process.exit(1); // Exit in production if DB connection fails
-    }
-});
 
 console.log('[Auth] Initializing with baseURL:', process.env.AUTH_BASE_URL);
 

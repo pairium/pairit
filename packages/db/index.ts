@@ -30,7 +30,12 @@ function getMongoUri(): string {
  * Build MongoDB client options with appropriate TLS settings
  */
 function buildClientOptions(): MongoClientOptions {
-    const options: MongoClientOptions = {};
+    const options: MongoClientOptions = {
+        // Timeouts - fail fast instead of hanging
+        connectTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 30000,
+    };
 
     if (IS_DEV) {
         // Workaround for Bun TLS "subject" destructuring error in development only
@@ -123,3 +128,14 @@ export async function closeDB(): Promise<void> {
 export function isConnected(): boolean {
     return db !== null;
 }
+
+// Register graceful shutdown handlers
+process.on('SIGTERM', async () => {
+    await closeDB();
+    process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+    await closeDB();
+    process.exit(0);
+});
