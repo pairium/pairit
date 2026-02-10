@@ -3,7 +3,12 @@ import { Button } from "@components/ui/Button";
 import { useParams } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import Header from "./components/Header";
-import { AuthRequiredError, advance, startSession } from "./lib/api";
+import {
+	AuthRequiredError,
+	type ProlificParams,
+	advance,
+	startSession,
+} from "./lib/api";
 import { useSession } from "./lib/auth-client";
 import { loadConfig } from "./runtime";
 import type { CompiledConfig } from "./runtime/config";
@@ -38,6 +43,18 @@ export default function App() {
 			const isViewMode =
 				searchParams.get("view") === "true" ||
 				searchParams.get("mode") === "view";
+
+			const prolificPid = searchParams.get("PROLIFIC_PID");
+			const studyId = searchParams.get("STUDY_ID");
+			const prolificSessionId = searchParams.get("SESSION_ID");
+			const prolific: ProlificParams | null =
+				prolificPid && studyId && prolificSessionId
+					? {
+							prolificPid,
+							studyId,
+							sessionId: prolificSessionId,
+						}
+					: null;
 
 			if (!experimentId) {
 				setError("Missing experiment ID");
@@ -94,7 +111,7 @@ export default function App() {
 
 			// Try to create a remote session (works even with local config for event testing)
 			try {
-				const r = await startSession(experimentId);
+				const r = await startSession(experimentId, prolific);
 				if (canceled) return;
 				console.log(
 					"Loading in REMOTE mode - sessionId:",

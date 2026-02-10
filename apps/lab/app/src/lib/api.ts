@@ -2,6 +2,12 @@ import type { EventPayload, Page } from "../runtime/types";
 
 const baseUrl = import.meta.env.VITE_API_URL || "";
 
+export type ProlificParams = {
+	prolificPid: string;
+	studyId: string;
+	sessionId: string;
+};
+
 export class AuthRequiredError extends Error {
 	constructor() {
 		super("Authentication required");
@@ -24,12 +30,15 @@ type GetResponse = {
 type AdvanceResponse = GetResponse;
 type SubmitEventResponse = { eventId: string };
 
-export async function startSession(configId: string): Promise<StartResponse> {
+export async function startSession(
+	configId: string,
+	prolific?: ProlificParams | null,
+): Promise<StartResponse> {
 	const r = await fetch(`${baseUrl}/sessions/start`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		credentials: "include", // Include cookies for Better Auth
-		body: JSON.stringify({ configId }),
+		body: JSON.stringify({ configId, ...(prolific && { prolific }) }),
 	});
 	if (r.status === 401) {
 		throw new AuthRequiredError();

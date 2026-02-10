@@ -31,12 +31,19 @@ export type ConfigDocument = {
 	updatedAt?: Date | null;
 };
 
+export type ProlificParams = {
+	prolificPid: string;
+	studyId: string;
+	sessionId: string;
+};
+
 export type Session = {
 	id: string;
 	configId: string;
 	config: Config;
 	currentPageId: string;
 	user_state: Record<string, any>;
+	prolific?: ProlificParams | null;
 	endedAt?: string;
 	createdAt?: Date;
 	updatedAt?: Date;
@@ -48,6 +55,7 @@ export type SessionDocument = {
 	config: Config;
 	currentPageId: string;
 	user_state: Record<string, unknown>;
+	prolific?: ProlificParams | null;
 	endedAt: string | null;
 	userId?: string | null; // User ID from Better Auth (null for anonymous/public sessions)
 	createdAt: Date;

@@ -10,7 +10,12 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { Elysia, t } from "elysia";
 import { getConfigsCollection, getSessionsCollection } from "../lib/db";
-import type { Config, Session, SessionDocument } from "../types";
+import type {
+	Config,
+	ProlificParams,
+	Session,
+	SessionDocument,
+} from "../types";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 const FORCE_AUTH = process.env.FORCE_AUTH === "true";
@@ -106,6 +111,7 @@ async function loadSession(sessionId: string): Promise<Session | null> {
 		config: data.config,
 		currentPageId: data.currentPageId,
 		user_state: data.user_state,
+		prolific: data.prolific ?? null,
 		endedAt: data.endedAt ?? undefined,
 		createdAt: data.createdAt,
 		updatedAt: data.updatedAt,
@@ -123,6 +129,7 @@ async function saveSession(
 		config: session.config,
 		currentPageId: session.currentPageId,
 		user_state: session.user_state,
+		prolific: session.prolific ?? null,
 		endedAt: session.endedAt ?? null,
 		userId: session.userId ?? null,
 		createdAt: session.createdAt ?? now,
@@ -157,6 +164,8 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 			// For authenticated configs, store the user ID
 			const userId = requireAuth && user ? user.id : null;
 
+			const prolific: ProlificParams | null = body.prolific ?? null;
+
 			const id = uid();
 			const session: Session & { userId?: string | null } = {
 				id,
@@ -164,6 +173,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				config,
 				currentPageId: config.initialPageId,
 				user_state: {},
+				prolific,
 				userId,
 			};
 			await saveSession(session);
@@ -179,6 +189,13 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 		{
 			body: t.Object({
 				configId: t.String({ minLength: 1 }),
+				prolific: t.Optional(
+					t.Object({
+						prolificPid: t.String(),
+						studyId: t.String(),
+						sessionId: t.String(),
+					}),
+				),
 			}),
 		},
 	)
