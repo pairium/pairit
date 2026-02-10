@@ -25,7 +25,7 @@ FORCE_AUTH=true source .env && bun run dev
 bun install                     # Install dependencies
 bun run dev                     # Run all services (lab-app:3000, lab-server:3001, manager-server:3002)
 bun run build                   # Build all packages
-bun test                        # Run tests
+bun run test                    # Run tests (bun test for packages, vitest for lab-app)
 biome check                     # Lint and format
 tsc --noEmit                    # Type check
 ```
