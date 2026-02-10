@@ -1,2 +1,1 @@
-export * from './Survey'
-
+export * from "./Survey";

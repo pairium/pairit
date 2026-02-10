@@ -3,12 +3,13 @@
  *
  * Factory for creating storage backends based on configuration.
  */
-import { LocalStorage } from "./local";
-import { GCSStorage } from "./gcs";
-import type { SignedUpload, StorageBackend, StorageOptions } from "./types";
 
-export { LocalStorage } from "./local";
+import { GCSStorage } from "./gcs";
+import { LocalStorage } from "./local";
+import type { StorageBackend, StorageOptions } from "./types";
+
 export { GCSStorage } from "./gcs";
+export { LocalStorage } from "./local";
 export type { SignedUpload, StorageBackend, StorageOptions } from "./types";
 
 /**
@@ -20,15 +21,18 @@ export type { SignedUpload, StorageBackend, StorageOptions } from "./types";
  * - GCP_PROJECT_ID: optional, for GCS
  */
 export function createStorage(options?: StorageOptions): StorageBackend {
-    const backend = options?.backend ?? (process.env.STORAGE_BACKEND as "local" | "gcs") ?? "local";
-    const location = options?.location ?? process.env.STORAGE_PATH ?? "./storage";
+	const backend =
+		options?.backend ??
+		(process.env.STORAGE_BACKEND as "local" | "gcs") ??
+		"local";
+	const location = options?.location ?? process.env.STORAGE_PATH ?? "./storage";
 
-    if (backend === "gcs") {
-        const projectId = options?.projectId ?? process.env.GCP_PROJECT_ID;
-        return new GCSStorage(location, projectId);
-    }
+	if (backend === "gcs") {
+		const projectId = options?.projectId ?? process.env.GCP_PROJECT_ID;
+		return new GCSStorage(location, projectId);
+	}
 
-    return new LocalStorage(location);
+	return new LocalStorage(location);
 }
 
 /**

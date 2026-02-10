@@ -6,58 +6,58 @@
  */
 
 export interface StorageBackend {
-    /**
-     * Store data at the given key
-     */
-    put(key: string, data: Buffer | Uint8Array | string): Promise<void>;
+	/**
+	 * Store data at the given key
+	 */
+	put(key: string, data: Buffer | Uint8Array | string): Promise<void>;
 
-    /**
-     * Retrieve data for the given key
-     * @returns The data, or null if not found
-     */
-    get(key: string): Promise<Buffer | null>;
+	/**
+	 * Retrieve data for the given key
+	 * @returns The data, or null if not found
+	 */
+	get(key: string): Promise<Buffer | null>;
 
-    /**
-     * Delete data at the given key
-     * @returns true if deleted, false if key didn't exist
-     */
-    delete(key: string): Promise<boolean>;
+	/**
+	 * Delete data at the given key
+	 * @returns true if deleted, false if key didn't exist
+	 */
+	delete(key: string): Promise<boolean>;
 
-    /**
-     * List all keys with the given prefix
-     */
-    list(prefix?: string): Promise<string[]>;
+	/**
+	 * List all keys with the given prefix
+	 */
+	list(prefix?: string): Promise<string[]>;
 
-    /**
-     * Check if a key exists
-     */
-    exists(key: string): Promise<boolean>;
+	/**
+	 * Check if a key exists
+	 */
+	exists(key: string): Promise<boolean>;
 
-    /**
-     * Get a signed URL for direct access (for GCS) or a local file path
-     */
-    getUrl(key: string, expiresInSeconds?: number): Promise<string>;
+	/**
+	 * Get a signed URL for direct access (for GCS) or a local file path
+	 */
+	getUrl(key: string, expiresInSeconds?: number): Promise<string>;
 
-    /**
-     * Get a signed URL for direct uploads when supported by the backend
-     */
-    getUploadUrl?(
-        key: string,
-        options?: { expiresInSeconds?: number; contentType?: string }
-    ): Promise<SignedUpload>;
+	/**
+	 * Get a signed URL for direct uploads when supported by the backend
+	 */
+	getUploadUrl?(
+		key: string,
+		options?: { expiresInSeconds?: number; contentType?: string },
+	): Promise<SignedUpload>;
 }
 
 export type SignedUpload = {
-    url: string;
-    method: "PUT";
-    headers?: Record<string, string>;
-    expiresAt?: string;
+	url: string;
+	method: "PUT";
+	headers?: Record<string, string>;
+	expiresAt?: string;
 };
 
 export interface StorageOptions {
-    backend: "local" | "gcs";
-    /** For local: base directory path. For GCS: bucket name */
-    location: string;
-    /** GCS project ID (only for GCS backend) */
-    projectId?: string;
+	backend: "local" | "gcs";
+	/** For local: base directory path. For GCS: bucket name */
+	location: string;
+	/** GCS project ID (only for GCS backend) */
+	projectId?: string;
 }

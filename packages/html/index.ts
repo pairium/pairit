@@ -1,11 +1,11 @@
 export interface PageOptions {
-    title: string;
-    content: string;
-    scripts?: string;
+	title: string;
+	content: string;
+	scripts?: string;
 }
 
-export function renderPage({ title, content, scripts = '' }: PageOptions) {
-    return `<!DOCTYPE html>
+export function renderPage({ title, content, scripts = "" }: PageOptions) {
+	return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -252,7 +252,7 @@ export function renderPage({ title, content, scripts = '' }: PageOptions) {
  * Centers the content and includes auto-close logic.
  */
 export function renderCliSuccessPage() {
-    const content = `
+	const content = `
     <div class="card">
         <h1>
             <svg class="icon" style="color: var(--emerald-600); width: 32px; height: 32px;" viewBox="0 0 24 24">
@@ -264,7 +264,7 @@ export function renderCliSuccessPage() {
         <button onclick="window.close()" class="btn btn-blue">Close Window</button>
     </div>`;
 
-    const scripts = `
+	const scripts = `
     <script>
         // Auto-close after 3 seconds if supported
         setTimeout(() => {
@@ -272,9 +272,9 @@ export function renderCliSuccessPage() {
         }, 3000);
     </script>`;
 
-    return renderPage({
-        title: "Login Successful",
-        content,
-        scripts
-    });
+	return renderPage({
+		title: "Login Successful",
+		content,
+		scripts,
+	});
 }

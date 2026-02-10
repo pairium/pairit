@@ -1,2 +1,1 @@
-export * from './PagedSurvey'
-
+export * from "./PagedSurvey";
