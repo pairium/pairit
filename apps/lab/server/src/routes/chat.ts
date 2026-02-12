@@ -6,6 +6,7 @@
 
 import { Elysia, t } from "elysia";
 import { MongoServerError, type ObjectId } from "mongodb";
+import { triggerAgents } from "../lib/agent-runner";
 import { getChatMessagesCollection, getSessionsCollection } from "../lib/db";
 import { broadcastToSession } from "../lib/sse";
 import type { ChatMessageDocument } from "../types";
@@ -129,6 +130,14 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 
 			for (const memberId of memberIds) {
 				broadcastToSession(memberId, "chat_message", eventData);
+			}
+
+			// Trigger AI agents if message is from a participant
+			const effectiveSenderType = senderType ?? "participant";
+			if (effectiveSenderType !== "agent" && effectiveSenderType !== "system") {
+				triggerAgents(groupId, sessionId).catch((err) => {
+					console.error("[Chat] Failed to trigger agents:", err);
+				});
 			}
 
 			return {

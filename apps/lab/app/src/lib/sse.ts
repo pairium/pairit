@@ -78,6 +78,18 @@ class SSEClient {
 		this.eventSource.addEventListener("user_state_change", (event) => {
 			this.dispatchEvent("user_state_change", JSON.parse(event.data));
 		});
+
+		this.eventSource.addEventListener("chat_ended", (event) => {
+			this.dispatchEvent("chat_ended", JSON.parse(event.data));
+		});
+
+		this.eventSource.addEventListener("state_updated", (event) => {
+			this.dispatchEvent("state_updated", JSON.parse(event.data));
+		});
+
+		this.eventSource.addEventListener("chat_message_delta", (event) => {
+			this.dispatchEvent("chat_message_delta", JSON.parse(event.data));
+		});
 	}
 
 	private handleDisconnect(): void {

@@ -118,22 +118,22 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 	} else if (isOwn) {
 		// Own messages: right-aligned, dark background
 		alignmentClasses = "flex justify-end";
-		bubbleClasses += " bg-slate-900 text-white";
+		bubbleClasses += " bg-slate-700 text-white";
 	} else if (isAgent) {
-		// Agent messages: left-aligned, blue background
+		// Agent messages: left-aligned, light background
 		alignmentClasses = "flex justify-start";
-		bubbleClasses += " bg-blue-500 text-white";
+		bubbleClasses += " bg-slate-100 text-slate-900";
 	} else {
 		// Other participant messages: left-aligned, light background
 		alignmentClasses = "flex justify-start";
-		bubbleClasses += " bg-slate-100 text-slate-900";
+		bubbleClasses += " bg-slate-200 text-slate-900";
 	}
 
 	return (
 		<div className={alignmentClasses}>
 			<div className={bubbleClasses}>
-				<div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-headings:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
-					{isOwn || isAgent ? (
+				<div className={`prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-headings:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 ${isOwn ? "prose-invert" : ""}`}>
+					{isOwn ? (
 						<Markdown
 							components={{
 								// Override text color for dark backgrounds

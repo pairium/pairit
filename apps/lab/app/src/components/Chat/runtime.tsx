@@ -28,12 +28,17 @@ type SSEChatMessage = {
 	createdAt: string;
 };
 
+type SSEChatEnded = {
+	groupId: string;
+};
+
 export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 	type: "chat",
 	renderer: ({ component, context }) => {
 		const { sessionId, userState } = context;
 		const [messages, setMessages] = useState<ChatMessage[]>([]);
 		const [loading, setLoading] = useState(true);
+		const [chatDisabled, setChatDisabled] = useState(false);
 		const seenMessageIds = useRef<Set<string>>(new Set());
 
 		// Resolve groupId: use chat_group_id from userState or fall back to sessionId
@@ -87,6 +92,20 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 				canceled = true;
 			};
 		}, [sessionId, groupId, toViewMessage]);
+
+		// Subscribe to SSE chat_ended events
+		useEffect(() => {
+			if (!sessionId || !groupId) return;
+
+			const unsubscribe = sseClient.on("chat_ended", (data) => {
+				const event = data as SSEChatEnded;
+				if (event.groupId === groupId) {
+					setChatDisabled(true);
+				}
+			});
+
+			return unsubscribe;
+		}, [sessionId, groupId]);
 
 		// Subscribe to SSE chat_message events
 		useEffect(() => {
@@ -175,6 +194,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 				messages={messages}
 				onSend={handleSend}
 				placeholder={component.props.placeholder}
+				disabled={chatDisabled}
 			/>
 		);
 	},
