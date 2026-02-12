@@ -201,7 +201,7 @@ matchmaking:
 
 agents:
   - id: facilitator
-    model: "claude-sonnet-4-5-20250929"
+    model: "gpt-5-nano"
     system: |
       You are a neutral facilitator helping a group make a hiring decision.
       Your role:

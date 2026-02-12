@@ -44,15 +44,61 @@ export async function triggerAgents(
 			continue;
 		}
 
-		await runAgent(agent, groupId, sessionId);
+		await runAgent(agent, groupId, sessionId, { requireHistory: true });
 	}
 }
+
+/**
+ * Trigger agents that have sendFirstMessage: true
+ * Called when chat page loads to send initial greeting
+ */
+export async function triggerFirstMessageAgents(
+	groupId: string,
+	sessionId: string,
+): Promise<void> {
+	if (activeRuns.has(groupId)) {
+		return;
+	}
+
+	const sessionConfig = await getSessionConfig(sessionId);
+	if (!sessionConfig) {
+		return;
+	}
+
+	const { configId, currentPageId } = sessionConfig;
+
+	const agentIds = await getPageAgentIds(configId, currentPageId);
+	if (agentIds.length === 0) {
+		return;
+	}
+
+	for (const agentId of agentIds) {
+		const agent = await getAgentById(configId, agentId);
+		if (!agent) {
+			console.error(`[Agent] Agent not found: ${agentId}`);
+			continue;
+		}
+
+		// Only trigger agents with sendFirstMessage: true
+		if (!agent.sendFirstMessage) {
+			continue;
+		}
+
+		await runAgent(agent, groupId, sessionId, { requireHistory: false });
+	}
+}
+
+type RunAgentOptions = {
+	requireHistory?: boolean;
+};
 
 async function runAgent(
 	agent: AgentConfig,
 	groupId: string,
 	sessionId: string,
+	options: RunAgentOptions = {},
 ): Promise<void> {
+	const { requireHistory = true } = options;
 	const abortController = new AbortController();
 	activeRuns.set(groupId, abortController);
 
@@ -64,7 +110,8 @@ async function runAgent(
 	try {
 		const history = await loadChatHistory(groupId);
 
-		if (history.length === 0) {
+		// Skip if history is required but empty (normal message response flow)
+		if (requireHistory && history.length === 0) {
 			return;
 		}
 
@@ -74,6 +121,11 @@ async function runAgent(
 			);
 			return;
 		}
+
+		// Get members early so we can stream deltas to them
+		const memberIds = await getGroupMembers(groupId);
+		const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+		const senderId = `agent:${agent.id}`;
 
 		let fullText = "";
 		const toolCalls: Array<{ name: string; args: Record<string, unknown> }> =
@@ -86,21 +138,26 @@ async function runAgent(
 		)) {
 			if (delta.type === "text_delta") {
 				fullText += delta.text;
+				// Broadcast delta to all members for real-time streaming
+				for (const memberId of memberIds) {
+					broadcastToSession(memberId, "chat_message_delta", {
+						streamId,
+						groupId,
+						senderId,
+						senderType: "agent",
+						delta: delta.text,
+						fullText,
+					});
+				}
 			} else if (delta.type === "tool_call") {
 				toolCalls.push({ name: delta.name, args: delta.args });
 			}
 		}
 
 		if (fullText.trim()) {
-			await persistAndBroadcastMessage(
-				groupId,
-				`agent:${agent.id}`,
-				"agent",
-				fullText,
-			);
+			await persistAndBroadcastMessage(groupId, senderId, "agent", fullText);
 		}
 
-		const memberIds = await getGroupMembers(groupId);
 		for (const toolCall of toolCalls) {
 			await handleToolCall(
 				toolCall.name,
@@ -203,8 +260,50 @@ async function handleToolCall(
 	await logToolCallEvent(name, args, sessionId);
 
 	if (name === "end_chat") {
-		console.log(`[Agent] Tool: end_chat for group ${groupId}`);
+		const { deal_reached, agreed_price } = args as {
+			deal_reached?: boolean;
+			agreed_price?: number;
+		};
+		console.log(
+			`[Agent] Tool: end_chat for group ${groupId} (deal_reached=${deal_reached}, agreed_price=${agreed_price})`,
+		);
+
+		// Set chat_ended and deal info in user_state for all members
+		const sessionsCollection = await getSessionsCollection();
 		for (const memberId of memberIds) {
+			if (memberId.startsWith("agent:")) continue;
+
+			const stateUpdates: Record<string, unknown> = {
+				"user_state.chat_ended": true,
+			};
+			if (deal_reached !== undefined) {
+				stateUpdates["user_state.deal_reached"] = deal_reached;
+			}
+			if (agreed_price !== undefined) {
+				stateUpdates["user_state.agreed_price"] = agreed_price;
+			}
+
+			await sessionsCollection.updateOne(
+				{ id: memberId },
+				{ $set: { ...stateUpdates, updatedAt: new Date() } },
+			);
+
+			broadcastToSession(memberId, "state_updated", {
+				path: "chat_ended",
+				value: true,
+			});
+			if (deal_reached !== undefined) {
+				broadcastToSession(memberId, "state_updated", {
+					path: "deal_reached",
+					value: deal_reached,
+				});
+			}
+			if (agreed_price !== undefined) {
+				broadcastToSession(memberId, "state_updated", {
+					path: "agreed_price",
+					value: agreed_price,
+				});
+			}
 			broadcastToSession(memberId, "chat_ended", { groupId });
 		}
 	}

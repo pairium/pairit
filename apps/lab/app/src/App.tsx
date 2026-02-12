@@ -14,7 +14,7 @@ import { sseClient } from "./lib/sse";
 import { loadConfig } from "./runtime";
 import type { CompiledConfig } from "./runtime/config";
 import { PageRenderer } from "./runtime/renderer";
-import type { Page } from "./runtime/types";
+import type { ButtonAction, Page } from "./runtime/types";
 
 export default function App() {
 	const { experimentId } = useParams({ from: "/$experimentId" });
@@ -208,15 +208,21 @@ export default function App() {
 		return unsubscribe;
 	}, [sessionId]);
 
-	async function onAction(a: { type: "go_to"; target: string }) {
+	async function onAction(a: ButtonAction) {
+		if (!a.target) {
+			setError("No target specified for action");
+			return;
+		}
+		const target = a.target;
+
 		if (mode === "local" && compiledConfig) {
-			const nextPage = compiledConfig.pages[a.target];
+			const nextPage = compiledConfig.pages[target];
 			if (!nextPage) {
-				setError(`Unknown target: ${a.target}`);
+				setError(`Unknown target: ${target}`);
 				return;
 			}
 			setError(null);
-			setCurrentPageId(a.target);
+			setCurrentPageId(target);
 			setPage(nextPage);
 			setEndRedirectUrl(nextPage.endRedirectUrl ?? null);
 			setEndedAt(nextPage.end ? new Date().toISOString() : null);
@@ -227,18 +233,18 @@ export default function App() {
 
 		// In hybrid mode, use local config for navigation but still update remote session
 		if (mode === "remote" && compiledConfig) {
-			const nextPage = compiledConfig.pages[a.target];
+			const nextPage = compiledConfig.pages[target];
 			if (!nextPage) {
-				setError(`Unknown target: ${a.target}`);
+				setError(`Unknown target: ${target}`);
 				return;
 			}
 			setLoading(true);
 			setError(null);
 			try {
 				// Update remote session state
-				await advance(sessionId, a.target);
+				await advance(sessionId, target);
 				// But use local page for rendering
-				setCurrentPageId(a.target);
+				setCurrentPageId(target);
 				setPage(nextPage);
 				setEndRedirectUrl(nextPage.endRedirectUrl ?? null);
 				setEndedAt(nextPage.end ? new Date().toISOString() : null);
@@ -254,7 +260,7 @@ export default function App() {
 		setLoading(true);
 		setError(null);
 		try {
-			const r = await advance(sessionId, a.target);
+			const r = await advance(sessionId, target);
 			setPage(r.page);
 			setEndRedirectUrl(r.page?.endRedirectUrl ?? null);
 			setEndedAt(r.endedAt);

@@ -150,3 +150,16 @@ export async function getChatHistory(
 	if (!r.ok) throw new Error("Failed to get chat history");
 	return r.json();
 }
+
+export async function startChatAgents(
+	groupId: string,
+	sessionId: string,
+): Promise<void> {
+	const r = await fetch(`${baseUrl}/chat/${groupId}/start-agents`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		credentials: "include",
+		body: JSON.stringify({ sessionId }),
+	});
+	if (!r.ok) throw new Error("Failed to start chat agents");
+}
