@@ -95,3 +95,58 @@ export async function updateState(
 	});
 	if (!r.ok) throw new Error("Failed to update state");
 }
+
+// Chat API
+
+export type ChatMessage = {
+	messageId: string;
+	groupId: string;
+	sessionId: string;
+	senderId: string;
+	senderType: "participant" | "agent" | "system";
+	content: string;
+	createdAt: string;
+};
+
+type SendChatMessageResponse = {
+	messageId: string;
+	createdAt: string;
+	deduplicated?: boolean;
+};
+
+type GetChatHistoryResponse = {
+	messages: ChatMessage[];
+};
+
+export async function sendChatMessage(
+	groupId: string,
+	sessionId: string,
+	content: string,
+): Promise<SendChatMessageResponse> {
+	const r = await fetch(`${baseUrl}/chat/${groupId}/send`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		credentials: "include",
+		body: JSON.stringify({
+			sessionId,
+			content,
+			idempotencyKey: crypto.randomUUID(),
+		}),
+	});
+	if (!r.ok) throw new Error("Failed to send message");
+	return r.json();
+}
+
+export async function getChatHistory(
+	groupId: string,
+	sessionId: string,
+): Promise<GetChatHistoryResponse> {
+	const r = await fetch(
+		`${baseUrl}/chat/${groupId}/history?sessionId=${encodeURIComponent(sessionId)}`,
+		{
+			credentials: "include",
+		},
+	);
+	if (!r.ok) throw new Error("Failed to get chat history");
+	return r.json();
+}

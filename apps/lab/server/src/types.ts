@@ -82,3 +82,14 @@ export type IdempotencyRecord = {
 	key: string;
 	createdAt: Date;
 };
+
+export type ChatMessageDocument = {
+	_id?: import("mongodb").ObjectId;
+	groupId: string;
+	sessionId: string;
+	senderId: string;
+	senderType: "participant" | "agent" | "system";
+	content: string;
+	createdAt: Date;
+	idempotencyKey?: string;
+};

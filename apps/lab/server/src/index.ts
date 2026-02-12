@@ -8,6 +8,7 @@ import { cors } from "@elysiajs/cors";
 import { auth } from "@pairit/auth";
 import { Elysia } from "elysia";
 import { ensureIndexes } from "./lib/db";
+import { chatRoutes } from "./routes/chat";
 import { configsRoutes } from "./routes/configs";
 import { eventsRoutes } from "./routes/events";
 import { sessionsRoutes } from "./routes/sessions";
@@ -84,7 +85,8 @@ app
 	.use(configsRoutes)
 	.use(sessionsRoutes)
 	.use(eventsRoutes)
-	.use(streamRoutes);
+	.use(streamRoutes)
+	.use(chatRoutes);
 
 // Static file serving (production only - in dev, Vite handles this)
 if (!IS_DEV) {
