@@ -9,8 +9,8 @@ import {
 	advance,
 	startSession,
 } from "./lib/api";
-import { sseClient } from "./lib/sse";
 import { useSession } from "./lib/auth-client";
+import { sseClient } from "./lib/sse";
 import { loadConfig } from "./runtime";
 import type { CompiledConfig } from "./runtime/config";
 import { PageRenderer } from "./runtime/renderer";
@@ -192,6 +192,20 @@ export default function App() {
 		if (!sessionId) return;
 		sseClient.connect(sessionId);
 		return () => sseClient.disconnect();
+	}, [sessionId]);
+
+	// Handle state_updated SSE events to sync userState
+	useEffect(() => {
+		if (!sessionId) return;
+
+		const unsubscribe = sseClient.on("state_updated", (data: unknown) => {
+			const { path, value } = data as { path: string; value: unknown };
+			if (path) {
+				setUserState((prev) => ({ ...prev, [path]: value }));
+			}
+		});
+
+		return unsubscribe;
 	}, [sessionId]);
 
 	async function onAction(a: { type: "go_to"; target: string }) {

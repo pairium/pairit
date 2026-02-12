@@ -89,7 +89,7 @@ pages:
 
 agents:
   - id: dealer
-    model: "gpt-4o"
+    model: "gpt-4o-mini"
     system: |
       You are a used car dealer. The car is a 2019 Honda Civic with 45,000 miles.
       Your reserve price is $12,000 — you will not sell below this.

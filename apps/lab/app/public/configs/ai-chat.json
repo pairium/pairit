@@ -132,5 +132,35 @@
         }
       ]
     }
+  ],
+  "agents": [
+    {
+      "id": "dealer",
+      "model": "gpt-4o-mini",
+      "system": "You are a used car dealer. The car is a 2019 Honda Civic with 45,000 miles.\nYour reserve price is $12,000 — you will not sell below this.\nYour starting ask is $18,000.\nBe friendly but firm. Use negotiation tactics.\nIf the buyer agrees to a price at or above $12,000, use assign_state to record the agreed price and that a deal was reached, then use end_chat.\n",
+      "tools": [
+        {
+          "name": "end_chat",
+          "description": "End the negotiation. Disables chat and prompts participant to continue."
+        },
+        {
+          "name": "assign_state",
+          "description": "Write a value to the participant's user_state.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "value": {}
+            },
+            "required": [
+              "path",
+              "value"
+            ]
+          }
+        }
+      ]
+    }
   ]
 }

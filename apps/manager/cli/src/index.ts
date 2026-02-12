@@ -19,6 +19,8 @@ type ExperimentConfig = {
 	schema_version?: string;
 	initialPageId?: string;
 	pages?: ExperimentPage[];
+	agents?: unknown[];
+	matchmaking?: unknown;
 };
 
 const program = new Command();
@@ -340,11 +342,17 @@ async function compileConfig(configPath: string): Promise<string> {
 		};
 	});
 
-	const output = {
+	const output: Record<string, unknown> = {
 		schema_version: config.schema_version ?? "v2",
 		initialPageId: config.initialPageId ?? nodes[0]?.id ?? "intro",
 		nodes,
 	};
+	if (config.agents) {
+		output.agents = config.agents;
+	}
+	if (config.matchmaking) {
+		output.matchmaking = config.matchmaking;
+	}
 
 	const resolvedPath = await resolvePath(configPath);
 	const outPath = path.join(
