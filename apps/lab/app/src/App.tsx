@@ -9,6 +9,7 @@ import {
 	advance,
 	startSession,
 } from "./lib/api";
+import { sseClient } from "./lib/sse";
 import { useSession } from "./lib/auth-client";
 import { loadConfig } from "./runtime";
 import type { CompiledConfig } from "./runtime/config";
@@ -185,6 +186,13 @@ export default function App() {
 			canceled = true;
 		};
 	}, [experimentId, authLoading, isAuthenticated]);
+
+	// Connect SSE when session is available
+	useEffect(() => {
+		if (!sessionId) return;
+		sseClient.connect(sessionId);
+		return () => sseClient.disconnect();
+	}, [sessionId]);
 
 	async function onAction(a: { type: "go_to"; target: string }) {
 		if (mode === "local" && compiledConfig) {

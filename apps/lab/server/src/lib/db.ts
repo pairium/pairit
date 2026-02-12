@@ -6,6 +6,7 @@
 import { connectDB } from "@pairit/db";
 import type { Collection } from "mongodb";
 import type {
+	ChatMessageDocument,
 	ConfigDocument,
 	EventDocument,
 	IdempotencyRecord,
@@ -42,6 +43,13 @@ export async function getIdempotencyCollection(): Promise<
 	return database.collection<IdempotencyRecord>("idempotency_keys");
 }
 
+export async function getChatMessagesCollection(): Promise<
+	Collection<ChatMessageDocument>
+> {
+	const database = await connectDB();
+	return database.collection<ChatMessageDocument>("chat_messages");
+}
+
 export async function ensureIndexes(): Promise<void> {
 	const database = await connectDB();
 
@@ -63,6 +71,13 @@ export async function ensureIndexes(): Promise<void> {
 	await database
 		.collection("idempotency_keys")
 		.createIndex({ createdAt: 1 }, { expireAfterSeconds: 86400 });
+
+	await database
+		.collection("chat_messages")
+		.createIndex({ groupId: 1, createdAt: 1 });
+	await database
+		.collection("chat_messages")
+		.createIndex({ idempotencyKey: 1 }, { unique: true, sparse: true });
 
 	console.log("[DB] All indexes ensured");
 }
