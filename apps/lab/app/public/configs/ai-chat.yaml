@@ -1,0 +1,110 @@
+# Config 2: Chat with AI agent
+# Tests: P0-3 (SSE), P0-4 (Chat), P0-5 (AI agent), P0-6 (end-to-end)
+# Status: Requires P0-3/4/5 to be implemented
+
+schema_version: 0.1.0
+initialPageId: intro
+
+pages:
+  - id: intro
+    components:
+      - type: text
+        props:
+          text: |
+            # Negotiation Study
+
+            You will negotiate the price of a used car with an AI assistant.
+            Try to get the best deal you can. The AI has a reserve price it won't go below.
+      - type: buttons
+        props:
+          buttons:
+            - id: start
+              text: "Start negotiation"
+              action:
+                type: go_to
+                target: chat
+
+  - id: chat
+    components:
+      - type: chat
+        props:
+          agents:
+            - dealer
+      - type: buttons
+        props:
+          buttons:
+            - id: end_chat
+              text: "End negotiation"
+              action:
+                type: go_to
+                target: post_survey
+
+  - id: post_survey
+    components:
+      - type: survey
+        props:
+          items:
+            - id: final_price
+              text: "What was the final agreed price (if any)?"
+              answer: numeric
+            - id: satisfaction
+              text: "How satisfied are you with the outcome?"
+              answer: likert5
+            - id: strategy
+              text: "Describe your negotiation strategy."
+              answer: text
+      - type: buttons
+        props:
+          buttons:
+            - id: finish
+              text: "Finish"
+              action:
+                type: go_to
+                branches:
+                  - when: "user_state.deal_reached == true"
+                    target: outro_deal
+                  - target: outro_no_deal
+
+  - id: outro_deal
+    end: true
+    endRedirectUrl: "https://app.prolific.com/submissions/complete?cc=NEGO123"
+    components:
+      - type: text
+        props:
+          text: |
+            # Thank you!
+
+            A deal was reached. Your responses have been recorded.
+
+  - id: outro_no_deal
+    end: true
+    endRedirectUrl: "https://app.prolific.com/submissions/complete?cc=NEGO123"
+    components:
+      - type: text
+        props:
+          text: |
+            # Thank you!
+
+            No deal was reached, but your responses have been recorded.
+
+agents:
+  - id: dealer
+    model: "gpt-4o"
+    system: |
+      You are a used car dealer. The car is a 2019 Honda Civic with 45,000 miles.
+      Your reserve price is $12,000 — you will not sell below this.
+      Your starting ask is $18,000.
+      Be friendly but firm. Use negotiation tactics.
+      If the buyer agrees to a price at or above $12,000, use assign_state to record the agreed price and that a deal was reached, then use end_chat.
+    tools:
+      - name: end_chat
+        description: "End the negotiation. Disables chat and prompts participant to continue."
+      - name: assign_state
+        description: "Write a value to the participant's user_state."
+        parameters:
+          type: object
+          properties:
+            path:
+              type: string
+            value: {}
+          required: [path, value]

@@ -2,11 +2,15 @@ import { Link } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import {
 	Bird,
+	CheckCircle2,
 	CircuitBoard,
+	Clock,
 	FlaskConical,
 	Mail,
+	MessageCircle,
 	Sparkles,
 	Undo2,
+	Users,
 } from "lucide-react";
 import type { HTMLAttributes } from "react";
 
@@ -21,28 +25,62 @@ type DemoConfig = {
 	title: string;
 	description: string;
 	icon: LucideIcon;
+	issues?: string;
+	disabled?: boolean;
 };
 
-const demoConfigs: DemoConfig[] = [
+// Target configs from SPEC.md — mapped to P0 issues
+const targetConfigs: DemoConfig[] = [
+	{
+		id: "hello-world",
+		title: "Config 0: Hello world",
+		description: "Simplest possible — one question, one button, data in MongoDB.",
+		icon: CheckCircle2,
+		issues: "P0-1, P0-2",
+	},
+	{
+		id: "survey-only",
+		title: "Config 1: Survey only",
+		description: "Surveys, branching (age < 18), Prolific redirect.",
+		icon: FlaskConical,
+		issues: "P0-1, P0-2",
+	},
+	{
+		id: "ai-chat",
+		title: "Config 2: AI chat",
+		description: "Negotiate with an AI agent. Tests SSE, chat, agent tools.",
+		icon: MessageCircle,
+		issues: "P0-3, P0-4, P0-5, P0-6",
+		disabled: true,
+	},
+	{
+		id: "team-decision",
+		title: "Config 3: Team decision",
+		description: "Matchmaking + group chat + AI facilitator.",
+		icon: Users,
+		issues: "P0-7, P0-8",
+		disabled: true,
+	},
+];
+
+// Additional showcase configs
+const showcaseConfigs: DemoConfig[] = [
 	{
 		id: "survey-showcase",
 		title: "Survey showcase",
-		description:
-			"Full walkthrough covering every built-in survey answer type, branching, and media.",
+		description: "Every built-in survey answer type, branching, and media.",
 		icon: FlaskConical,
 	},
 	{
 		id: "simple-survey",
 		title: "Paged survey demo",
-		description:
-			"Lightweight multi-step survey that highlights the paged survey component in action.",
+		description: "Multi-step survey with the paged survey component.",
 		icon: Sparkles,
 	},
 	{
 		id: "component-events-showcase",
-		title: "Component events showcase",
-		description:
-			"Deep dive into event instrumentation for buttons, media, matchmaking, chat, and more.",
+		title: "Component events",
+		description: "Event instrumentation for buttons, media, and more.",
 		icon: CircuitBoard,
 	},
 ];
@@ -126,30 +164,75 @@ export function Landing() {
 
 				<section className="space-y-4">
 					<h2 className="text-2xl font-semibold tracking-tight text-slate-900">
-						Demo configurations
+						Target configurations
 					</h2>
 					<p className="text-sm text-slate-600">
-						Load any config by visiting <code>/$experimentId</code> with the IDs
-						below.
+						These configs define "done" — each maps to P0 issues. Visit{" "}
+						<code>/$experimentId</code> to test.
 					</p>
 					<div className="grid gap-4 md:grid-cols-2">
-						{demoConfigs.map(({ id, title, description, icon: Icon }) => (
+						{targetConfigs.map(
+							({ id, title, description, issues, disabled }) => (
+								<Card key={id} className="flex h-full flex-col justify-between">
+									<CardHeader className="space-y-2">
+										<CardTitle className="flex items-center gap-2 text-lg">
+											{disabled ? (
+												<Clock className="h-5 w-5 text-amber-500" />
+											) : (
+												<CheckCircle2 className="h-5 w-5 text-green-600" />
+											)}
+											{title}
+										</CardTitle>
+										<CardDescription>{description}</CardDescription>
+										{issues && (
+											<p className="text-xs font-medium text-slate-500">
+												{issues}
+											</p>
+										)}
+									</CardHeader>
+									<CardContent>
+									<Link
+										to="/$experimentId"
+										params={{ experimentId: id }}
+										search={{ view: true }}
+										className={`${buttonBase} ${disabled ? "opacity-50 pointer-events-none" : ""}`}
+									>
+										Open {id}
+									</Link>
+									</CardContent>
+								</Card>
+							),
+						)}
+					</div>
+				</section>
+
+				<section className="space-y-4">
+					<h2 className="text-2xl font-semibold tracking-tight text-slate-900">
+						Showcase configurations
+					</h2>
+					<p className="text-sm text-slate-600">
+						Additional demos for testing specific components.
+					</p>
+					<div className="grid gap-4 md:grid-cols-3">
+						{showcaseConfigs.map(({ id, title, description, icon: IconComp }) => (
 							<Card key={id} className="flex h-full flex-col justify-between">
 								<CardHeader className="space-y-2">
-									<CardTitle className="flex items-center gap-2 text-lg">
-										<Icon className="h-5 w-5 text-slate-500" />
+									<CardTitle className="flex items-center gap-2 text-base">
+										<IconComp className="h-4 w-4 text-slate-500" />
 										{title}
 									</CardTitle>
-									<CardDescription>{description}</CardDescription>
+									<CardDescription className="text-xs">
+										{description}
+									</CardDescription>
 								</CardHeader>
 								<CardContent>
 									<Link
 										to="/$experimentId"
 										params={{ experimentId: id }}
 										search={{ view: true }}
-										className={buttonBase}
+										className={ghostButton}
 									>
-										Open {id}
+										Open
 									</Link>
 								</CardContent>
 							</Card>

@@ -1,0 +1,212 @@
+# Config 3: Matchmaking + group chat + AI agent
+# Tests: P0-7 (Matchmaking), P0-8 (end-to-end)
+# Status: Requires P0-3/4/5/7 to be implemented
+
+schema_version: 0.1.0
+initialPageId: consent
+
+pages:
+  - id: consent
+    components:
+      - type: text
+        props:
+          text: |
+            # Team Decision Study
+
+            You will be grouped with two other participants to make a group decision.
+            Some groups will have an AI facilitator.
+      - type: buttons
+        props:
+          buttons:
+            - id: agree
+              text: "I agree to participate"
+              action:
+                type: go_to
+                target: pre_survey
+
+  - id: pre_survey
+    components:
+      - type: survey
+        props:
+          items:
+            - id: leadership_style
+              text: "How would you describe your leadership style?"
+              answer:
+                multiple_choice:
+                  choices:
+                    - Collaborative
+                    - Directive
+                    - Delegative
+                    - Adaptive
+            - id: confidence
+              text: "How confident are you in group decision-making?"
+              answer: likert5
+      - type: buttons
+        props:
+          buttons:
+            - id: to_matching
+              text: "Continue to matching"
+              action:
+                type: go_to
+                target: matching
+
+  - id: matching
+    components:
+      - type: matchmaking
+        props:
+          poolId: main_pool
+      - type: buttons
+        props:
+          buttons:
+            - id: matched
+              text: "Continue"
+              action:
+                type: go_to
+                branches:
+                  - when: "user_state.treatment == 'facilitated'"
+                    target: chat_facilitated
+                  - target: chat_control
+
+  - id: matching_timeout
+    end: true
+    endRedirectUrl: "https://app.prolific.com/submissions/complete?cc=TIMEOUT"
+    components:
+      - type: text
+        props:
+          text: |
+            We're sorry — we couldn't find enough group members at this time.
+            Thank you for your willingness to participate.
+
+  - id: chat_control
+    components:
+      - type: text
+        props:
+          text: |
+            **Your task:** Decide together which candidate to hire from the three profiles below.
+            You have 10 minutes.
+      - type: chat
+      - type: buttons
+        props:
+          buttons:
+            - id: control_done
+              text: "We've decided"
+              action:
+                type: go_to
+                target: post_survey_control
+
+  - id: chat_facilitated
+    components:
+      - type: text
+        props:
+          text: |
+            **Your task:** Decide together which candidate to hire from the three profiles below.
+            You have 10 minutes. An AI facilitator will help guide the discussion.
+      - type: chat
+        props:
+          agents:
+            - facilitator
+      - type: buttons
+        props:
+          buttons:
+            - id: facilitated_done
+              text: "We've decided"
+              action:
+                type: go_to
+                target: post_survey_facilitated
+
+  - id: post_survey_control
+    components:
+      - type: survey
+        props:
+          items:
+            - id: decision
+              text: "Which candidate did your group choose?"
+              answer:
+                multiple_choice:
+                  choices:
+                    - Candidate A
+                    - Candidate B
+                    - Candidate C
+                    - No consensus
+            - id: process_satisfaction
+              text: "How satisfied were you with the decision-making process?"
+              answer: likert7
+            - id: partner_rating
+              text: "How would you rate your partners' contributions?"
+              answer: likert5
+      - type: buttons
+        props:
+          buttons:
+            - id: done_control
+              text: "Submit"
+              action:
+                type: go_to
+                target: debrief
+
+  - id: post_survey_facilitated
+    components:
+      - type: survey
+        props:
+          items:
+            - id: decision
+              text: "Which candidate did your group choose?"
+              answer:
+                multiple_choice:
+                  choices:
+                    - Candidate A
+                    - Candidate B
+                    - Candidate C
+                    - No consensus
+            - id: process_satisfaction
+              text: "How satisfied were you with the decision-making process?"
+              answer: likert7
+            - id: partner_rating
+              text: "How would you rate your partners' contributions?"
+              answer: likert5
+            - id: facilitator_helpful
+              text: "Was the AI facilitator helpful?"
+              answer: likert5
+      - type: buttons
+        props:
+          buttons:
+            - id: done_facilitated
+              text: "Submit"
+              action:
+                type: go_to
+                target: debrief
+
+  - id: debrief
+    end: true
+    endRedirectUrl: "https://app.prolific.com/submissions/complete?cc=TEAM456"
+    components:
+      - type: text
+        props:
+          text: |
+            # Thank you!
+
+            This study examines how AI facilitation affects group decision-making.
+            Some groups had an AI facilitator and some did not.
+
+matchmaking:
+  - id: main_pool
+    num_users: 3
+    timeoutSeconds: 180
+    timeoutTarget: matching_timeout
+    assignment:
+      type: balanced_random
+      conditions:
+        - facilitated
+        - control
+      field: treatment
+
+agents:
+  - id: facilitator
+    model: "claude-sonnet-4-5-20250929"
+    system: |
+      You are a neutral facilitator helping a group make a hiring decision.
+      Your role:
+      - Ensure all participants share their views
+      - Summarize points of agreement and disagreement
+      - Ask clarifying questions
+      - Do NOT express your own preference
+      - If the group seems stuck, suggest a structured approach
