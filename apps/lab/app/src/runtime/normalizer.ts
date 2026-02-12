@@ -45,8 +45,18 @@ function normalizeButton(
 	const text = typeof button.text === "string" ? button.text.trim() : null;
 	const action = button.action;
 	if (!text || !action || typeof action !== "object") return null;
-	const goTo = action as { type?: unknown; target?: unknown };
-	if (goTo.type !== "go_to" || typeof goTo.target !== "string") return null;
+	const goTo = action as {
+		type?: unknown;
+		target?: unknown;
+		branches?: unknown;
+	};
+	if (goTo.type !== "go_to") return null;
+
+	// Must have either target or branches
+	const hasTarget = typeof goTo.target === "string";
+	const hasBranches = Array.isArray(goTo.branches) && goTo.branches.length > 0;
+	if (!hasTarget && !hasBranches) return null;
+
 	const skipValidationCandidate =
 		typeof (button as { skipValidation?: unknown }).skipValidation === "boolean"
 			? (button as { skipValidation?: boolean }).skipValidation
@@ -65,12 +75,18 @@ function normalizeButton(
 		typeof button.id === "string" && button.id.trim().length > 0
 			? button.id.trim()
 			: `${options.pageId}_${text}`;
+
+	// Build action with target and/or branches
+	const normalizedAction: Button["action"] = { type: "go_to" };
+	if (hasTarget) normalizedAction.target = goTo.target as string;
+	if (hasBranches)
+		normalizedAction.branches = goTo.branches as Button["action"]["branches"];
+	if (skipValidation) normalizedAction.skipValidation = true;
+
 	return {
 		id,
 		text,
-		action: skipValidation
-			? { type: "go_to", target: goTo.target, skipValidation: true }
-			: { type: "go_to", target: goTo.target },
+		action: normalizedAction,
 		events: button.events,
 	};
 }

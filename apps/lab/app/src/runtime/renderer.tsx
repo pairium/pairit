@@ -1,23 +1,50 @@
 import { Card, CardContent } from "@components/ui/Card";
 
 import { Fragment, useCallback, useMemo, useRef } from "react";
+import { evaluateExpression } from "./expression";
 import {
 	getComponentRenderer,
 	type NavigationGuard,
 	type RuntimeComponentContext,
 } from "./registry";
-import type { ButtonsComponent, ComponentInstance, Page } from "./types";
+import type { ButtonAction, ComponentInstance, Page } from "./types";
 
-type ButtonAction = ButtonsComponent["props"]["buttons"][number]["action"];
+function resolveTarget(
+	action: ButtonAction,
+	userState: Record<string, unknown>,
+): string {
+	if (action.target) return action.target;
+	if (!action.branches) throw new Error("No target or branches");
+
+	for (const branch of action.branches) {
+		if (!branch.when) return branch.target; // default branch
+		if (evaluateExpression(branch.when, { user_state: userState })) {
+			return branch.target;
+		}
+	}
+	throw new Error("No matching branch");
+}
 
 interface PageRendererProps {
 	page: Page;
 	onAction: (action: ButtonAction) => Promise<void> | void;
 	sessionId?: string | null;
+	userState?: Record<string, unknown>;
+	onUserStateChange?: (updates: Record<string, unknown>) => void;
 }
 
-export function PageRenderer({ page, onAction, sessionId }: PageRendererProps) {
+export function PageRenderer({
+	page,
+	onAction,
+	sessionId,
+	userState,
+	onUserStateChange,
+}: PageRendererProps) {
 	const guardsRef = useRef<Set<NavigationGuard>>(new Set());
+	const userStateRef = useRef<Record<string, unknown>>(userState ?? {});
+
+	// Keep ref in sync with prop
+	userStateRef.current = userState ?? {};
 
 	const registerNavigationGuard = useCallback((guard: NavigationGuard) => {
 		guardsRef.current.add(guard);
@@ -26,10 +53,21 @@ export function PageRenderer({ page, onAction, sessionId }: PageRendererProps) {
 		};
 	}, []);
 
+	// Wrap onUserStateChange to also update ref immediately (before React re-renders)
+	const wrappedOnUserStateChange = useCallback(
+		(updates: Record<string, unknown>) => {
+			userStateRef.current = { ...userStateRef.current, ...updates };
+			onUserStateChange?.(updates);
+		},
+		[onUserStateChange],
+	);
+
 	const guardedAction = useCallback(
 		async (action: ButtonAction) => {
 			if (action.skipValidation) {
-				await onAction(action);
+				// Resolve target using current userState
+				const target = resolveTarget(action, userStateRef.current);
+				await onAction({ ...action, target });
 				return;
 			}
 			const guards = Array.from(guardsRef.current);
@@ -46,7 +84,9 @@ export function PageRenderer({ page, onAction, sessionId }: PageRendererProps) {
 					}
 				}
 			}
-			await onAction(action);
+			// Resolve target AFTER guards have run (they may have updated userState)
+			const target = resolveTarget(action, userStateRef.current);
+			await onAction({ ...action, target });
 		},
 		[onAction],
 	);
@@ -56,8 +96,16 @@ export function PageRenderer({ page, onAction, sessionId }: PageRendererProps) {
 			onAction: guardedAction,
 			registerNavigationGuard,
 			sessionId,
+			userState,
+			onUserStateChange: wrappedOnUserStateChange,
 		}),
-		[guardedAction, registerNavigationGuard, sessionId],
+		[
+			guardedAction,
+			registerNavigationGuard,
+			sessionId,
+			userState,
+			wrappedOnUserStateChange,
+		],
 	);
 
 	return (

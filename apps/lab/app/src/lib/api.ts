@@ -82,3 +82,16 @@ export async function submitEvent(
 	if (!r.ok) throw new Error("Failed to submit event");
 	return r.json();
 }
+
+export async function updateState(
+	sessionId: string,
+	updates: Record<string, unknown>,
+): Promise<void> {
+	const r = await fetch(`${baseUrl}/sessions/${sessionId}/state`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		credentials: "include",
+		body: JSON.stringify({ updates, idempotencyKey: crypto.randomUUID() }),
+	});
+	if (!r.ok) throw new Error("Failed to update state");
+}

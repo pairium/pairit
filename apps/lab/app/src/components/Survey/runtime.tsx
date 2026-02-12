@@ -1,4 +1,4 @@
-import { submitEvent } from "@app/lib/api";
+import { submitEvent, updateState } from "@app/lib/api";
 import { defineRuntimeComponent } from "@app/runtime/define-runtime-component";
 import type { SurveyProps } from "./Survey";
 import { Survey } from "./Survey";
@@ -25,6 +25,9 @@ export const SurveyRuntime = defineRuntimeComponent<
 						componentId: component.id ?? "unknown",
 						data: values,
 					});
+					// Update user_state with survey values
+					await updateState(context.sessionId, values);
+					context.onUserStateChange?.(values);
 				} catch (error) {
 					console.error("Failed to submit survey event", error);
 				}

@@ -45,6 +45,7 @@ async function handleButtonClick(
 	context: RuntimeComponentContext,
 ) {
 	await emitButtonEvent(button, componentId, context);
+	// Pass raw action - renderer will resolve branches after guards run
 	await Promise.resolve(context.onAction(button.action));
 }
 
