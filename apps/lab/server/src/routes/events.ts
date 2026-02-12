@@ -8,6 +8,7 @@
  * - No additional auth check needed beyond session existence
  */
 import { Elysia, t } from "elysia";
+import { MongoServerError } from "mongodb";
 import { getEventsCollection, getSessionsCollection } from "../lib/db";
 import type { EventDocument } from "../types";
 
@@ -32,12 +33,20 @@ export const eventsRoutes = new Elysia().post(
 			componentType: body.componentType,
 			componentId: body.componentId,
 			data: body.data,
+			idempotencyKey: body.idempotencyKey,
 			createdAt: new Date(),
 		};
 
 		const eventsCollection = await getEventsCollection();
-		const result = await eventsCollection.insertOne(event as any);
-		return { eventId: result.insertedId.toString() };
+		try {
+			const result = await eventsCollection.insertOne(event as any);
+			return { eventId: result.insertedId.toString() };
+		} catch (err) {
+			if (err instanceof MongoServerError && err.code === 11000) {
+				return { eventId: "duplicate", deduplicated: true };
+			}
+			throw err;
+		}
 	},
 	{
 		params: t.Object({
@@ -49,6 +58,7 @@ export const eventsRoutes = new Elysia().post(
 			componentType: t.String({ minLength: 1 }),
 			componentId: t.String({ minLength: 1 }),
 			data: t.Record(t.String(), t.Unknown()),
+			idempotencyKey: t.String({ minLength: 1 }),
 		}),
 	},
 );

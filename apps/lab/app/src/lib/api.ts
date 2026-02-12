@@ -63,7 +63,7 @@ export async function advance(
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		credentials: "include",
-		body: JSON.stringify({ target }),
+		body: JSON.stringify({ target, idempotencyKey: crypto.randomUUID() }),
 	});
 	if (!r.ok) throw new Error("Failed to advance");
 	return r.json();
@@ -77,7 +77,7 @@ export async function submitEvent(
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		credentials: "include",
-		body: JSON.stringify(event),
+		body: JSON.stringify({ ...event, idempotencyKey: crypto.randomUUID() }),
 	});
 	if (!r.ok) throw new Error("Failed to submit event");
 	return r.json();

@@ -74,5 +74,11 @@ export type Event = {
 };
 
 export type EventDocument = Event & {
+	idempotencyKey: string;
+	createdAt: Date;
+};
+
+export type IdempotencyRecord = {
+	key: string;
 	createdAt: Date;
 };

@@ -7,6 +7,7 @@ import { resolve } from "node:path";
 import { cors } from "@elysiajs/cors";
 import { auth } from "@pairit/auth";
 import { Elysia } from "elysia";
+import { ensureIndexes } from "./lib/db";
 import { configsRoutes } from "./routes/configs";
 import { eventsRoutes } from "./routes/events";
 import { sessionsRoutes } from "./routes/sessions";
@@ -113,3 +114,7 @@ app.listen(Number(process.env.PORT) || 3001);
 console.log(
 	`🚀 Lab server running on ${app.server?.hostname}:${app.server?.port}`,
 );
+
+ensureIndexes().catch((err) => {
+	console.error("[DB] Failed to ensure indexes:", err);
+});

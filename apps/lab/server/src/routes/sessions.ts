@@ -6,10 +6,16 @@
  */
 
 // Import the loadConfig function (duplicated from configs.ts for now)
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { Elysia, t } from "elysia";
-import { getConfigsCollection, getSessionsCollection } from "../lib/db";
+import { MongoServerError } from "mongodb";
+import {
+	getConfigsCollection,
+	getIdempotencyCollection,
+	getSessionsCollection,
+} from "../lib/db";
 import type {
 	Config,
 	ProlificParams,
@@ -17,12 +23,10 @@ import type {
 	SessionDocument,
 } from "../types";
 
+import { deriveAuthContext } from "../lib/auth-middleware";
+
 const IS_DEV = process.env.NODE_ENV === "development";
 const FORCE_AUTH = process.env.FORCE_AUTH === "true";
-
-import { randomUUID } from "node:crypto";
-
-import { deriveAuthContext } from "../lib/auth-middleware";
 
 function isPage(
 	value: unknown,
@@ -118,7 +122,7 @@ async function loadSession(sessionId: string): Promise<Session | null> {
 	};
 }
 
-async function saveSession(
+async function createSession(
 	session: Session & { userId?: string | null },
 ): Promise<void> {
 	const collection = await getSessionsCollection();
@@ -135,11 +139,56 @@ async function saveSession(
 		createdAt: session.createdAt ?? now,
 		updatedAt: now,
 	};
-	await collection.updateOne(
-		{ id: session.id },
-		{ $set: doc },
-		{ upsert: true },
+	await collection.insertOne(doc);
+}
+
+async function advanceSession(
+	sessionId: string,
+	target: string,
+	isEnd: boolean,
+): Promise<SessionDocument | null> {
+	const collection = await getSessionsCollection();
+	const now = new Date();
+	const setFields: Record<string, unknown> = {
+		currentPageId: target,
+		updatedAt: now,
+	};
+	if (isEnd) setFields.endedAt = new Date().toISOString();
+
+	return await collection.findOneAndUpdate(
+		{ id: sessionId },
+		{ $set: setFields },
+		{ returnDocument: "after" },
 	);
+}
+
+export async function updateUserState(
+	sessionId: string,
+	path: string,
+	value: unknown,
+): Promise<SessionDocument | null> {
+	const collection = await getSessionsCollection();
+	if (path.includes("$") || path.startsWith(".") || path.endsWith(".")) {
+		throw new Error(`Invalid user_state path: ${path}`);
+	}
+	return await collection.findOneAndUpdate(
+		{ id: sessionId },
+		{ $set: { [`user_state.${path}`]: value, updatedAt: new Date() } },
+		{ returnDocument: "after" },
+	);
+}
+
+async function checkIdempotency(key: string): Promise<{ duplicate: boolean }> {
+	const collection = await getIdempotencyCollection();
+	try {
+		await collection.insertOne({ key, createdAt: new Date() });
+		return { duplicate: false };
+	} catch (err) {
+		if (err instanceof MongoServerError && err.code === 11000) {
+			return { duplicate: true };
+		}
+		throw err;
+	}
 }
 
 export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
@@ -177,7 +226,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				prolific,
 				userId,
 			};
-			await saveSession(session);
+			await createSession(session);
 			const page = config.pages[session.currentPageId];
 
 			return {
@@ -230,6 +279,29 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 	.post(
 		"/:id/advance",
 		async ({ params: { id }, body, set }) => {
+			// Check idempotency first
+			const { duplicate } = await checkIdempotency(body.idempotencyKey);
+			if (duplicate) {
+				// Return current session state for idempotent response
+				const session = await loadSession(id);
+				if (!session) {
+					set.status = 404;
+					return { error: "not_found" };
+				}
+				const page = session.config.pages[session.currentPageId] || {
+					id: session.currentPageId,
+					components: [],
+				};
+				return {
+					sessionId: session.id,
+					configId: session.configId,
+					currentPageId: session.currentPageId,
+					page,
+					endedAt: session.endedAt ?? null,
+					deduplicated: true,
+				};
+			}
+
 			const session = await loadSession(id);
 			if (!session) {
 				set.status = 404;
@@ -238,24 +310,25 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 
 			// Session existence = authorization (Qualtrics model)
 
-			session.currentPageId = body.target;
-
 			// In hybrid mode, we don't validate page existence since frontend manages its own config
 			const page = session.config.pages[body.target] || {
 				id: body.target,
 				components: [],
 			};
+			const isEnd = !!page.end;
 
-			if (page.end) {
-				session.endedAt = new Date().toISOString();
+			const updated = await advanceSession(id, body.target, isEnd);
+			if (!updated) {
+				set.status = 500;
+				return { error: "update_failed" };
 			}
-			await saveSession(session);
+
 			return {
-				sessionId: session.id,
-				configId: session.configId,
-				currentPageId: session.currentPageId,
+				sessionId: updated.id,
+				configId: updated.configId,
+				currentPageId: updated.currentPageId,
 				page,
-				endedAt: session.endedAt ?? null,
+				endedAt: updated.endedAt ?? null,
 			};
 		},
 		{
@@ -264,6 +337,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 			}),
 			body: t.Object({
 				target: t.String({ minLength: 1 }),
+				idempotencyKey: t.String({ minLength: 1 }),
 			}),
 		},
 	);
