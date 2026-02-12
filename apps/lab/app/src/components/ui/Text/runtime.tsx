@@ -1,5 +1,6 @@
 import { defineRuntimeComponent } from "@app/runtime/define-runtime-component";
 import type { TextComponent } from "@app/runtime/types";
+import Markdown from "react-markdown";
 
 export const TextRuntime = defineRuntimeComponent<
 	"text",
@@ -12,14 +13,10 @@ export const TextRuntime = defineRuntimeComponent<
 			return null;
 		}
 
-		if (component.props.markdown) {
-			return (
-				<div className="whitespace-pre-wrap text-base leading-relaxed text-slate-700">
-					{text}
-				</div>
-			);
-		}
-
-		return <p className="text-base text-slate-700">{text}</p>;
+		return (
+			<div className="prose prose-slate max-w-none">
+				<Markdown>{text}</Markdown>
+			</div>
+		);
 	},
 });
