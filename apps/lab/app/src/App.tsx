@@ -28,6 +28,7 @@ export default function App() {
 	const [page, setPage] = useState<Page | null>(null);
 	const [endedAt, setEndedAt] = useState<string | null>(null);
 	const [endRedirectUrl, setEndRedirectUrl] = useState<string | null>(null);
+	const [userState, setUserState] = useState<Record<string, unknown>>({});
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [authRequired, setAuthRequired] = useState(false);
@@ -75,6 +76,7 @@ export default function App() {
 			setPage(null);
 			setEndedAt(null);
 			setEndRedirectUrl(null);
+			setUserState({});
 			setAuthRequired(false);
 			setLoading(true);
 			setError(null);
@@ -276,7 +278,15 @@ export default function App() {
 				)}
 
 				{!loading && page && !endedAt && (
-					<PageRenderer page={page} onAction={onAction} sessionId={sessionId} />
+					<PageRenderer
+						page={page}
+						onAction={onAction}
+						sessionId={sessionId}
+						userState={userState}
+						onUserStateChange={(updates) =>
+							setUserState((prev) => ({ ...prev, ...updates }))
+						}
+					/>
 				)}
 
 				{!loading && endedAt && (

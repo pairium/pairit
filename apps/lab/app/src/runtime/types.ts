@@ -1,6 +1,10 @@
 export type ButtonAction = {
 	type: "go_to";
-	target: string;
+	target?: string;
+	branches?: Array<{
+		when?: string;
+		target: string;
+	}>;
 	skipValidation?: boolean;
 };
 

@@ -277,6 +277,32 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 		},
 	)
 	.post(
+		"/:id/state",
+		async ({ params: { id }, body, set }) => {
+			const session = await loadSession(id);
+			if (!session) {
+				set.status = 404;
+				return { error: "not_found" };
+			}
+
+			// Update each field in user_state
+			for (const [path, value] of Object.entries(body.updates)) {
+				await updateUserState(id, path, value);
+			}
+
+			return { success: true };
+		},
+		{
+			params: t.Object({
+				id: t.String(),
+			}),
+			body: t.Object({
+				updates: t.Record(t.String(), t.Unknown()),
+				idempotencyKey: t.String({ minLength: 1 }),
+			}),
+		},
+	)
+	.post(
 		"/:id/advance",
 		async ({ params: { id }, body, set }) => {
 			// Check idempotency first
