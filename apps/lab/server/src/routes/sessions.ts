@@ -105,7 +105,7 @@ function uid(): string {
 	return randomUUID();
 }
 
-async function loadSession(sessionId: string): Promise<Session | null> {
+export async function loadSession(sessionId: string): Promise<Session | null> {
 	const collection = await getSessionsCollection();
 	const data = await collection.findOne({ id: sessionId });
 	if (!data) return null;

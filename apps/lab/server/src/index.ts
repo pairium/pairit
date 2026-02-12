@@ -11,6 +11,7 @@ import { ensureIndexes } from "./lib/db";
 import { configsRoutes } from "./routes/configs";
 import { eventsRoutes } from "./routes/events";
 import { sessionsRoutes } from "./routes/sessions";
+import { streamRoutes } from "./routes/stream";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 const RAW_CORS_ORIGINS = process.env.CORS_ORIGINS;
@@ -82,7 +83,8 @@ app
 	// API Routes
 	.use(configsRoutes)
 	.use(sessionsRoutes)
-	.use(eventsRoutes);
+	.use(eventsRoutes)
+	.use(streamRoutes);
 
 // Static file serving (production only - in dev, Vite handles this)
 if (!IS_DEV) {
