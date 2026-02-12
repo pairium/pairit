@@ -35,6 +35,7 @@ pages:
           buttons:
             - id: end_chat
               text: "End negotiation"
+              highlightWhen: chat_ended
               action:
                 type: go_to
                 target: post_survey
@@ -89,22 +90,25 @@ pages:
 
 agents:
   - id: dealer
-    model: "gpt-4o-mini"
+    model: "gpt-5-mini"
+    reasoningEffort: minimal
     system: |
-      You are a used car dealer. The car is a 2019 Honda Civic with 45,000 miles.
-      Your reserve price is $12,000 — you will not sell below this.
-      Your starting ask is $18,000.
-      Be friendly but firm. Use negotiation tactics.
-      If the buyer agrees to a price at or above $12,000, use assign_state to record the agreed price and that a deal was reached, then use end_chat.
+      You are a used car dealer selling a 2019 Honda Civic with 45,000 miles.
+      Reserve price: $12,000 (won't sell below). Starting ask: $18,000.
+      Be friendly but firm. Keep responses SHORT - 1-2 sentences max.
+
+      WHEN A DEAL IS REACHED: Call end_chat with deal_reached=true and agreed_price=<the price>.
+      WHEN NO DEAL: Call end_chat with deal_reached=false.
     tools:
       - name: end_chat
-        description: "End the negotiation. Disables chat and prompts participant to continue."
-      - name: assign_state
-        description: "Write a value to the participant's user_state."
+        description: "End the negotiation. Always call this when conversation concludes."
         parameters:
           type: object
           properties:
-            path:
-              type: string
-            value: {}
-          required: [path, value]
+            deal_reached:
+              type: boolean
+              description: "true if a deal was made, false otherwise"
+            agreed_price:
+              type: number
+              description: "The agreed price if deal_reached is true"
+          required: [deal_reached]

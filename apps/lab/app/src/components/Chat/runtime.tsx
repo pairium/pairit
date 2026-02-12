@@ -7,6 +7,7 @@ import {
 	type ChatMessage as ApiChatMessage,
 	getChatHistory,
 	sendChatMessage,
+	startChatAgents,
 	submitEvent,
 } from "@app/lib/api";
 import { sseClient } from "@app/lib/sse";
@@ -32,6 +33,22 @@ type SSEChatEnded = {
 	groupId: string;
 };
 
+type SSEChatMessageDelta = {
+	streamId: string;
+	groupId: string;
+	senderId: string;
+	senderType: "agent";
+	delta: string;
+	fullText: string;
+};
+
+type StreamingMessage = {
+	streamId: string;
+	senderId: string;
+	senderType: "agent";
+	content: string;
+};
+
 export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 	type: "chat",
 	renderer: ({ component, context }) => {
@@ -39,7 +56,10 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 		const [messages, setMessages] = useState<ChatMessage[]>([]);
 		const [loading, setLoading] = useState(true);
 		const [chatDisabled, setChatDisabled] = useState(false);
+		const [streamingMessage, setStreamingMessage] =
+			useState<StreamingMessage | null>(null);
 		const seenMessageIds = useRef<Set<string>>(new Set());
+		const hasTriggeredAgents = useRef(false);
 
 		// Resolve groupId: use chat_group_id from userState or fall back to sessionId
 		const groupId = (userState?.chat_group_id as string) || sessionId || "";
@@ -93,6 +113,23 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			};
 		}, [sessionId, groupId, toViewMessage]);
 
+		// Trigger agents with sendFirstMessage on mount (after history loads)
+		useEffect(() => {
+			if (!sessionId || !groupId || loading) return;
+			if (hasTriggeredAgents.current || messages.length > 0) return;
+
+			hasTriggeredAgents.current = true;
+
+			// Small delay to ensure SSE connection is ready
+			const timer = setTimeout(() => {
+				startChatAgents(groupId, sessionId).catch((error) => {
+					console.error("[Chat] Failed to start agents:", error);
+				});
+			}, 300);
+
+			return () => clearTimeout(timer);
+		}, [loading, sessionId, groupId, messages.length]);
+
 		// Subscribe to SSE chat_ended events
 		useEffect(() => {
 			if (!sessionId || !groupId) return;
@@ -102,6 +139,27 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 				if (event.groupId === groupId) {
 					setChatDisabled(true);
 				}
+			});
+
+			return unsubscribe;
+		}, [sessionId, groupId]);
+
+		// Subscribe to SSE chat_message_delta events (streaming)
+		useEffect(() => {
+			if (!sessionId || !groupId) return;
+
+			const unsubscribe = sseClient.on("chat_message_delta", (data) => {
+				const delta = data as SSEChatMessageDelta;
+
+				// Only process deltas for our group
+				if (delta.groupId !== groupId) return;
+
+				setStreamingMessage({
+					streamId: delta.streamId,
+					senderId: delta.senderId,
+					senderType: delta.senderType,
+					content: delta.fullText,
+				});
 			});
 
 			return unsubscribe;
@@ -122,6 +180,11 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 				// Dedupe by messageId
 				if (seenMessageIds.current.has(message.messageId)) return;
 				seenMessageIds.current.add(message.messageId);
+
+				// Clear streaming message when final message arrives from agent
+				if (message.senderType === "agent") {
+					setStreamingMessage(null);
+				}
 
 				setMessages((prev) => [...prev, toViewMessage(message)]);
 
@@ -195,6 +258,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 				onSend={handleSend}
 				placeholder={component.props.placeholder}
 				disabled={chatDisabled}
+				streamingMessage={streamingMessage}
 			/>
 		);
 	},

@@ -6,7 +6,7 @@
 
 import { Elysia, t } from "elysia";
 import { MongoServerError, type ObjectId } from "mongodb";
-import { triggerAgents } from "../lib/agent-runner";
+import { triggerAgents, triggerFirstMessageAgents } from "../lib/agent-runner";
 import { getChatMessagesCollection, getSessionsCollection } from "../lib/db";
 import { broadcastToSession } from "../lib/sse";
 import type { ChatMessageDocument } from "../types";
@@ -195,6 +195,32 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 		{
 			params: t.Object({ groupId: t.String() }),
 			query: t.Object({
+				sessionId: t.String({ minLength: 1 }),
+			}),
+		},
+	)
+	.post(
+		"/:groupId/start-agents",
+		async ({ params: { groupId }, body, set }) => {
+			const { sessionId } = body;
+
+			// Verify membership
+			const isMember = await verifyMembership(sessionId, groupId);
+			if (!isMember) {
+				set.status = 403;
+				return { error: "not_a_member" };
+			}
+
+			// Trigger agents with sendFirstMessage: true
+			triggerFirstMessageAgents(groupId, sessionId).catch((err) => {
+				console.error("[Chat] Failed to trigger first message agents:", err);
+			});
+
+			return { ok: true };
+		},
+		{
+			params: t.Object({ groupId: t.String() }),
+			body: t.Object({
 				sessionId: t.String({ minLength: 1 }),
 			}),
 		},

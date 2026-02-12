@@ -127,15 +127,27 @@ export function PageRenderer({
 	);
 }
 
+function RuntimeComponentWrapper({
+	component,
+	context,
+}: {
+	component: ComponentInstance;
+	context: RuntimeComponentContext;
+}) {
+	const renderer = getComponentRenderer(component.type);
+	return <>{renderer({ component, context })}</>;
+}
+
 function renderComponentInstance(
 	component: ComponentInstance,
 	index: number,
 	context: RuntimeComponentContext,
 ) {
-	const renderer = getComponentRenderer(component.type);
 	return (
-		<Fragment key={`${component.type}-${index}`}>
-			{renderer({ component, context })}
-		</Fragment>
+		<RuntimeComponentWrapper
+			key={`${component.type}-${index}`}
+			component={component}
+			context={context}
+		/>
 	);
 }

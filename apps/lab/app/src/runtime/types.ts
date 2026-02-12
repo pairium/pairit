@@ -36,6 +36,7 @@ export type Button = {
 	text: string;
 	action: ButtonAction;
 	events?: ComponentEventsConfig<"button">;
+	highlightWhen?: string;
 };
 
 export interface ComponentInstance<

@@ -15,11 +15,19 @@ export type ChatMessage = {
 	isOwn?: boolean;
 };
 
+type StreamingMessage = {
+	streamId: string;
+	senderId: string;
+	senderType: "agent";
+	content: string;
+};
+
 export type ChatViewProps = {
 	messages: ChatMessage[];
 	onSend: (content: string) => void;
 	disabled?: boolean;
 	placeholder?: string;
+	streamingMessage?: StreamingMessage | null;
 };
 
 export function ChatView({
@@ -27,16 +35,17 @@ export function ChatView({
 	onSend,
 	disabled = false,
 	placeholder = "Type a message...",
+	streamingMessage,
 }: ChatViewProps) {
 	const [input, setInput] = useState("");
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLTextAreaElement>(null);
 
-	// Auto-scroll to bottom when new messages arrive
-	// biome-ignore lint/correctness/useExhaustiveDependencies: We intentionally trigger scroll on messages.length change
+	// Auto-scroll to bottom when new messages arrive or streaming updates
+	// biome-ignore lint/correctness/useExhaustiveDependencies: We intentionally trigger scroll on messages.length and streaming changes
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-	}, [messages.length]);
+	}, [messages.length, streamingMessage?.content]);
 
 	// Focus input on mount
 	useEffect(() => {
@@ -71,6 +80,7 @@ export function ChatView({
 				{messages.map((message) => (
 					<MessageBubble key={message.messageId} message={message} />
 				))}
+				{streamingMessage && <StreamingBubble message={streamingMessage} />}
 				<div ref={messagesEndRef} />
 			</div>
 
@@ -132,7 +142,9 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 	return (
 		<div className={alignmentClasses}>
 			<div className={bubbleClasses}>
-				<div className={`prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-headings:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 ${isOwn ? "prose-invert" : ""}`}>
+				<div
+					className={`prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-headings:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 ${isOwn ? "prose-invert" : ""}`}
+				>
 					{isOwn ? (
 						<Markdown
 							components={{
@@ -159,6 +171,26 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 						</Markdown>
 					) : (
 						<Markdown>{message.content}</Markdown>
+					)}
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function StreamingBubble({ message }: { message: StreamingMessage }) {
+	return (
+		<div className="flex justify-start">
+			<div className="max-w-[80%] rounded-2xl bg-slate-100 px-4 py-2 text-sm text-slate-900">
+				<div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-headings:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
+					{message.content ? (
+						<Markdown>{message.content}</Markdown>
+					) : (
+						<span className="inline-flex items-center gap-1">
+							<span className="h-2 w-2 animate-pulse rounded-full bg-slate-400" />
+							<span className="h-2 w-2 animate-pulse rounded-full bg-slate-400 delay-75" />
+							<span className="h-2 w-2 animate-pulse rounded-full bg-slate-400 delay-150" />
+						</span>
 					)}
 				</div>
 			</div>

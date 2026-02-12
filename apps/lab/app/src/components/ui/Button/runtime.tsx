@@ -6,6 +6,17 @@ import { Button } from "./Button";
 
 type ButtonDefinition = ButtonsComponent["props"]["buttons"][number];
 
+function evaluateHighlight(
+	highlightWhen: string | undefined,
+	userState: Record<string, unknown> | undefined,
+): boolean {
+	if (!highlightWhen || !userState) return false;
+
+	// Simple check: if highlightWhen is a path like "chat_ended", check if userState[path] is truthy
+	const value = userState[highlightWhen];
+	return Boolean(value);
+}
+
 export const ButtonsRuntime = defineRuntimeComponent<
 	"buttons",
 	ButtonsComponent["props"]
@@ -23,17 +34,24 @@ export const ButtonsRuntime = defineRuntimeComponent<
 
 		return (
 			<div className="flex flex-wrap gap-3">
-				{buttons.map((button) => (
-					<Button
-						key={button.id}
-						type="button"
-						onClick={() =>
-							void handleButtonClick(button, component.id, context)
-						}
-					>
-						{button.text}
-					</Button>
-				))}
+				{buttons.map((button) => {
+					const isHighlighted = evaluateHighlight(
+						button.highlightWhen,
+						context.userState,
+					);
+					return (
+						<Button
+							key={button.id}
+							type="button"
+							variant={isHighlighted ? "highlighted" : "default"}
+							onClick={() =>
+								void handleButtonClick(button, component.id, context)
+							}
+						>
+							{button.text}
+						</Button>
+					);
+				})}
 			</div>
 		);
 	},

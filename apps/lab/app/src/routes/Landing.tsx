@@ -51,7 +51,6 @@ const targetConfigs: DemoConfig[] = [
 		description: "Negotiate with an AI agent. Tests SSE, chat, agent tools.",
 		icon: MessageCircle,
 		issues: "P0-3, P0-4, P0-5, P0-6",
-		disabled: true,
 	},
 	{
 		id: "team-decision",

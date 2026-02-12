@@ -6,7 +6,7 @@ import type {
 	TextComponent,
 } from "./types";
 
-type RawButton = Partial<Button> & { text?: unknown; action?: unknown };
+type RawButton = Partial<Button> & { text?: unknown; action?: unknown; highlightWhen?: unknown };
 
 type RawComponent =
 	| string
@@ -83,11 +83,15 @@ function normalizeButton(
 		normalizedAction.branches = goTo.branches as Button["action"]["branches"];
 	if (skipValidation) normalizedAction.skipValidation = true;
 
+	const highlightWhen =
+		typeof button.highlightWhen === "string" ? button.highlightWhen : undefined;
+
 	return {
 		id,
 		text,
 		action: normalizedAction,
 		events: button.events,
+		highlightWhen,
 	};
 }
 

@@ -12,6 +12,8 @@ type RawAgent = {
 	id?: string;
 	model?: string;
 	system?: string;
+	sendFirstMessage?: boolean;
+	reasoningEffort?: "minimal" | "low" | "medium" | "high";
 	tools?: Array<{
 		name: string;
 		description: string;
@@ -34,6 +36,8 @@ function toAgentConfig(raw: RawAgent): AgentConfig {
 		id: raw.id ?? "",
 		model: raw.model ?? "",
 		system: raw.system ?? "",
+		sendFirstMessage: raw.sendFirstMessage,
+		reasoningEffort: raw.reasoningEffort,
 		tools: raw.tools,
 	};
 }

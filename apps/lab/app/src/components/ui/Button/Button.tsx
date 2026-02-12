@@ -10,6 +10,8 @@ const variants: Record<string, string> = {
 	default: "bg-black text-white shadow hover:bg-black/90",
 	ghost:
 		"bg-white text-slate-900 border border-slate-300 shadow-sm hover:bg-slate-100",
+	highlighted:
+		"bg-emerald-600 text-white shadow-lg hover:bg-emerald-700 animate-pulse ring-2 ring-emerald-400 ring-offset-2",
 };
 
 export interface ButtonProps extends ComponentPropsWithoutRef<"button"> {

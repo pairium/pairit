@@ -10,6 +10,8 @@ export type AgentConfig = {
 	id: string;
 	model: string;
 	system: string;
+	sendFirstMessage?: boolean;
+	reasoningEffort?: "minimal" | "low" | "medium" | "high";
 	tools?: Array<{
 		name: string;
 		description: string;
@@ -83,6 +85,7 @@ async function* streamOpenAI(
 			messages: [{ role: "system", content: agent.system }, ...messages],
 			stream: true,
 			tools: tools?.length ? tools : undefined,
+			...(agent.reasoningEffort && { reasoning_effort: agent.reasoningEffort }),
 		},
 		{ signal },
 	);
