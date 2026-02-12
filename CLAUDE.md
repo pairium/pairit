@@ -2,13 +2,24 @@
 
 Monorepo for a behavioral science experiment platform. Participants run experiments in the **lab**, experimenters manage them via the **manager**.
 
+## Local Development
+
+Prerequisites:
+- `.env` file in project root (Google OAuth credentials + remote Atlas URI)
+
+```bash
+# Start dev (remote Atlas + Google OAuth + auth required)
+# Open http://localhost:3000/<experimentId> to trigger sign-in
+bun run dev
+```
+
 ## Commands
 
 ```bash
 bun install                     # Install dependencies
 bun run dev                     # Run all services (lab-app:3000, lab-server:3001, manager-server:3002)
 bun run build                   # Build all packages
-bun test                        # Run tests
+bun run test                    # Run tests (bun test for packages, vitest for lab-app)
 biome check                     # Lint and format
 tsc --noEmit                    # Type check
 ```

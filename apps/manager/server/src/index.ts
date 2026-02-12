@@ -2,20 +2,27 @@
  * Manager Server Entry Point
  * Elysia app with config and media management
  */
-import { Elysia, t } from 'elysia';
-import { cors } from '@elysiajs/cors';
-import { randomBytes } from 'crypto';
-import { auth } from '@pairit/auth';
-import { configsRoutes } from './routes/configs';
-import { mediaRoutes } from './routes/media';
-import { renderPage } from '@pairit/html';
 
-const IS_DEV = process.env.NODE_ENV === 'development';
+import { randomBytes } from "node:crypto";
+import { cors } from "@elysiajs/cors";
+import { auth } from "@pairit/auth";
+import { renderPage } from "@pairit/html";
+import { Elysia, t } from "elysia";
+import { configsRoutes } from "./routes/configs";
+import { mediaRoutes } from "./routes/media";
+
+const IS_DEV = process.env.NODE_ENV === "development";
 const RAW_CORS_ORIGINS = process.env.CORS_ORIGINS;
-const ALLOWED_ORIGINS = RAW_CORS_ORIGINS ? RAW_CORS_ORIGINS.split(',').map(s => s.trim()).filter(Boolean) : [];
-const LAB_URL = process.env.PAIRIT_LAB_URL || 'http://localhost:3001';
+const ALLOWED_ORIGINS = RAW_CORS_ORIGINS
+	? RAW_CORS_ORIGINS.split(",")
+			.map((s) => s.trim())
+			.filter(Boolean)
+	: [];
+const LAB_URL = process.env.PAIRIT_LAB_URL || "http://localhost:3001";
 if (!IS_DEV && ALLOWED_ORIGINS.length === 0) {
-    console.warn('[CORS] CORS_ORIGINS not set; disabling cross-origin access in production');
+	console.warn(
+		"[CORS] CORS_ORIGINS not set; disabling cross-origin access in production",
+	);
 }
 
 // Authorization code store for CLI login flow
@@ -29,183 +36,196 @@ const authCodeStore = new Map<string, { token: string; expiresAt: number }>();
  * Called before adding new codes to prevent unbounded growth
  */
 function evictExpiredCodes(): void {
-    const now = Date.now();
-    for (const [code, entry] of authCodeStore) {
-        if (now > entry.expiresAt) {
-            authCodeStore.delete(code);
-        }
-    }
+	const now = Date.now();
+	for (const [code, entry] of authCodeStore) {
+		if (now > entry.expiresAt) {
+			authCodeStore.delete(code);
+		}
+	}
 
-    // If still over limit, remove oldest entries (FIFO - Map maintains insertion order)
-    if (authCodeStore.size >= AUTH_CODE_MAX_SIZE) {
-        const toDelete = authCodeStore.size - AUTH_CODE_MAX_SIZE + 1;
-        let deleted = 0;
-        for (const code of authCodeStore.keys()) {
-            if (deleted >= toDelete) break;
-            authCodeStore.delete(code);
-            deleted++;
-        }
-    }
+	// If still over limit, remove oldest entries (FIFO - Map maintains insertion order)
+	if (authCodeStore.size >= AUTH_CODE_MAX_SIZE) {
+		const toDelete = authCodeStore.size - AUTH_CODE_MAX_SIZE + 1;
+		let deleted = 0;
+		for (const code of authCodeStore.keys()) {
+			if (deleted >= toDelete) break;
+			authCodeStore.delete(code);
+			deleted++;
+		}
+	}
 }
 
 function generateAuthCode(token: string): string {
-    // Evict expired codes and enforce size limit before adding new one
-    evictExpiredCodes();
+	// Evict expired codes and enforce size limit before adding new one
+	evictExpiredCodes();
 
-    const code = randomBytes(32).toString('hex');
-    authCodeStore.set(code, {
-        token,
-        expiresAt: Date.now() + AUTH_CODE_EXPIRY_MS
-    });
-    // Clean up this specific code after expiry
-    setTimeout(() => authCodeStore.delete(code), AUTH_CODE_EXPIRY_MS);
-    return code;
+	const code = randomBytes(32).toString("hex");
+	authCodeStore.set(code, {
+		token,
+		expiresAt: Date.now() + AUTH_CODE_EXPIRY_MS,
+	});
+	// Clean up this specific code after expiry
+	setTimeout(() => authCodeStore.delete(code), AUTH_CODE_EXPIRY_MS);
+	return code;
 }
 
 function exchangeAuthCode(code: string): string | null {
-    const entry = authCodeStore.get(code);
-    if (!entry) return null;
+	const entry = authCodeStore.get(code);
+	if (!entry) return null;
 
-    // Delete immediately - codes are single-use
-    authCodeStore.delete(code);
+	// Delete immediately - codes are single-use
+	authCodeStore.delete(code);
 
-    // Check expiry
-    if (Date.now() > entry.expiresAt) return null;
+	// Check expiry
+	if (Date.now() > entry.expiresAt) return null;
 
-    return entry.token;
+	return entry.token;
 }
 
 const app = new Elysia()
-    .use(
-        cors({
-            origin: IS_DEV ? '*' : ALLOWED_ORIGINS,
-            methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-            allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-            exposeHeaders: ['Content-Type'],
-            maxAge: 86400,
-        })
-    )
-    .onError(({ code, error, set }) => {
-        console.error(`[Elysia Error] ${code}:`, error);
-        set.status = 500;
-        // Check if error has message property safely
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        return {
-            status: 'error',
-            code,
-            message
-        };
-    })
-    // Mount Better Auth handler at /api/auth/*
-    .all('/api/auth/*', async ({ request, set }) => {
-        try {
-            console.log(`[Auth Request] ${request.method} ${request.url}`);
-            const res = await auth.handler(request);
-            console.log(`[Auth Response] Status: ${res.status}`);
+	.use(
+		cors({
+			origin: IS_DEV ? "*" : ALLOWED_ORIGINS,
+			methods: ["GET", "POST", "DELETE", "OPTIONS"],
+			allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+			exposeHeaders: ["Content-Type"],
+			maxAge: 86400,
+		}),
+	)
+	.onError(({ code, error, set }) => {
+		console.error(`[Elysia Error] ${code}:`, error);
+		set.status = 500;
+		// Check if error has message property safely
+		const message = error instanceof Error ? error.message : "Unknown error";
+		return {
+			status: "error",
+			code,
+			message,
+		};
+	})
+	// Mount Better Auth handler at /api/auth/*
+	.all("/api/auth/*", async ({ request, set }) => {
+		try {
+			console.log(`[Auth Request] ${request.method} ${request.url}`);
+			const res = await auth.handler(request);
+			console.log(`[Auth Response] Status: ${res.status}`);
 
-            // If it's a 4xx or 5xx, or if we want to debug, log the body
-            if (res.status >= 400) {
-                try {
-                    const clone = res.clone();
-                    const text = await clone.text();
-                    console.log(`[Auth Response Body] ${text}`);
-                } catch (e) {
-                    console.log(`[Auth Response Body] Could not read body: ${e}`);
-                }
-            }
+			// If it's a 4xx or 5xx, or if we want to debug, log the body
+			if (res.status >= 400) {
+				try {
+					const clone = res.clone();
+					const text = await clone.text();
+					console.log(`[Auth Response Body] ${text}`);
+				} catch (e) {
+					console.log(`[Auth Response Body] Could not read body: ${e}`);
+				}
+			}
 
-            return res;
-        } catch (error) {
-            console.error('[Auth Fatal Error]:', error);
-            set.status = 500;
-            return {
-                error: 'Internal Server Error',
-                message: error instanceof Error ? error.message : String(error)
-            };
-        }
-    });
+			return res;
+		} catch (error) {
+			console.error("[Auth Fatal Error]:", error);
+			set.status = 500;
+			return {
+				error: "Internal Server Error",
+				message: error instanceof Error ? error.message : String(error),
+			};
+		}
+	});
 
 // Debug endpoints only available in non-production
 if (IS_DEV) {
-    app
-    .get('/db-test', async () => {
-        try {
-            const { connectDB } = await import('./lib/db');
-            const database = await connectDB();
-            if (!database) throw new Error('Database connection failed to return a Db object');
+	app
+		.get("/db-test", async () => {
+			try {
+				const { connectDB } = await import("./lib/db");
+				const database = await connectDB();
+				if (!database)
+					throw new Error("Database connection failed to return a Db object");
 
-            const collections = await database.listCollections().toArray();
-            return {
-                status: 'ok',
-                databaseName: database.databaseName,
-                collections: collections.map((c: { name: string }) => c.name)
-            };
-        } catch (error) {
-            console.error('[DB Test Error]:', error);
-            return {
-                status: 'error',
-                message: error instanceof Error ? error.message : String(error)
-            };
-        }
-    })
-    .get('/debug-env', () => {
-        const uri = process.env.MONGODB_URI || 'FAILOVER_TO_DEFAULT';
-        const redactedUri = uri.length > 20
-            ? `${uri.substring(0, 15)}...${uri.substring(uri.length - 10)}`
-            : uri;
+				const collections = await database.listCollections().toArray();
+				return {
+					status: "ok",
+					databaseName: database.databaseName,
+					collections: collections.map((c: { name: string }) => c.name),
+				};
+			} catch (error) {
+				console.error("[DB Test Error]:", error);
+				return {
+					status: "error",
+					message: error instanceof Error ? error.message : String(error),
+				};
+			}
+		})
+		.get("/debug-env", () => {
+			const uri = process.env.MONGODB_URI || "FAILOVER_TO_DEFAULT";
+			const redactedUri =
+				uri.length > 20
+					? `${uri.substring(0, 15)}...${uri.substring(uri.length - 10)}`
+					: uri;
 
-        return {
-            MONGODB_URI_REDACTED: redactedUri,
-            ENV_KEYS: Object.keys(process.env).filter(k => !k.includes('SECRET') && !k.includes('PASSWORD')),
-            GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? 'SET' : 'MISSING',
-            AUTH_BASE_URL: process.env.AUTH_BASE_URL || 'MISSING'
-        };
-        });
+			return {
+				MONGODB_URI_REDACTED: redactedUri,
+				ENV_KEYS: Object.keys(process.env).filter(
+					(k) => !k.includes("SECRET") && !k.includes("PASSWORD"),
+				),
+				GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? "SET" : "MISSING",
+				AUTH_BASE_URL: process.env.AUTH_BASE_URL || "MISSING",
+			};
+		});
 }
 
 app
-    // Endpoint to exchange authorization code for session token (CLI use)
-    .post('/api/cli/exchange', async ({ body, set }) => {
-        const token = exchangeAuthCode(body.code);
-        if (!token) {
-            set.status = 400;
-            return { error: 'invalid_code', message: 'Invalid or expired authorization code' };
-        }
-        return { token };
-    }, {
-        body: t.Object({
-            code: t.String({ minLength: 1 })
-        })
-    })
-    .get('/login-success', ({ query, cookie }) => {
-        // Check for both standard and secure cookie names
-        const sessionToken = (cookie['better-auth.session_token']?.value ||
-            cookie['__Secure-better-auth.session_token']?.value) as string | undefined;
+	// Endpoint to exchange authorization code for session token (CLI use)
+	.post(
+		"/api/cli/exchange",
+		async ({ body, set }) => {
+			const token = exchangeAuthCode(body.code);
+			if (!token) {
+				set.status = 400;
+				return {
+					error: "invalid_code",
+					message: "Invalid or expired authorization code",
+				};
+			}
+			return { token };
+		},
+		{
+			body: t.Object({
+				code: t.String({ minLength: 1 }),
+			}),
+		},
+	)
+	.get("/login-success", ({ query, cookie }) => {
+		// Check for both standard and secure cookie names
+		const sessionToken = (cookie["better-auth.session_token"]?.value ||
+			cookie["__Secure-better-auth.session_token"]?.value) as
+			| string
+			| undefined;
 
-        // Handle CLI Loopback Flow
-        // If a CLI redirect URI is present (and safe), generate an auth code and redirect
-        const cliRedirect = query.cli_redirect_uri;
-        let redirectUrl: string | undefined;
+		// Handle CLI Loopback Flow
+		// If a CLI redirect URI is present (and safe), generate an auth code and redirect
+		const cliRedirect = query.cli_redirect_uri;
+		let redirectUrl: string | undefined;
 
-        if (sessionToken && cliRedirect && typeof cliRedirect === 'string') {
-            try {
-                const url = new URL(cliRedirect);
-                // Security: Only allow redirect to localhost/127.0.0.1 for CLI handoff
-                if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
-                    // Generate a short-lived authorization code instead of exposing the session token
-                    const authCode = generateAuthCode(sessionToken);
-                    url.searchParams.set('code', authCode);
+		if (sessionToken && cliRedirect && typeof cliRedirect === "string") {
+			try {
+				const url = new URL(cliRedirect);
+				// Security: Only allow redirect to localhost/127.0.0.1 for CLI handoff
+				if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+					// Generate a short-lived authorization code instead of exposing the session token
+					const authCode = generateAuthCode(sessionToken);
+					url.searchParams.set("code", authCode);
 
-                    // Client-side redirect to avoid "Mixed Content" blocking (HTTPS -> HTTP)
-                    // We render the success page which then redirects via JS
-                    redirectUrl = url.toString();
-                }
-            } catch (e) {
-                // Ignore invalid URLs
-            }
-        }
+					// Client-side redirect to avoid "Mixed Content" blocking (HTTPS -> HTTP)
+					// We render the success page which then redirects via JS
+					redirectUrl = url.toString();
+				}
+			} catch (_e) {
+				// Ignore invalid URLs
+			}
+		}
 
-        const content = `
+		const content = `
         <div class="card">
             <h1>
                 <svg class="icon" viewBox="0 0 24 24" style="color: var(--emerald-600); width: 32px; height: 32px;">
@@ -214,22 +234,26 @@ app
                 Login Successful
             </h1>
 
-            ${redirectUrl ? `
+            ${
+							redirectUrl
+								? `
                 <p>Redirecting you back to the CLI...</p>
                 <div style="margin-top: 1rem; font-size: 0.875rem; color: var(--slate-600);">
                     If you are not redirected, <a href="${redirectUrl}">click here</a>.
                 </div>
-            ` : `
+            `
+								: `
                 <p>You have successfully authenticated. You can now close this window and return to your CLI.</p>
                 <div style="margin-top: 1.5rem;">
                     <button onclick="window.close()" class="btn btn-blue">Close Window</button>
                 </div>
-            `}
+            `
+						}
         </div>`;
 
-        const scriptContent = `
+		const scriptContent = `
         <script>
-            const redirectUrl = ${JSON.stringify(redirectUrl || '')};
+            const redirectUrl = ${JSON.stringify(redirectUrl || "")};
 
             if (redirectUrl) {
                 setTimeout(() => {
@@ -238,18 +262,21 @@ app
             }
         </script>`;
 
-        return new Response(renderPage({
-            title: 'Login Successful',
-            content,
-            scripts: scriptContent
-        }), {
-            headers: {
-                'Content-Type': 'text/html'
-            }
-        });
-    })
-    .get('/login', () => {
-        const content = `
+		return new Response(
+			renderPage({
+				title: "Login Successful",
+				content,
+				scripts: scriptContent,
+			}),
+			{
+				headers: {
+					"Content-Type": "text/html",
+				},
+			},
+		);
+	})
+	.get("/login", () => {
+		const content = `
         <div class="card">
             <h1>Pairit CLI Login</h1>
             <p>Click the button below to sign in with Google. You will be redirected to a page with your session token.</p>
@@ -259,7 +286,7 @@ app
             </button>
         </div>`;
 
-        const scriptContent = `
+		const scriptContent = `
         <script>
             async function login() {
                 try {
@@ -294,16 +321,19 @@ app
             }
         </script>`;
 
-        return new Response(renderPage({
-            title: 'Pairit CLI Login',
-            content,
-            scripts: scriptContent
-        }), {
-            headers: { 'content-type': 'text/html' }
-        });
-    })
-    .get('/', () => {
-        const content = `
+		return new Response(
+			renderPage({
+				title: "Pairit CLI Login",
+				content,
+				scripts: scriptContent,
+			}),
+			{
+				headers: { "content-type": "text/html" },
+			},
+		);
+	})
+	.get("/", () => {
+		const content = `
         <section class="hero">
             <h1>Platform Admin</h1>
             <p class="subtitle">Consolidated management for your experiments, media assets, and configurations.</p>
@@ -320,15 +350,20 @@ app
             <a href="${LAB_URL}" class="btn btn-primary">Go to Lab</a>
         </div>`;
 
-        return new Response(renderPage({
-            title: 'Pairit Manager',
-            content
-        }), {
-            headers: { 'content-type': 'text/html' }
-        });
-    })
-    .use(configsRoutes)
-    .use(mediaRoutes)
-    .listen(Number(process.env.PORT) || 3002);
+		return new Response(
+			renderPage({
+				title: "Pairit Manager",
+				content,
+			}),
+			{
+				headers: { "content-type": "text/html" },
+			},
+		);
+	})
+	.use(configsRoutes)
+	.use(mediaRoutes)
+	.listen(Number(process.env.PORT) || 3002);
 
-console.log(`🚀 Manager server running on ${app.server?.hostname}:${app.server?.port}`);
+console.log(
+	`🚀 Manager server running on ${app.server?.hostname}:${app.server?.port}`,
+);

@@ -10,12 +10,12 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "bun test",
+    "test": "bun test packages/ && bun run --filter @pairit/lab-app test",
     "build": "bun run --filter '*' build",
-    "dev": "bun run --filter '@pairit/lab-*' --filter '@pairit/manager-server' dev",
-    "emulators": "echo 'Deprecated: use docker compose up'"
+    "dev": "FORCE_AUTH=true NODE_ENV=development bun --env-file=.env run --filter '@pairit/lab-*' --filter '@pairit/manager-server' dev"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.3.14",
     "@types/node": "^24.7.0",
     "typescript": "^5.9.3"
   }
