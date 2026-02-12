@@ -88,15 +88,14 @@ This monorepo hosts the Pairit stack.
 
    **Option B: Native Bun (For hot-reload development)**
    ```bash
-   # Start only MongoDB in Docker
-   docker compose up -d mongodb
-
-   # Run servers locally with hot reload
+   # Requires .env in project root (Google OAuth + remote Atlas URI)
    bun run dev
    ```
    - Lab app (Vite): http://localhost:3000
    - Lab server: http://localhost:3001
    - Manager server: http://localhost:3002
+
+   Open http://localhost:3000/<experimentId> to trigger the auth sign-in flow.
 
    Or run individually using workspace filters:
    ```bash

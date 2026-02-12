@@ -5,18 +5,12 @@ Monorepo for a behavioral science experiment platform. Participants run experime
 ## Local Development
 
 Prerequisites:
-- MongoDB running locally (`brew services start mongodb-community`)
-- `.env` file in project root with Google OAuth credentials (only needed for remote MongoDB)
+- `.env` file in project root (Google OAuth credentials + remote Atlas URI)
 
 ```bash
-# Fast local dev (uses localhost:27017, no remote Atlas connection)
-NODE_ENV=development bun run dev
-
-# With remote MongoDB (slower, for testing prod-like setup)
-source .env && bun run dev
-
-# Test auth-required flow without a requireAuth config
-FORCE_AUTH=true source .env && bun run dev
+# Start dev (remote Atlas + Google OAuth + auth required)
+# Open http://localhost:3000/<experimentId> to trigger sign-in
+bun run dev
 ```
 
 ## Commands

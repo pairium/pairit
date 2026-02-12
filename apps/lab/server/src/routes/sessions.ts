@@ -148,7 +148,9 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 		"/start",
 		async ({ body, set, requireAuth, user }) => {
 			// Enforce auth requirement (FORCE_AUTH=true bypasses config check for testing)
-			if ((requireAuth || FORCE_AUTH) && !user) {
+			// Prolific participants are identified by their params — skip OAuth for them
+			const hasProlific = body.prolific?.prolificPid;
+			if ((requireAuth || FORCE_AUTH) && !user && !hasProlific) {
 				set.status = 401;
 				return { error: "authentication_required" };
 			}
@@ -161,8 +163,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 
 			const { config } = loaded;
 
-			// For authenticated configs, store the user ID
-			const userId = requireAuth && user ? user.id : null;
+			const userId = user ? user.id : null;
 
 			const prolific: ProlificParams | null = body.prolific ?? null;
 

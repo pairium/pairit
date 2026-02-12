@@ -182,7 +182,7 @@ export default function App() {
 		return () => {
 			canceled = true;
 		};
-	}, [experimentId, authLoading]);
+	}, [experimentId, authLoading, isAuthenticated]);
 
 	async function onAction(a: { type: "go_to"; target: string }) {
 		if (mode === "local" && compiledConfig) {
