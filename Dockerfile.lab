@@ -22,7 +22,7 @@ RUN bun install
 # Build frontend
 ARG VITE_MANAGER_URL
 ENV VITE_MANAGER_URL=$VITE_MANAGER_URL
-RUN bun run --filter "lab-app" build
+RUN bun run --filter "@pairit/lab-app" build
 
 # Production image
 FROM base AS runner

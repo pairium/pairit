@@ -400,7 +400,5 @@ else
     echo -e "${GREEN}✓ All Phase 3 Tests Passed!${NC}"
 fi
 echo ""
-echo "Next: Check MongoDB for user and session data:"
-echo "  docker compose exec mongodb mongosh pairit --eval \"db.user.find().pretty()\""
-echo "  docker compose exec mongodb mongosh pairit --eval \"db.session.find().pretty()\""
+echo "Next: Check MongoDB for user and session data (e.g. via mongosh or Atlas UI)"
 

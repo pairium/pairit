@@ -22,8 +22,6 @@ This monorepo hosts the Pairit stack.
 ## Prerequisites
 
 - [Bun](https://bun.sh/) 1.1 or newer
-- [Docker](https://www.docker.com/) (recommended for full stack coordination)
-- [MongoDB](https://www.mongodb.com/) (if running locally without Docker)
 
 ## Quickstart
 
@@ -58,33 +56,8 @@ This monorepo hosts the Pairit stack.
    # Edit .env with your values (Google OAuth, MongoDB, OpenAI, etc.)
    ```
 
-3. Choose a development mode:
-
-   **Option A: Docker-based (Full stack in containers)**
+3. Start development:
    ```bash
-   # Quick start (uses existing images)
-   docker compose up -d
-
-   # Or with rebuild (recommended after code changes)
-   ./scripts/local/deploy.sh
-   ```
-   - Lab Server: http://localhost:3001
-   - Manager Server: http://localhost:3002
-   - MongoDB: localhost:27017
-
-   To stop all services:
-   ```bash
-   docker compose down
-   ```
-
-   Data persists in Docker volumes. To fully reset:
-   ```bash
-   docker compose down -v
-   ```
-
-   **Option B: Native Bun (For hot-reload development)**
-   ```bash
-   # Requires .env in project root (Google OAuth + remote Atlas URI)
    bun run dev
    ```
    - Lab app (Vite): http://localhost:3000
@@ -100,20 +73,14 @@ This monorepo hosts the Pairit stack.
    bun run --filter manager-server dev  # Manager API only
    ```
 
-   ⚠️ **Do not mix**: Running both Docker services and `bun run dev` causes port conflicts (3001/3002).
-
 ## Deployment
 
 The stack is containerized using Docker and deployed via Google Cloud Build / Run.
 
 ### Environment Variables
 
-**For local development:**
 1. Copy `env.template` to `.env`
-2. Edit `.env` with your values (Google OAuth credentials, etc.)
-
-**For cloud deployment:**
-Create `.env.production` with production values (see `scripts/cloud/env.production.template`).
+2. Edit `.env` with your values (local defaults work as-is; set real values for production)
 
 **Required variables:**
 - `MONGODB_URI` - MongoDB connection string
@@ -140,10 +107,8 @@ We use Google Cloud Run for a serverless, scalable deployment.
 ### Deployment & Testing
 
 **Deployment**
-- **Local**: `./scripts/local/deploy.sh` (builds and runs with Docker Compose)
-- **Cloud**: `./scripts/cloud/deploy.sh [PROJECT_ID] [REGION]` (deploys to Cloud Run)
+- **Cloud**: `./scripts/deploy.sh [PROJECT_ID] [REGION]` (deploys to Cloud Run)
 
 **Testing**
-Unified test runner for both environments:
 - **Local**: `./scripts/test.sh local` (verifies health + runs integration tests)
 - **Cloud**: `./scripts/test.sh cloud` (discovers URLs + runs integration tests against prod)

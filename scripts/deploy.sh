@@ -12,26 +12,25 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 echo "📂 Project Root: $PROJECT_ROOT"
 cd "$PROJECT_ROOT"
 
-# Read vars from .env first (PROJECT_ID and secrets come from here)
-if [ -f .env.production ]; then
-    echo "📜 Sourcing .env.production..."
-    set -a
-    source .env.production
-    set +a
-elif [ -f .env ]; then
+# Read vars from .env (PROJECT_ID and secrets come from here)
+if [ -f .env ]; then
     echo "📜 Sourcing .env..."
     set -a
     source .env
     set +a
 else
-    echo "❌ No .env or .env.production file found in $PROJECT_ROOT"
+    echo "❌ No .env file found in $PROJECT_ROOT"
     exit 1
 fi
 
 # Configuration (args override .env)
 PROJECT_ID=${1:-$PROJECT_ID}
-REGION=${2:-${REGION:-us-central1}}
+REGION=${2:-${REGION:-us-east4}}
 REPO_NAME="pairit-repo"
+
+# Service names
+MANAGER_SERVICE="manager"
+LAB_SERVICE="lab"
 
 if [ -z "$PROJECT_ID" ]; then
     echo "❌ PROJECT_ID not set in .env and not provided as argument"
@@ -49,8 +48,8 @@ if [ -z "$PROJECT_NUMBER" ]; then
 fi
 
 # Compute Cloud Run URLs (deterministic: service-projectnumber.region.run.app)
-MANAGER_SERVICE_URL="https://pairit-manager-${PROJECT_NUMBER}.${REGION}.run.app"
-LAB_SERVICE_URL="https://pairit-lab-${PROJECT_NUMBER}.${REGION}.run.app"
+MANAGER_SERVICE_URL="https://${MANAGER_SERVICE}-${PROJECT_NUMBER}.${REGION}.run.app"
+LAB_SERVICE_URL="https://${LAB_SERVICE}-${PROJECT_NUMBER}.${REGION}.run.app"
 
 echo "📍 Manager URL: $MANAGER_SERVICE_URL"
 echo "📍 Lab URL: $LAB_SERVICE_URL"
@@ -100,7 +99,7 @@ gcloud builds submit \
     .
 rm "$CLOUDBUILD_MANAGER"
 
-# Prepare env vars with ++ delimiter to avoid comma conflicts
+# Prepare env vars with ++ delimiter to avoid comma conflicts in MONGODB_URI
 MANAGER_ENV="NODE_ENV=production"
 MANAGER_ENV="$MANAGER_ENV++MONGODB_URI=$MONGODB_URI"
 MANAGER_ENV="$MANAGER_ENV++STORAGE_BACKEND=gcs"
@@ -108,13 +107,12 @@ MANAGER_ENV="$MANAGER_ENV++STORAGE_PATH=${STORAGE_PATH:-pairit-media-prod}"
 MANAGER_ENV="$MANAGER_ENV++GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"
 MANAGER_ENV="$MANAGER_ENV++GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET"
 MANAGER_ENV="$MANAGER_ENV++AUTH_SECRET=$AUTH_SECRET"
-MANAGER_ENV="$MANAGER_ENV++AUTH_BASE_URL=${MANAGER_SERVICE_URL}/api/auth"
+MANAGER_ENV="$MANAGER_ENV++AUTH_BASE_URL=${MANAGER_SERVICE_URL}"
 MANAGER_ENV="$MANAGER_ENV++AUTH_TRUSTED_ORIGINS=${MANAGER_SERVICE_URL}"
 MANAGER_ENV="$MANAGER_ENV++PAIRIT_LAB_URL=${LAB_SERVICE_URL}"
-MANAGER_ENV="$MANAGER_ENV++CORS_ORIGINS=${CORS_ORIGINS}"
 
 echo "📦 Deploying Manager Server..."
-if ! DEPLOY_OUTPUT=$(gcloud run deploy pairit-manager \
+if ! DEPLOY_OUTPUT=$(gcloud run deploy "$MANAGER_SERVICE" \
         --image "$MANAGER_IMAGE" \
         --region "$REGION" \
         --project "$PROJECT_ID" \
@@ -127,12 +125,12 @@ if ! DEPLOY_OUTPUT=$(gcloud run deploy pairit-manager \
 
 echo "$DEPLOY_OUTPUT"
 
-# Extract Service URL using list for consistency (always returns the new deterministic URL)
-MANAGER_URL=$(gcloud run services list --filter="SERVICE:pairit-manager" --project "$PROJECT_ID" --region "$REGION" --format="value(URL)")
+# Extract Service URL
+MANAGER_URL=$(gcloud run services list --filter="SERVICE:$MANAGER_SERVICE" --project "$PROJECT_ID" --region "$REGION" --format="value(URL)")
 
 if [ -z "$MANAGER_URL" ]; then
     echo "⚠️  Could not find Manager URL via list. Checking via describe as fallback..."
-    MANAGER_URL=$(gcloud run services describe pairit-manager --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)' 2>/dev/null)
+    MANAGER_URL=$(gcloud run services describe "$MANAGER_SERVICE" --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)' 2>/dev/null)
 fi
 
 echo "🔗 Final Manager URL: $MANAGER_URL"
@@ -159,18 +157,20 @@ rm "$CLOUDBUILD_LAB"
 LAB_ENV="NODE_ENV=production"
 LAB_ENV="$LAB_ENV++MONGODB_URI=$MONGODB_URI"
 LAB_ENV="$LAB_ENV++STORAGE_BACKEND=gcs"
+LAB_ENV="$LAB_ENV++STORAGE_PATH=${STORAGE_PATH:-pairit-media-prod}"
 LAB_ENV="$LAB_ENV++GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"
 LAB_ENV="$LAB_ENV++GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET"
 LAB_ENV="$LAB_ENV++AUTH_SECRET=$AUTH_SECRET"
-LAB_ENV="$LAB_ENV++AUTH_BASE_URL=${LAB_SERVICE_URL}/api/auth"
+LAB_ENV="$LAB_ENV++AUTH_BASE_URL=${LAB_SERVICE_URL}"
 LAB_ENV="$LAB_ENV++AUTH_TRUSTED_ORIGINS=${LAB_SERVICE_URL}"
-LAB_ENV="$LAB_ENV++CORS_ORIGINS=${CORS_ORIGINS_LAB}"
+LAB_ENV="$LAB_ENV++OPENAI_API_KEY=${OPENAI_API_KEY}"
 
 echo "📦 Deploying Lab Server..."
-if ! LAB_DEPLOY_OUTPUT=$(gcloud run deploy pairit-lab \
+if ! LAB_DEPLOY_OUTPUT=$(gcloud run deploy "$LAB_SERVICE" \
         --image "$LAB_IMAGE" \
         --region "$REGION" \
         --project "$PROJECT_ID" \
+        --port 3001 \
         --set-env-vars "^++^$LAB_ENV" \
         --allow-unauthenticated 2>&1); then
         echo "❌ Lab Deployment Failed!"
@@ -179,10 +179,15 @@ if ! LAB_DEPLOY_OUTPUT=$(gcloud run deploy pairit-lab \
     fi
 echo "$LAB_DEPLOY_OUTPUT"
 
-echo "✅ Deployment initiated!"
-echo "⚠️  IMPORTANT POST-DEPLOYMENT STEPS:"
-echo "1. Verify AUTH_BASE_URL and AUTH_TRUSTED_ORIGINS match your actual Cloud Run URL."
-echo "2. Update your Google OAuth Credentials authorized redirect URIs."
-echo "3. IAM Permissions Verify:"
-echo "   - Cloud Run Service Account must have 'roles/storage.objectAdmin' on bucket '${STORAGE_PATH:-pairit-media-prod}'."
-echo "   - Cloud Run Service Account must have 'roles/iam.serviceAccountTokenCreator' on itself."
+echo ""
+echo "✅ Deployment complete!"
+echo ""
+echo "📍 Manager: $MANAGER_URL"
+echo "📍 Lab: $LAB_SERVICE_URL"
+echo ""
+echo "⚠️  POST-DEPLOYMENT CHECKLIST:"
+echo "1. Add OAuth redirect URIs to Google Cloud Console:"
+echo "   - ${MANAGER_URL}/api/auth/callback/google"
+echo "   - ${LAB_SERVICE_URL}/api/auth/callback/google"
+echo "2. Whitelist Cloud Run IPs in MongoDB Atlas (or use 0.0.0.0/0 for dev)"
+echo "3. Verify IAM permissions for GCS bucket '${STORAGE_PATH:-pairit-media-prod}'"

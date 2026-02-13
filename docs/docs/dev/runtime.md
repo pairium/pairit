@@ -90,7 +90,7 @@ Flow:
 
 Environment:
 
-- Set `VITE_API_URL` in `apps/lab/app/.env.local` (dev) or `.env.production` (prod) to point at your Lab Server base URL.
+- Set `VITE_API_URL` in `apps/lab/app/.env.local` (dev) or via build args (prod) to point at your Lab Server base URL.
   - Example (native dev): `VITE_API_URL=http://localhost:3001`
   - Example (deployed): `VITE_API_URL=https://<your-lab-service-host>`
 

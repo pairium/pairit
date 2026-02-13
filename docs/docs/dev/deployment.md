@@ -6,7 +6,7 @@ This guide describes how to deploy the Pairit application (Lab Server and Manage
 
 - **Google Cloud SDK (`gcloud`)** installed and authenticated.
 - **Bun** runtime installed locally.
-- **Docker** installed (optional, for local verification).
+- **Docker** installed (for Cloud Build only, not needed for local dev).
 - Access to the GCP project (`pairit-lab-staging`).
 
 ## Directory Structure
@@ -14,25 +14,19 @@ Key deployment files are organized as follows:
 
 ```
 .
-├── cloudbuild.lab.yaml       # Cloud Build config for Lab Server
-├── cloudbuild.manager.yaml   # Cloud Build config for Manager Server
 ├── Dockerfile.lab            # Dockerfile for Lab Server
 ├── Dockerfile.manager        # Dockerfile for Manager Server
 ├── scripts/
-│   ├── local/
-│   │   └── deploy.sh         # Local Docker Compose deployment
-│   ├── cloud/
-│   │   └── deploy.sh         # Cloud Run deployment
-│   └── test.sh               # Unified verification & test runner
-└── scripts/tests/
-    └── verify-health.sh      # Health check script
+│   ├── deploy.sh             # Cloud Run deployment
+│   ├── test.sh               # Unified verification & test runner
+│   └── tests/
+│       └── verify-health.sh  # Health check script
 ```
 
 ## Configuration
 
 1.  **Environment Variables**:
-    *   **Cloud**: Create a `.env.production` file in the root directory (use `scripts/cloud/env.production.template` as a reference).
-    *   **Local**: Create a `.env` file (use `env.template`).
+    *   Copy `env.template` to `.env` and fill in values (local defaults work as-is; set real values for production).
     *   Required variables (see references):
         *   `NODE_ENV`: `development` or `production`. Controls CORS and debug endpoints.
         *   `PROJECT_ID`: GCP Project ID.
@@ -50,21 +44,14 @@ Key deployment files are organized as follows:
 To deploy both services to Cloud Run:
 
 ```bash
-./scripts/cloud/deploy.sh [PROJECT_ID] [REGION]
+./scripts/deploy.sh [PROJECT_ID] [REGION]
 ```
 
 This script will:
-1.  Source variables from `.env.production`.
+1.  Source variables from `.env`.
 2.  Enable Artifact Registry.
 3.  Build Docker images using Cloud Build.
 4.  Deploy services to Cloud Run.
-
-### Local Deployment
-To run services locally with Docker Compose:
-
-```bash
-./scripts/local/deploy.sh
-```
 
 ## Verification
 
@@ -101,7 +88,7 @@ When configuring the OAuth Consent Screen and Credentials:
 
 ## Deployment Script Internals (`deploy.sh`)
 
-The `scripts/cloud/deploy.sh` script automates several manual steps:
+The `scripts/deploy.sh` script automates several manual steps:
 1.  **Context Switching**: It changes directory to the project root to run builds, ensuring the full monorepo context is available.
 2.  **Artifact Registry**: Checks for and creates the `pairit-repo` repository if it doesn't exist.
 3.  **Dynamic Envs**: It injects the *actual* Cloud Run URLs into `AUTH_BASE_URL` environment variables during deployment. This prevents the "redirect mismatch" errors common with authentication.

@@ -79,9 +79,16 @@ if (IS_DEV) {
 	});
 }
 
+// Mount Better Auth handler - handles all paths under /api/auth/
+// Using onRequest hook to intercept all auth paths before other routes
+app.onRequest(({ request, set }) => {
+	const url = new URL(request.url);
+	if (url.pathname.startsWith("/api/auth/")) {
+		return auth.handler(request);
+	}
+});
+
 app
-	// Mount Better Auth handler at /api/auth/*
-	.all("/api/auth/*", ({ request }) => auth.handler(request))
 
 	// API Routes
 	.use(configsRoutes)
@@ -97,6 +104,9 @@ if (!IS_DEV) {
 	app
 		.get("/", () => Bun.file(`${distPath}/index.html`))
 		.get("/favicon.ico", () => Bun.file(`${distPath}/favicon.ico`))
+		.get("/manifest.json", () => Bun.file(`${distPath}/manifest.json`))
+		.get("/logo192.png", () => Bun.file(`${distPath}/logo192.png`))
+		.get("/logo512.png", () => Bun.file(`${distPath}/logo512.png`))
 		.get("/assets/*", ({ params: { "*": path }, set }) => {
 			const fullPath = resolve(distPath, "assets", path);
 			if (!fullPath.startsWith(resolve(distPath, "assets"))) {
@@ -113,8 +123,13 @@ if (!IS_DEV) {
 			}
 			return Bun.file(fullPath);
 		})
-		// SPA catch-all for client-side routes
-		.get("*", () => Bun.file(`${distPath}/index.html`));
+		// SPA catch-all for client-side routes (exclude /api/* paths)
+		.get("*", ({ path }) => {
+			if (path.startsWith("/api/")) {
+				return new Response("Not Found", { status: 404 });
+			}
+			return Bun.file(`${distPath}/index.html`);
+		});
 }
 
 app.listen(Number(process.env.PORT) || 3001);

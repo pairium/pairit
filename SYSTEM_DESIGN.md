@@ -247,7 +247,7 @@ NODE_ENV=development bun run dev     # starts 3 services with hot reload
                                      #   manager    → localhost:3002 (Elysia)
 ```
 
-- MongoDB: `brew services start mongodb-community` or `docker compose up -d mongodb`
+- MongoDB: remote Atlas (connection string in `.env`)
 - No Google OAuth needed for local dev (falls back to localhost MongoDB)
 - Local configs in `apps/lab/app/public/configs/*.json` for frontend-only testing
 - Biome for lint/format, TypeScript strict, Vitest + Bun test
