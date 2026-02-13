@@ -226,7 +226,7 @@ export function renderPage({ title, content, scripts = "" }: PageOptions) {
     <header class="header">
         <div class="header-content">
             <a href="/" class="logo">
-                <svg class="icon" viewBox="0 0 24 24"><path d="M16 8l2 -2m0 0l-12 0m12 0l0 12m-2 -2l-2 2"></path><circle cx="12" cy="12" r="9"></circle></svg>
+                <svg class="icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7h.01"/><path d="M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20"/><path d="m20 7 2 .5-2 .5"/><path d="M10 18v3"/><path d="M14 17.75V21"/><path d="M7 18a6 6 0 0 0 3.84-10.61"/></svg>
                 Pairit Manager
             </a>
         </div>
