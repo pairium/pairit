@@ -4,7 +4,7 @@
 	"description": "Pairit experiment configuration CLI",
 	"type": "module",
 	"bin": {
-		"pairit": "src/index.ts"
+		"pairit": "dist/index.js"
 	},
 	"scripts": {
 		"build": "bun build src/index.ts --outdir dist --target node",

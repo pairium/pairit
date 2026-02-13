@@ -2,7 +2,7 @@
 
 import "dotenv/config";
 import { createHash } from "node:crypto";
-import { readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -259,6 +259,24 @@ mediaCommand
 		}
 	});
 
+const dataCommand = program
+	.command("data")
+	.description("Export experiment data");
+
+dataCommand
+	.command("export")
+	.argument("<configId>", "Config ID to export data for")
+	.option("--format <format>", "Output format: csv, json, jsonl", "csv")
+	.option("--out <directory>", "Output directory", ".")
+	.description("Export sessions, events, and chat messages for a config")
+	.action(async (configId: string, options: DataExportOptions) => {
+		try {
+			await exportData(configId, options);
+		} catch (error) {
+			reportCliError("Export failed", error);
+		}
+	});
+
 program.parseAsync(process.argv).catch((err) => {
 	console.error(err);
 	process.exit(1);
@@ -307,6 +325,11 @@ type MediaListEntry = {
 	size?: number;
 	updatedAt?: string | null;
 	metadata?: unknown;
+};
+
+type DataExportOptions = {
+	format: "csv" | "json" | "jsonl";
+	out: string;
 };
 
 async function lintConfig(configPath: string): Promise<void> {
@@ -673,6 +696,201 @@ function reportCliError(prefix: string, error: unknown) {
 		console.error(`${prefix}: unknown error`);
 	}
 	process.exitCode = 1;
+}
+
+async function exportData(
+	configId: string,
+	options: DataExportOptions,
+): Promise<void> {
+	const format = options.format;
+	const outDir = path.resolve(process.cwd(), options.out);
+
+	// Ensure output directory exists
+	await mkdir(outDir, { recursive: true });
+
+	console.log(`Exporting data for ${configId} in ${format} format...`);
+
+	// Fetch all data in parallel
+	const [sessionsRes, eventsRes, messagesRes] = await Promise.all([
+		callFunctions(`/data/${encodeURIComponent(configId)}/sessions`, {
+			method: "GET",
+		}) as Promise<{ sessions: SessionExport[] }>,
+		callFunctions(`/data/${encodeURIComponent(configId)}/events`, {
+			method: "GET",
+		}) as Promise<{ events: EventExport[] }>,
+		callFunctions(`/data/${encodeURIComponent(configId)}/chat-messages`, {
+			method: "GET",
+		}) as Promise<{ messages: ChatMessageExport[] }>,
+	]);
+
+	const sessions = sessionsRes.sessions ?? [];
+	const events = eventsRes.events ?? [];
+	const messages = messagesRes.messages ?? [];
+
+	// Write each data type to its own file
+	await writeExportFile(
+		path.join(outDir, `${configId}-sessions`),
+		sessions,
+		format,
+		flattenSession,
+	);
+	console.log(`✓ Exported ${sessions.length} sessions`);
+
+	await writeExportFile(
+		path.join(outDir, `${configId}-events`),
+		events,
+		format,
+		flattenEvent,
+	);
+	console.log(`✓ Exported ${events.length} events`);
+
+	await writeExportFile(
+		path.join(outDir, `${configId}-chat-messages`),
+		messages,
+		format,
+		(msg) => msg,
+	);
+	console.log(`✓ Exported ${messages.length} chat messages`);
+
+	console.log(`\nFiles written to: ${outDir}`);
+}
+
+type SessionExport = {
+	sessionId: string;
+	configId: string;
+	currentPageId: string;
+	status: string;
+	user_state: Record<string, unknown>;
+	prolific: { prolificPid: string; studyId: string; sessionId: string } | null;
+	userId: string | null;
+	createdAt: string | null;
+	updatedAt: string | null;
+	endedAt: string | null;
+};
+
+type EventExport = {
+	sessionId: string;
+	type: string;
+	pageId: string;
+	componentType: string;
+	componentId: string;
+	data: Record<string, unknown>;
+	timestamp: string;
+	createdAt: string | null;
+};
+
+type ChatMessageExport = {
+	messageId: string | null;
+	groupId: string;
+	sessionId: string;
+	senderId: string;
+	senderType: string;
+	content: string;
+	createdAt: string | null;
+};
+
+function flattenSession(session: SessionExport): Record<string, unknown> {
+	const { user_state, prolific, ...rest } = session;
+
+	const flattened: Record<string, unknown> = { ...rest };
+
+	// Flatten user_state with prefix
+	if (user_state && typeof user_state === "object") {
+		for (const [key, value] of Object.entries(user_state)) {
+			flattened[`user_state.${key}`] = serializeValue(value);
+		}
+	}
+
+	// Flatten prolific with prefix
+	if (prolific) {
+		flattened["prolific.prolificPid"] = prolific.prolificPid;
+		flattened["prolific.studyId"] = prolific.studyId;
+		flattened["prolific.sessionId"] = prolific.sessionId;
+	}
+
+	return flattened;
+}
+
+function flattenEvent(event: EventExport): Record<string, unknown> {
+	const { data, ...rest } = event;
+
+	const flattened: Record<string, unknown> = { ...rest };
+
+	// Flatten data with prefix
+	if (data && typeof data === "object") {
+		for (const [key, value] of Object.entries(data)) {
+			flattened[`data.${key}`] = serializeValue(value);
+		}
+	}
+
+	return flattened;
+}
+
+function serializeValue(value: unknown): string | number | boolean | null {
+	if (value === null || value === undefined) return null;
+	if (typeof value === "string") return value;
+	if (typeof value === "number") return value;
+	if (typeof value === "boolean") return value;
+	return JSON.stringify(value);
+}
+
+async function writeExportFile<T>(
+	basePath: string,
+	data: T[],
+	format: "csv" | "json" | "jsonl",
+	flatten: (item: T) => Record<string, unknown>,
+): Promise<void> {
+	const filePath = `${basePath}.${format}`;
+
+	if (format === "json") {
+		await writeFile(filePath, JSON.stringify(data, null, 2), "utf8");
+		return;
+	}
+
+	if (format === "jsonl") {
+		const lines = data.map((item) => JSON.stringify(item));
+		await writeFile(filePath, lines.join("\n"), "utf8");
+		return;
+	}
+
+	// CSV format
+	if (data.length === 0) {
+		await writeFile(filePath, "", "utf8");
+		return;
+	}
+
+	// Collect all unique keys across all records
+	const allKeys = new Set<string>();
+	const flattenedData = data.map((item) => {
+		const flat = flatten(item);
+		for (const key of Object.keys(flat)) {
+			allKeys.add(key);
+		}
+		return flat;
+	});
+
+	const headers = Array.from(allKeys).sort();
+	const rows = [headers.join(",")];
+
+	for (const record of flattenedData) {
+		const values = headers.map((header) => {
+			const value = record[header];
+			return escapeCsvValue(value);
+		});
+		rows.push(values.join(","));
+	}
+
+	await writeFile(filePath, rows.join("\n"), "utf8");
+}
+
+function escapeCsvValue(value: unknown): string {
+	if (value === null || value === undefined) return "";
+	const str = String(value);
+	// If value contains comma, quote, or newline, wrap in quotes and escape internal quotes
+	if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+		return `"${str.replace(/"/g, '""')}"`;
+	}
+	return str;
 }
 
 export const __filename = fileURLToPath(import.meta.url);
