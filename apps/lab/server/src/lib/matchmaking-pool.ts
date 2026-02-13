@@ -5,6 +5,7 @@
 
 import { getGroupsCollection, getSessionsCollection } from "./db";
 import { broadcastToSession } from "./sse";
+import { assignTreatment } from "./treatment-assignment";
 
 export type PoolConfig = {
 	numUsers: number;
@@ -32,12 +33,6 @@ const pools = new Map<string, WaitingEntry[]>();
 
 // Track session -> poolKey for disconnect cleanup
 const sessionPools = new Map<string, string>();
-
-// Track condition counts per pool for balanced_random
-const conditionCounts = new Map<string, Map<string, number>>();
-
-// Track block position per pool for block randomization
-const blockPositions = new Map<string, number>();
 
 function getPoolKey(configId: string, poolId: string): string {
 	return `${configId}:${poolId}`;
@@ -269,45 +264,6 @@ async function formGroup(
 	}
 
 	return { status: "matched", groupId, treatment };
-}
-
-/**
- * Assign treatment based on assignment strategy
- */
-function assignTreatment(
-	poolKey: string,
-	conditions: string[],
-	assignmentType: "random" | "balanced_random" | "block" = "random",
-): string {
-	const opts = conditions.length ? conditions : ["control", "treatment"];
-
-	if (assignmentType === "random") {
-		return opts[Math.floor(Math.random() * opts.length)];
-	}
-
-	if (assignmentType === "balanced_random") {
-		// Pick condition with lowest count
-		let counts = conditionCounts.get(poolKey);
-		if (!counts) {
-			counts = new Map(opts.map((c) => [c, 0]));
-			conditionCounts.set(poolKey, counts);
-		}
-		const minCount = Math.min(...opts.map((c) => counts.get(c) ?? 0));
-		const candidates = opts.filter((c) => (counts.get(c) ?? 0) === minCount);
-		const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-		counts.set(chosen, (counts.get(chosen) ?? 0) + 1);
-		return chosen;
-	}
-
-	if (assignmentType === "block") {
-		// Round-robin through conditions in order
-		const pos = blockPositions.get(poolKey) ?? 0;
-		const chosen = opts[pos % opts.length];
-		blockPositions.set(poolKey, pos + 1);
-		return chosen;
-	}
-
-	return opts[0];
 }
 
 /**

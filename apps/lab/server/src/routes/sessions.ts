@@ -11,6 +11,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { Elysia, t } from "elysia";
 import { MongoServerError } from "mongodb";
+import { deriveAuthContext } from "../lib/auth-middleware";
 import {
 	getConfigsCollection,
 	getIdempotencyCollection,
@@ -22,8 +23,6 @@ import type {
 	Session,
 	SessionDocument,
 } from "../types";
-
-import { deriveAuthContext } from "../lib/auth-middleware";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 const FORCE_AUTH = process.env.FORCE_AUTH === "true";

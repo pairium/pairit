@@ -12,6 +12,7 @@ import { chatRoutes } from "./routes/chat";
 import { configsRoutes } from "./routes/configs";
 import { eventsRoutes } from "./routes/events";
 import { matchmakingRoutes } from "./routes/matchmaking";
+import { randomizeRoutes } from "./routes/randomize";
 import { sessionsRoutes } from "./routes/sessions";
 import { streamRoutes } from "./routes/stream";
 
@@ -88,7 +89,8 @@ app
 	.use(eventsRoutes)
 	.use(streamRoutes)
 	.use(chatRoutes)
-	.use(matchmakingRoutes);
+	.use(matchmakingRoutes)
+	.use(randomizeRoutes);
 
 // Static file serving (production only - in dev, Vite handles this)
 if (!IS_DEV) {
