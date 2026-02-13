@@ -32,8 +32,7 @@ Key deployment files are organized as follows:
 
 1.  **Environment Variables**:
     *   **Cloud**: Create a `.env.production` file in the root directory (use `scripts/cloud/env.production.template` as a reference).
-    *   **Local**: Create a `.env.local` file (use `env.local.template`).
-        *   Note: If running with native Bun (`bun dev`), you must also create `apps/lab/server/.env.local` with `AUTH_BASE_URL="http://localhost:3001/api/auth"`.
+    *   **Local**: Create a `.env` file (use `env.template`).
     *   Required variables (see references):
         *   `NODE_ENV`: `development` or `production`. Controls CORS and debug endpoints.
         *   `PROJECT_ID`: GCP Project ID.

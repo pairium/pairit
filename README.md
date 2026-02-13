@@ -54,12 +54,8 @@ This monorepo hosts the Pairit stack.
 2. Configure environment variables:
    ```bash
    # Copy template for local development
-   cp env.local.template .env.local
-   # Edit .env.local with your values (Google OAuth, etc.)
-
-   # For Lab Server (requires different AUTH_BASE_URL for native development)
-   cp .env.local apps/lab/server/.env.local
-   # Update apps/lab/server/.env.local: AUTH_BASE_URL="http://localhost:3001/api/auth"
+   cp env.template .env
+   # Edit .env with your values (Google OAuth, MongoDB, OpenAI, etc.)
    ```
 
 3. Choose a development mode:
@@ -113,8 +109,8 @@ The stack is containerized using Docker and deployed via Google Cloud Build / Ru
 ### Environment Variables
 
 **For local development:**
-1. Copy `env.local.template` to `.env.local`
-2. Edit `.env.local` with your values (Google OAuth credentials, etc.)
+1. Copy `env.template` to `.env`
+2. Edit `.env` with your values (Google OAuth credentials, etc.)
 
 **For cloud deployment:**
 Create `.env.production` with production values (see `scripts/cloud/env.production.template`).
@@ -122,11 +118,18 @@ Create `.env.production` with production values (see `scripts/cloud/env.producti
 **Required variables:**
 - `MONGODB_URI` - MongoDB connection string
 - `STORAGE_BACKEND` - `local` or `gcs`
+- `STORAGE_PATH` - Storage location (local path or GCS bucket name)
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - For OAuth authentication
-- `AUTH_SECRET` - Better Auth secret (32+ characters)
-- `AUTH_BASE_URL` - Base URL for auth endpoints
+- `AUTH_SECRET` - Better Auth secret (32+ characters, has insecure default in dev)
+- `OPENAI_API_KEY` - OpenAI API key for LLM features
+
+**Production only:**
+- `AUTH_BASE_URL` - Base URL for auth endpoints (auto-derived from PORT in dev)
 - `PAIRIT_LAB_URL` - Lab service URL (for manager homepage link)
-- `CORS_ORIGINS` - Comma-separated allowed origins, or `*` for all (production should restrict)
+- `CORS_ORIGINS` - Comma-separated allowed origins (allows all in dev)
+
+**Optional:**
+- `PAIRIT_API_URL` - Manager server URL for CLI (defaults to `http://localhost:3002`)
 
 ## Deployment to Google Cloud
 

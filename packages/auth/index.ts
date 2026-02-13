@@ -42,23 +42,34 @@ const finalSecret = getAuthSecret();
 const client = getClient();
 const dbName = getDbName();
 
-console.log("[Auth] Initializing with baseURL:", process.env.AUTH_BASE_URL);
+// In dev, derive base URL from PORT; in production, require AUTH_BASE_URL
+function getBaseURL(): string {
+	if (process.env.AUTH_BASE_URL) {
+		return new URL(process.env.AUTH_BASE_URL).origin;
+	}
+	if (IS_DEV) {
+		const port = process.env.PORT || 3000;
+		return `http://localhost:${port}`;
+	}
+	throw new Error("AUTH_BASE_URL environment variable is required in production");
+}
+
+const baseURL = getBaseURL();
+console.log("[Auth] Initializing with baseURL:", baseURL);
 
 export const auth = betterAuth({
 	database: mongodbAdapter(client.db(dbName)),
-	baseURL: process.env.AUTH_BASE_URL
-		? new URL(process.env.AUTH_BASE_URL).origin
-		: "http://localhost:3000",
+	baseURL,
 	basePath: "/api/auth",
 	secret: finalSecret,
 	trustedOrigins: [
 		...(process.env.AUTH_TRUSTED_ORIGINS
 			? process.env.AUTH_TRUSTED_ORIGINS.split(",")
 			: []),
-		process.env.AUTH_BASE_URL
-			? new URL(process.env.AUTH_BASE_URL).origin
-			: "http://localhost:3001",
-		...(IS_DEV ? ["http://localhost:3000"] : []),
+		baseURL,
+		...(IS_DEV
+			? ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"]
+			: []),
 	],
 
 	// Enable email/password authentication
