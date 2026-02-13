@@ -40,7 +40,7 @@
 					"description": "You must be 18 or older to participate.",
 					"answer": {
 						"numeric": {
-							"min": 18,
+							"min": 0,
 							"max": 120,
 							"step": 1
 						}
@@ -62,7 +62,15 @@
 					"text": "Continue",
 					"action": {
 						"type": "go_to",
-						"target": "collaboration_style"
+						"branches": [
+							{
+								"when": "user_state.participant_age < 18",
+								"target": "disqualified"
+							},
+							{
+								"target": "collaboration_style"
+							}
+						]
 					}
 				}
 			]
@@ -271,6 +279,19 @@
 		{
 			"id": "disqualified",
 			"text": "Thanks for your interest. You must be 18 or older to participate.",
+			"buttons": [
+				{
+					"id": "disqualified_done",
+					"text": "Done",
+					"action": {
+						"type": "go_to",
+						"target": "disqualified_end"
+					}
+				}
+			]
+		},
+		{
+			"id": "disqualified_end",
 			"end": true,
 			"endRedirectUrl": "https://app.prolific.com/submissions/complete?cc=DISQUAL"
 		},
