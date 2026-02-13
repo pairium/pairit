@@ -1,5 +1,5 @@
-# Team Decision: 2 participants, no AI
-# Demonstrates: Matchmaking with group chat
+# AI Mediation: 2 participants + AI facilitator
+# Demonstrates: Matchmaking with AI-facilitated group chat
 
 schema_version: 0.1.0
 initialPageId: consent
@@ -10,9 +10,10 @@ pages:
       - type: text
         props:
           text: |
-            # Team Decision Study
+            # AI-Mediated Discussion Study
 
-            You will be paired with another participant to make a decision together.
+            You will be paired with another participant for a discussion.
+            An AI facilitator will help guide your conversation.
       - type: buttons
         props:
           buttons:
@@ -27,23 +28,17 @@ pages:
       - type: survey
         props:
           items:
-            - id: leadership_style
-              text: "How would you describe your leadership style?"
-              answer:
-                multiple_choice:
-                  choices:
-                    - Collaborative
-                    - Directive
-                    - Delegative
-                    - Adaptive
-            - id: confidence
-              text: "How confident are you in group decision-making?"
+            - id: ai_comfort
+              text: "How comfortable are you discussing with an AI present?"
+              answer: likert5
+            - id: topic_familiarity
+              text: "How familiar are you with hiring decisions?"
               answer: likert5
       - type: buttons
         props:
           buttons:
             - id: to_matching
-              text: "Continue to matching"
+              text: "Find a partner"
               action:
                 type: go_to
                 target: matching
@@ -52,12 +47,12 @@ pages:
     components:
       - type: matchmaking
         props:
-          poolId: main_pool
+          poolId: mediation_pool
       - type: buttons
         props:
           buttons:
             - id: matched
-              text: "Continue to chat"
+              text: "Start discussion"
               action:
                 type: go_to
                 target: chat
@@ -69,7 +64,7 @@ pages:
       - type: text
         props:
           text: |
-            We're sorry - we couldn't find enough group members at this time.
+            We're sorry - we couldn't find a partner at this time.
             Thank you for your willingness to participate.
 
   - id: chat
@@ -77,14 +72,17 @@ pages:
       - type: text
         props:
           text: |
-            **Your task:** Decide together which candidate to hire from the three profiles below.
-            You have 10 minutes.
+            **Your task:** Discuss with your partner which candidate to recommend for hire.
+            The AI facilitator will help structure your conversation.
       - type: chat
+        props:
+          agents:
+            - facilitator
       - type: buttons
         props:
           buttons:
             - id: done
-              text: "We've decided"
+              text: "We've reached a conclusion"
               action:
                 type: go_to
                 target: post_survey
@@ -95,7 +93,7 @@ pages:
         props:
           items:
             - id: decision
-              text: "Which candidate did your group choose?"
+              text: "Which candidate did you recommend?"
               answer:
                 multiple_choice:
                   choices:
@@ -103,12 +101,21 @@ pages:
                     - Candidate B
                     - Candidate C
                     - No consensus
-            - id: process_satisfaction
-              text: "How satisfied were you with the decision-making process?"
+            - id: facilitator_helpful
+              text: "How helpful was the AI facilitator?"
               answer: likert7
             - id: partner_rating
               text: "How would you rate your partner's contributions?"
               answer: likert5
+            - id: ai_influence
+              text: "Did the AI influence your decision?"
+              answer:
+                multiple_choice:
+                  choices:
+                    - "Yes, significantly"
+                    - "Yes, somewhat"
+                    - "No, not really"
+                    - "No, not at all"
       - type: buttons
         props:
           buttons:
@@ -120,17 +127,27 @@ pages:
 
   - id: debrief
     end: true
-    endRedirectUrl: "https://app.prolific.com/submissions/complete?cc=TEAM456"
+    endRedirectUrl: "https://app.prolific.com/submissions/complete?cc=AIMOD789"
     components:
       - type: text
         props:
           text: |
             # Thank you!
 
-            This study examines group decision-making dynamics.
+            This study examines how AI facilitation affects pair discussions.
+            The AI was designed to be neutral and help structure the conversation.
 
 matchmaking:
-  - id: main_pool
+  - id: mediation_pool
     num_users: 2
-    timeoutSeconds: 180
+    timeoutSeconds: 120
     timeoutTarget: matching_timeout
+
+agents:
+  - id: facilitator
+    model: "gpt-5-nano"
+    system: |
+      You are a neutral facilitator helping two people make a hiring decision.
+      Keep responses to ONE short sentence. Be extremely brief.
+      Ask a question OR make an observation, never both.
+      Stay neutral - never express preferences.

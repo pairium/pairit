@@ -20,12 +20,14 @@ type StartResponse = {
 	configId: string;
 	currentPageId: string;
 	page: Page;
+	user_state?: Record<string, unknown>;
 };
 type GetResponse = {
 	sessionId: string;
 	currentPageId: string;
 	page: Page;
 	endedAt: string | null;
+	user_state?: Record<string, unknown>;
 };
 type AdvanceResponse = GetResponse;
 type SubmitEventResponse = { eventId: string };
@@ -171,7 +173,8 @@ export type MatchmakingParams = {
 	num_users: number;
 	timeoutSeconds: number;
 	timeoutTarget?: string;
-	assignment?: "random" | "round-robin";
+	assignmentType?: "random" | "balanced_random" | "block";
+	conditions?: string[];
 };
 
 export type MatchmakingResponse =

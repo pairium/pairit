@@ -1,0 +1,161 @@
+# Randomization Demo: Shows 3 assignment strategies
+# Educational walkthrough - no actual matchmaking
+
+schema_version: 0.1.0
+initialPageId: intro
+
+pages:
+  - id: intro
+    components:
+      - type: text
+        props:
+          text: |
+            # Randomization Strategies
+
+            Pairit supports three treatment assignment strategies for experiments:
+
+            **1. Random**
+            Pure random selection. Each group has equal probability of any condition.
+            Simple but may result in unbalanced groups, especially with small samples.
+
+            **2. Balanced Random**
+            Assigns to the condition with fewest groups so far.
+            Ensures equal distribution while maintaining unpredictability.
+
+            **3. Block**
+            Round-robin through conditions: A, B, A, B, A, B...
+            Deterministic alternation for strict balance.
+      - type: buttons
+        props:
+          buttons:
+            - id: next
+              text: "See Examples"
+              action:
+                type: go_to
+                target: examples
+
+  - id: examples
+    components:
+      - type: text
+        props:
+          text: |
+            ## Configuration Examples
+
+            Here's how to configure each strategy in your YAML:
+
+            ```yaml
+            matchmaking:
+              - id: my_pool
+                num_users: 2
+                timeoutSeconds: 120
+                assignment:
+                  type: random  # or balanced_random, or block
+                  conditions:
+                    - treatment
+                    - control
+            ```
+
+            The assigned condition is stored in `user_state.treatment` and can be used for branching:
+
+            ```yaml
+            - type: buttons
+              props:
+                buttons:
+                  - id: continue
+                    text: "Continue"
+                    action:
+                      type: go_to
+                      branches:
+                        - when: "user_state.treatment == 'treatment'"
+                          target: treatment_page
+                        - target: control_page
+            ```
+      - type: buttons
+        props:
+          buttons:
+            - id: next
+              text: "When to Use Each"
+              action:
+                type: go_to
+                target: when_to_use
+
+  - id: when_to_use
+    components:
+      - type: text
+        props:
+          text: |
+            ## When to Use Each Strategy
+
+            **Random**
+            - Best for: Large samples, simple setup
+            - Trade-off: May be unbalanced short-term
+
+            **Balanced Random**
+            - Best for: Most experiments
+            - Trade-off: Slightly predictable near balance point
+
+            **Block**
+            - Best for: Strict alternation needed
+            - Trade-off: Fully predictable sequence
+
+            **Recommendation:** Use `balanced_random` for most experiments. It provides the best balance of randomization and equal distribution.
+      - type: buttons
+        props:
+          buttons:
+            - id: explore
+              text: "Explore Condition Paths"
+              action:
+                type: go_to
+                target: explore
+
+  - id: explore
+    components:
+      - type: text
+        props:
+          text: |
+            ## Explore Condition Paths
+
+            In a real experiment, participants would be automatically assigned to one condition.
+
+            For this demo, click below to see what each path looks like:
+      - type: buttons
+        props:
+          buttons:
+            - id: treatment
+              text: "See Treatment Path"
+              action:
+                type: go_to
+                target: result_treatment
+            - id: control
+              text: "See Control Path"
+              action:
+                type: go_to
+                target: result_control
+
+  - id: result_treatment
+    end: true
+    components:
+      - type: text
+        props:
+          text: |
+            # Treatment Condition
+
+            In a real experiment, this participant was assigned to **treatment**.
+
+            Their `user_state.treatment` would be set to `"treatment"`, and all subsequent branching logic would route them through the treatment experience.
+
+            This assignment is stored in MongoDB and available for data analysis.
+
+  - id: result_control
+    end: true
+    components:
+      - type: text
+        props:
+          text: |
+            # Control Condition
+
+            In a real experiment, this participant was assigned to **control**.
+
+            Their `user_state.treatment` would be set to `"control"`, and all subsequent branching logic would route them through the control experience.
+
+            This assignment is stored in MongoDB and available for data analysis.

@@ -113,15 +113,19 @@ configCommand
 	.description("List configs from Pairit Functions")
 	.action(async (_options: ListOptions) => {
 		try {
-			const response = await callFunctions(`/configs`, { method: "GET" });
+			const response = (await callFunctions(`/configs`, { method: "GET" })) as {
+				configs?: unknown[];
+			};
 
-			const configs = Array.isArray(response.configs) ? response.configs : [];
+			const configs = (
+				Array.isArray(response?.configs) ? response.configs : []
+			) as ConfigListEntry[];
 			if (!configs.length) {
 				console.log("No configs found");
 				return;
 			}
 
-			configs.forEach((config: ConfigListEntry) => {
+			configs.forEach((config) => {
 				const metadata = config.metadata as Record<string, unknown> | undefined;
 				const filename = metadata?.originalFilename
 					? ` | file=${metadata.originalFilename}`
@@ -209,17 +213,19 @@ mediaCommand
 			const params = new URLSearchParams();
 			if (options.bucket) params.set("bucket", options.bucket);
 			if (options.prefix) params.set("prefix", options.prefix);
-			const response = await callFunctions(`/media?${params.toString()}`, {
+			const response = (await callFunctions(`/media?${params.toString()}`, {
 				method: "GET",
-			});
+			})) as { objects?: unknown[] };
 
-			const objects = Array.isArray(response.objects) ? response.objects : [];
+			const objects = (
+				Array.isArray(response?.objects) ? response.objects : []
+			) as MediaListEntry[];
 			if (!objects.length) {
 				console.log("No media objects found");
 				return;
 			}
 
-			objects.forEach((object: MediaListEntry) => {
+			objects.forEach((object) => {
 				console.log(
 					`${object.name} | size=${object.size ?? "n/a"} | updated=${object.updatedAt ?? "n/a"}`,
 				);
@@ -263,9 +269,7 @@ type UploadOptions = {
 	metadata?: string;
 };
 
-type ListOptions = {
-	// owner removed
-};
+type ListOptions = Record<string, never>;
 
 type DeleteOptions = {
 	force?: boolean;
@@ -331,11 +335,63 @@ async function lintConfig(configPath: string): Promise<void> {
 	}
 }
 
+type MatchmakingPoolConfig = {
+	id: string;
+	num_users?: number;
+	timeoutSeconds?: number;
+	timeoutTarget?: string;
+	assignment?: {
+		type?: "random" | "balanced_random" | "block";
+		conditions?: string[];
+	};
+};
+
+type ComponentWithProps = {
+	type: string;
+	props?: Record<string, unknown>;
+};
+
 async function compileConfig(configPath: string): Promise<string> {
 	const config = await loadConfig(configPath);
 
+	// Build pool config lookup from matchmaking array
+	const poolConfigs = new Map<string, MatchmakingPoolConfig>();
+	if (Array.isArray(config.matchmaking)) {
+		for (const pool of config.matchmaking as MatchmakingPoolConfig[]) {
+			if (pool.id) {
+				poolConfigs.set(pool.id, pool);
+			}
+		}
+	}
+
 	const nodes = (config.pages ?? []).map((page) => {
 		const { id, ...rest } = page;
+
+		// Merge pool config into matchmaking components
+		if (Array.isArray(rest.components)) {
+			rest.components = (rest.components as ComponentWithProps[]).map(
+				(comp) => {
+					if (comp.type === "matchmaking" && comp.props?.poolId) {
+						const poolConfig = poolConfigs.get(comp.props.poolId as string);
+						if (poolConfig) {
+							return {
+								...comp,
+								props: {
+									...comp.props,
+									num_users: poolConfig.num_users,
+									timeoutSeconds: poolConfig.timeoutSeconds,
+									timeoutTarget: poolConfig.timeoutTarget,
+									assignmentType: poolConfig.assignment?.type,
+									conditions: poolConfig.assignment?.conditions,
+								},
+							};
+						}
+					}
+					return comp;
+				},
+			);
+		}
+
 		return {
 			id,
 			...rest,
@@ -545,7 +601,7 @@ async function resolvePath(configPath: string): Promise<string> {
 async function callFunctions(
 	pathname: string,
 	init: RequestInit = {},
-): Promise<any> {
+): Promise<unknown> {
 	const baseUrl = getFunctionsBaseUrl();
 	const url = new URL(pathname, baseUrl).toString();
 

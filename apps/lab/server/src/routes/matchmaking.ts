@@ -23,14 +23,21 @@ export const matchmakingRoutes = new Elysia({ prefix: "/sessions" })
 				return { error: "session_not_found" };
 			}
 
-			const { poolId, num_users, timeoutSeconds, timeoutTarget, assignment } =
-				body;
+			const {
+				poolId,
+				num_users,
+				timeoutSeconds,
+				timeoutTarget,
+				assignmentType,
+				conditions,
+			} = body;
 
 			const result = await enqueueSession(id, session.configId, poolId, {
 				numUsers: num_users,
 				timeoutSeconds,
 				timeoutTarget,
-				assignment,
+				assignmentType,
+				conditions,
 			});
 
 			if (result.status === "waiting") {
@@ -51,9 +58,14 @@ export const matchmakingRoutes = new Elysia({ prefix: "/sessions" })
 				num_users: t.Number({ minimum: 2 }),
 				timeoutSeconds: t.Number({ minimum: 1 }),
 				timeoutTarget: t.Optional(t.String()),
-				assignment: t.Optional(
-					t.Union([t.Literal("random"), t.Literal("round-robin")]),
+				assignmentType: t.Optional(
+					t.Union([
+						t.Literal("random"),
+						t.Literal("balanced_random"),
+						t.Literal("block"),
+					]),
 				),
+				conditions: t.Optional(t.Array(t.String())),
 			}),
 		},
 	)
