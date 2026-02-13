@@ -4,11 +4,9 @@ import {
 	Bird,
 	CheckCircle2,
 	CircuitBoard,
-	Clock,
 	FlaskConical,
 	Mail,
 	MessageCircle,
-	Sparkles,
 	Undo2,
 	Users,
 } from "lucide-react";
@@ -25,68 +23,32 @@ type DemoConfig = {
 	title: string;
 	description: string;
 	icon: LucideIcon;
-	issues?: string;
-	disabled?: boolean;
 };
 
-// Target configs from SPEC.md — mapped to P0 issues
-const targetConfigs: DemoConfig[] = [
+const sampleConfigs: DemoConfig[] = [
 	{
 		id: "hello-world",
-		title: "Config 0: Hello world",
-		description:
-			"Simplest possible — one question, one button, data in MongoDB.",
+		title: "Hello world",
+		description: "One question, one button, data in MongoDB.",
 		icon: CheckCircle2,
-		issues: "P0-1, P0-2",
-	},
-	{
-		id: "survey-only",
-		title: "Config 1: Survey only",
-		description: "Surveys, branching (age < 18), Prolific redirect.",
-		icon: FlaskConical,
-		issues: "P0-1, P0-2",
-	},
-	{
-		id: "ai-chat",
-		title: "Config 2: AI chat",
-		description: "Negotiate with an AI agent. Tests SSE, chat, agent tools.",
-		icon: MessageCircle,
-		issues: "P0-3, P0-4, P0-5, P0-6",
-	},
-	{
-		id: "team-decision",
-		title: "Config 3: Team decision",
-		description: "Matchmaking + group chat + AI facilitator.",
-		icon: Users,
-		issues: "P0-7, P0-8",
-	},
-];
-
-// Additional showcase configs
-const showcaseConfigs: DemoConfig[] = [
-	{
-		id: "matchmaking-test",
-		title: "Matchmaking test",
-		description: "Simple 2-person matchmaking test. Open in 2 tabs.",
-		icon: Users,
 	},
 	{
 		id: "survey-showcase",
-		title: "Survey showcase",
-		description: "Every built-in survey answer type, branching, and media.",
+		title: "Survey",
+		description: "Answer types, branching, media, and Prolific redirect.",
 		icon: FlaskConical,
 	},
 	{
-		id: "simple-survey",
-		title: "Paged survey demo",
-		description: "Multi-step survey with the paged survey component.",
-		icon: Sparkles,
+		id: "ai-chat",
+		title: "AI chat",
+		description: "Negotiate with an AI agent via streaming chat.",
+		icon: MessageCircle,
 	},
 	{
-		id: "component-events-showcase",
-		title: "Component events",
-		description: "Event instrumentation for buttons, media, and more.",
-		icon: CircuitBoard,
+		id: "team-decision",
+		title: "Team decision",
+		description: "Matchmaking and group chat. Open in multiple tabs.",
+		icon: Users,
 	},
 ];
 
@@ -169,81 +131,43 @@ export function Landing() {
 
 				<section className="space-y-4">
 					<h2 className="text-2xl font-semibold tracking-tight text-slate-900">
-						Target configurations
+						Sample configurations
 					</h2>
 					<p className="text-sm text-slate-600">
-						These configs define "done" — each maps to P0 issues. Visit{" "}
-						<code>/$experimentId</code> to test.
+						Browse demo experiments. Visit <code>/$experimentId</code> to test.
 					</p>
-					<div className="grid gap-4 md:grid-cols-2">
-						{targetConfigs.map(
-							({ id, title, description, issues, disabled }) => (
-								<Card key={id} className="flex h-full flex-col justify-between">
-									<CardHeader className="space-y-2">
-										<CardTitle className="flex items-center gap-2 text-lg">
-											{disabled ? (
-												<Clock className="h-5 w-5 text-amber-500" />
-											) : (
-												<CheckCircle2 className="h-5 w-5 text-green-600" />
-											)}
-											{title}
-										</CardTitle>
-										<CardDescription>{description}</CardDescription>
-										{issues && (
-											<p className="text-xs font-medium text-slate-500">
-												{issues}
-											</p>
-										)}
-									</CardHeader>
-									<CardContent>
-										<Link
-											to="/$experimentId"
-											params={{ experimentId: id }}
-											search={{ view: true }}
-											className={`${buttonBase} ${disabled ? "opacity-50 pointer-events-none" : ""}`}
+					<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+						{sampleConfigs.map(({ id, title, description, icon: IconComp }) => (
+							<Card key={id} className="flex h-full flex-col justify-between">
+								<CardHeader className="space-y-2">
+									<CardTitle className="flex items-center gap-2 text-base">
+										<IconComp className="h-4 w-4 text-slate-500" />
+										{title}
+									</CardTitle>
+									<CardDescription className="text-xs">
+										{description}{" "}
+										<a
+											href={`/configs/${id}.yaml`}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="text-slate-400 underline hover:text-slate-600"
 										>
-											Open {id}
-										</Link>
-									</CardContent>
-								</Card>
-							),
-						)}
-					</div>
-				</section>
-
-				<section className="space-y-4">
-					<h2 className="text-2xl font-semibold tracking-tight text-slate-900">
-						Showcase configurations
-					</h2>
-					<p className="text-sm text-slate-600">
-						Additional demos for testing specific components.
-					</p>
-					<div className="grid gap-4 md:grid-cols-3">
-						{showcaseConfigs.map(
-							({ id, title, description, icon: IconComp }) => (
-								<Card key={id} className="flex h-full flex-col justify-between">
-									<CardHeader className="space-y-2">
-										<CardTitle className="flex items-center gap-2 text-base">
-											<IconComp className="h-4 w-4 text-slate-500" />
-											{title}
-										</CardTitle>
-										<CardDescription className="text-xs">
-											{description}
-										</CardDescription>
-									</CardHeader>
-									<CardContent>
-										<Link
-											to="/$experimentId"
-											params={{ experimentId: id }}
-											search={{ view: true }}
-											className={ghostButton}
-										>
-											Open
-										</Link>
-									</CardContent>
-								</Card>
-							),
-						)}
+											View config ↗
+										</a>
+									</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<Link
+										to="/$experimentId"
+										params={{ experimentId: id }}
+										search={{ view: true }}
+										className={`${ghostButton} w-full justify-center`}
+									>
+										Open
+									</Link>
+								</CardContent>
+							</Card>
+						))}
 					</div>
 				</section>
 
@@ -261,8 +185,8 @@ export function Landing() {
 							<p className="text-sm text-slate-600">
 								Reach the experiment coordinator for help.
 							</p>
-							<a className={buttonBase} href="mailto:lab@pairit.test">
-								<Mail className="h-4 w-4" /> Email lab@pairit.test
+							<a className={buttonBase} href="mailto:pairit@pairium.ai">
+								<Mail className="h-4 w-4" /> Email pairit@pairium.ai
 							</a>
 						</CardContent>
 					</Card>
