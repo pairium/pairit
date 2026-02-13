@@ -41,7 +41,9 @@ export default function Header({
 			<div className="mx-auto flex w-full max-w-4xl items-center justify-between px-6 py-4">
 				<div className="text-lg font-semibold tracking-tight">Pairit Lab</div>
 				<div className="flex items-center gap-4">
-					<div className="text-sm text-slate-500" title={statusTitle}>{status}</div>
+					<div className="text-sm text-slate-500" title={statusTitle}>
+						{status}
+					</div>
 					{!isLoading &&
 						(isAuthenticated ? (
 							<div className="flex items-center gap-3">

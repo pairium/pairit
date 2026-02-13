@@ -18,7 +18,11 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 			return { error: "session_not_found" };
 		}
 
-		const { assignmentType = "random", conditions = [], stateKey = "treatment" } = body;
+		const {
+			assignmentType = "random",
+			conditions = [],
+			stateKey = "treatment",
+		} = body;
 
 		// Idempotent: return existing assignment if present
 		const existingValue = session.user_state?.[stateKey];

@@ -51,7 +51,9 @@ function getBaseURL(): string {
 		const port = process.env.PORT || 3000;
 		return `http://localhost:${port}`;
 	}
-	throw new Error("AUTH_BASE_URL environment variable is required in production");
+	throw new Error(
+		"AUTH_BASE_URL environment variable is required in production",
+	);
 }
 
 const baseURL = getBaseURL();
@@ -68,7 +70,11 @@ export const auth = betterAuth({
 			: []),
 		baseURL,
 		...(IS_DEV
-			? ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"]
+			? [
+					"http://localhost:3000",
+					"http://localhost:3001",
+					"http://localhost:3002",
+				]
 			: []),
 	],
 

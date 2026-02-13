@@ -3,8 +3,8 @@
 __MACOSX/
 .AppleDouble
 .LSOverride
-Icon[
-]
+# macOS custom folder icons (Icon with carriage return)
+Icon?
 
 # Thumbnails
 ._*
@@ -264,8 +264,8 @@ count.txt
 __MACOSX/
 .AppleDouble
 .LSOverride
-Icon[
-]
+# macOS custom folder icons (Icon with carriage return)
+Icon?
 
 # Thumbnails
 ._*
