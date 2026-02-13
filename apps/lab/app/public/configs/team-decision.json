@@ -80,7 +80,10 @@
         {
           "type": "matchmaking",
           "props": {
-            "poolId": "main_pool"
+            "poolId": "team_decision_pool",
+            "num_users": 3,
+            "timeoutSeconds": 120,
+            "timeoutTarget": "matching_timeout"
           }
         },
         {

@@ -9,6 +9,7 @@ import type {
 	ChatMessageDocument,
 	ConfigDocument,
 	EventDocument,
+	GroupDocument,
 	IdempotencyRecord,
 	SessionDocument,
 } from "../types";
@@ -50,6 +51,13 @@ export async function getChatMessagesCollection(): Promise<
 	return database.collection<ChatMessageDocument>("chat_messages");
 }
 
+export async function getGroupsCollection(): Promise<
+	Collection<GroupDocument>
+> {
+	const database = await connectDB();
+	return database.collection<GroupDocument>("groups");
+}
+
 export async function ensureIndexes(): Promise<void> {
 	const database = await connectDB();
 
@@ -78,6 +86,10 @@ export async function ensureIndexes(): Promise<void> {
 	await database
 		.collection("chat_messages")
 		.createIndex({ idempotencyKey: 1 }, { unique: true, sparse: true });
+
+	await database
+		.collection("groups")
+		.createIndex({ groupId: 1 }, { unique: true });
 
 	console.log("[DB] All indexes ensured");
 }

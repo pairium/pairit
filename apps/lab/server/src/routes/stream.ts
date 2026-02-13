@@ -4,6 +4,7 @@
  */
 
 import { Elysia, sse, t } from "elysia";
+import { handleDisconnect } from "../lib/matchmaking-pool";
 import {
 	AsyncEventQueue,
 	addConnection,
@@ -71,6 +72,7 @@ export const streamRoutes = new Elysia({ prefix: "/sessions" })
 				heartbeatActive = false;
 			} finally {
 				removeConnection(id, controller);
+				handleDisconnect(id);
 			}
 		},
 		{

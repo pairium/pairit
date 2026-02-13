@@ -11,6 +11,7 @@ import { ensureIndexes } from "./lib/db";
 import { chatRoutes } from "./routes/chat";
 import { configsRoutes } from "./routes/configs";
 import { eventsRoutes } from "./routes/events";
+import { matchmakingRoutes } from "./routes/matchmaking";
 import { sessionsRoutes } from "./routes/sessions";
 import { streamRoutes } from "./routes/stream";
 
@@ -86,7 +87,8 @@ app
 	.use(sessionsRoutes)
 	.use(eventsRoutes)
 	.use(streamRoutes)
-	.use(chatRoutes);
+	.use(chatRoutes)
+	.use(matchmakingRoutes);
 
 // Static file serving (production only - in dev, Vite handles this)
 if (!IS_DEV) {
