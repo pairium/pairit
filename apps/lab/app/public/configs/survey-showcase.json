@@ -271,12 +271,14 @@
 		{
 			"id": "disqualified",
 			"text": "Thanks for your interest. You must be 18 or older to participate.",
-			"end": true
+			"end": true,
+			"endRedirectUrl": "https://app.prolific.com/submissions/complete?cc=DISQUAL"
 		},
 		{
 			"id": "outro",
 			"text": "You're all set! We'll tailor your session based on these inputs.\nLook for a message from the research team soon.\n",
-			"end": true
+			"end": true,
+			"endRedirectUrl": "https://app.prolific.com/submissions/complete?cc=SHOWCASE123"
 		}
 	]
 }

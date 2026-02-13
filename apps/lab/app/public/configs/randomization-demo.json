@@ -232,6 +232,7 @@
 		{
 			"id": "end",
 			"end": true,
+			"endRedirectUrl": "https://app.prolific.com/submissions/complete?cc=RAND123",
 			"components": []
 		}
 	]
