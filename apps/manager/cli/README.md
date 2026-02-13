@@ -2,6 +2,7 @@
 
 A lightweight command line utility for working with Pairit experiment configuration files and media assets. It exposes grouped commands:
 
+- `login` — authenticate with Google OAuth (required for all hosted commands)
 - `config lint` — run minimal validation (schema_version, initialPageId, pages)
 - `config compile` — normalize a YAML config and emit sibling canonical JSON
 - `config upload` — compile and upload a config through the manager service
@@ -10,6 +11,7 @@ A lightweight command line utility for working with Pairit experiment configurat
 - `media upload` — upload a binary asset to Cloud Storage via the manager service (uploads are public unless `--private` is passed; the backend selects the bucket unless you override with `--bucket`)
 - `media list` — list media objects in Cloud Storage
 - `media delete` — delete a media object from Cloud Storage
+- `data export` — export sessions, events, and chat messages for a config as CSV/JSON/JSONL
 
 ## Install
    
@@ -23,18 +25,20 @@ You can invoke the CLI directly using Bun:
 bun run src/index.ts --help
 ```
 
-### Link locally (optional)
+### Link globally (optional)
 
 ```bash
 cd apps/manager/cli
 bun link
-# in another dir
-bun link pairit-cli
 ```
+
+This makes `pairit` available globally from the `bin` field in package.json.
 
 ## Usage
 
 ```bash
+pairit login                                       # Authenticate (required first)
+
 pairit config lint path/to/config.yaml
 pairit config compile path/to/config.yaml
 pairit config upload configs/simple-survey-basic.yaml --owner you@example.com
@@ -44,6 +48,11 @@ pairit config delete 2f3c4d5e...
 pairit media upload assets/video.mp4 --content-type video/mp4
 pairit media list --prefix onboarding/
 pairit media delete onboarding/intro.mp4
+
+pairit data export <configId>                      # Export as CSV to current dir
+pairit data export <configId> --format json        # Export as JSON
+pairit data export <configId> --format jsonl       # Export as JSONL
+pairit data export <configId> --out ./exports      # Export to specific directory
 ```
 
 Add `--private` if you need to keep an object private. Use `--bucket <name>` only when you need to override the backend default.
@@ -64,6 +73,11 @@ bun run apps/manager/cli/src/index.ts media delete onboarding/logo.png --force
 ```
 
 `config compile` writes `configs/simple-survey-basic.json` next to the source YAML. `config upload` defaults the config id to a 16-character base64url string derived from the SHA-256 hash of the compiled JSON (unless `--config-id` overrides it).
+
+`data export` creates three files in the output directory:
+- `{configId}-sessions.{format}` — session ID, user_state fields (flattened), timestamps, status
+- `{configId}-events.{format}` — session ID, event type, component info, payload, timestamps
+- `{configId}-chat-messages.{format}` — group ID, session ID, sender, content, timestamps
 
 All hosted commands require the manager service to be reachable (Cloud Run deployment or local server). Set `PAIRIT_API_URL` to point to the desired target. When unset, the CLI defaults to `http://localhost:3002`.
 

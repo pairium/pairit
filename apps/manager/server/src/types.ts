@@ -32,3 +32,46 @@ export type MediaListItem = {
 	publicUrl?: string;
 	metadata?: Record<string, unknown> | null;
 };
+
+export type ProlificParams = {
+	prolificPid: string;
+	studyId: string;
+	sessionId: string;
+};
+
+export type SessionDocument = {
+	id: string;
+	configId: string;
+	config: unknown;
+	currentPageId: string;
+	user_state: Record<string, unknown>;
+	prolific?: ProlificParams | null;
+	endedAt: string | null;
+	userId?: string | null;
+	createdAt: Date;
+	updatedAt: Date;
+};
+
+export type EventDocument = {
+	type: string;
+	timestamp: string;
+	sessionId: string;
+	configId: string;
+	pageId: string;
+	componentType: string;
+	componentId: string;
+	data: Record<string, unknown>;
+	idempotencyKey: string;
+	createdAt: Date;
+};
+
+export type ChatMessageDocument = {
+	_id?: import("mongodb").ObjectId;
+	groupId: string;
+	sessionId: string;
+	senderId: string;
+	senderType: "participant" | "agent" | "system";
+	content: string;
+	createdAt: Date;
+	idempotencyKey?: string;
+};

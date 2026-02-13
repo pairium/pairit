@@ -9,6 +9,7 @@ import { auth } from "@pairit/auth";
 import { renderPage } from "@pairit/html";
 import { Elysia, t } from "elysia";
 import { configsRoutes } from "./routes/configs";
+import { dataRoutes } from "./routes/data";
 import { mediaRoutes } from "./routes/media";
 
 const IS_DEV = process.env.NODE_ENV === "development";
@@ -361,6 +362,7 @@ app
 		);
 	})
 	.use(configsRoutes)
+	.use(dataRoutes)
 	.use(mediaRoutes)
 	.listen(Number(process.env.PORT) || 3002);
 
