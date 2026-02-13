@@ -2,8 +2,10 @@ import { Link } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import {
 	Bird,
+	Bot,
 	CheckCircle2,
 	CircuitBoard,
+	Dices,
 	FlaskConical,
 	Mail,
 	MessageCircle,
@@ -23,6 +25,7 @@ type DemoConfig = {
 	title: string;
 	description: string;
 	icon: LucideIcon;
+	disabled?: boolean;
 };
 
 const sampleConfigs: DemoConfig[] = [
@@ -35,8 +38,15 @@ const sampleConfigs: DemoConfig[] = [
 	{
 		id: "survey-showcase",
 		title: "Survey",
-		description: "Answer types, branching, media, and Prolific redirect.",
+		description: "Q&A, branching, media, and Prolific redirect.",
 		icon: FlaskConical,
+	},
+	{
+		id: "randomization-demo",
+		title: "Randomization",
+		description: "Random, balanced, and block assignment.",
+		icon: Dices,
+		disabled: true,
 	},
 	{
 		id: "ai-chat",
@@ -47,8 +57,14 @@ const sampleConfigs: DemoConfig[] = [
 	{
 		id: "team-decision",
 		title: "Team decision",
-		description: "Matchmaking and group chat. Open in multiple tabs.",
+		description: "2-person matchmaking and group chat.",
 		icon: Users,
+	},
+	{
+		id: "ai-mediation",
+		title: "AI mediation",
+		description: "2-person chat with AI facilitator. Open in 2 tabs.",
+		icon: Bot,
 	},
 ];
 
@@ -137,37 +153,46 @@ export function Landing() {
 						Browse demo experiments. Visit <code>/$experimentId</code> to test.
 					</p>
 					<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-						{sampleConfigs.map(({ id, title, description, icon: IconComp }) => (
-							<Card key={id} className="flex h-full flex-col justify-between">
-								<CardHeader className="space-y-2">
-									<CardTitle className="flex items-center gap-2 text-base">
-										<IconComp className="h-4 w-4 text-slate-500" />
-										{title}
-									</CardTitle>
-									<CardDescription className="text-xs">
-										{description}{" "}
-										<a
-											href={`/configs/${id}.yaml`}
-											target="_blank"
-											rel="noopener noreferrer"
-											className="text-slate-400 underline hover:text-slate-600"
-										>
-											View config ↗
-										</a>
-									</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<Link
-										to="/$experimentId"
-										params={{ experimentId: id }}
-										search={{ view: true }}
-										className={`${ghostButton} w-full justify-center`}
-									>
-										Open
-									</Link>
-								</CardContent>
-							</Card>
-						))}
+						{sampleConfigs.map(
+							({ id, title, description, icon: IconComp, disabled }) => (
+								<Card key={id} className="flex h-full flex-col justify-between">
+									<CardHeader className="space-y-2">
+										<CardTitle className="flex items-center gap-2 text-base">
+											<IconComp className="h-4 w-4 text-slate-500" />
+											{title}
+										</CardTitle>
+										<CardDescription className="text-xs">
+											{description}{" "}
+											<a
+												href={`/configs/${id}.yaml`}
+												target="_blank"
+												rel="noopener noreferrer"
+												className="text-slate-400 underline hover:text-slate-600"
+											>
+												View config ↗
+											</a>
+										</CardDescription>
+									</CardHeader>
+									<CardContent>
+										{disabled ? (
+											<span
+												className={`${ghostButton} w-full justify-center cursor-not-allowed opacity-50`}
+											>
+												Coming soon
+											</span>
+										) : (
+											<Link
+												to="/$experimentId"
+												params={{ experimentId: id }}
+												className={`${ghostButton} w-full justify-center`}
+											>
+												Open
+											</Link>
+										)}
+									</CardContent>
+								</Card>
+							),
+						)}
 					</div>
 				</section>
 

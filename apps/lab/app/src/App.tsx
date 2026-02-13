@@ -140,6 +140,7 @@ export default function App() {
 						localConfig.pages[r.currentPageId]?.endRedirectUrl ?? null,
 					);
 					setEndedAt(null);
+					if (r.user_state) setUserState(r.user_state);
 				} else {
 					setMode("remote");
 					setCompiledConfig(null);
@@ -148,6 +149,7 @@ export default function App() {
 					setPage(r.page);
 					setEndRedirectUrl(r.page?.endRedirectUrl ?? null);
 					setEndedAt(null);
+					if (r.user_state) setUserState(r.user_state);
 				}
 			} catch (e: unknown) {
 				if (canceled) return;
@@ -242,7 +244,9 @@ export default function App() {
 			setError(null);
 			try {
 				// Update remote session state
-				await advance(sessionId, target);
+				const r = await advance(sessionId, target);
+				// Sync user_state from server
+				if (r.user_state) setUserState(r.user_state);
 				// But use local page for rendering
 				setCurrentPageId(target);
 				setPage(nextPage);
@@ -261,6 +265,8 @@ export default function App() {
 		setError(null);
 		try {
 			const r = await advance(sessionId, target);
+			// Sync user_state from server
+			if (r.user_state) setUserState(r.user_state);
 			setPage(r.page);
 			setEndRedirectUrl(r.page?.endRedirectUrl ?? null);
 			setEndedAt(r.endedAt);

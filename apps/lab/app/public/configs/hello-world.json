@@ -1,50 +1,50 @@
 {
-  "schema_version": "0.1.0",
-  "initialPageId": "survey",
-  "nodes": [
-    {
-      "id": "survey",
-      "components": [
-        {
-          "type": "survey",
-          "props": {
-            "items": [
-              {
-                "id": "mood",
-                "text": "How are you feeling today?",
-                "answer": "likert5"
-              }
-            ]
-          }
-        },
-        {
-          "type": "buttons",
-          "props": {
-            "buttons": [
-              {
-                "id": "done",
-                "text": "Submit",
-                "action": {
-                  "type": "go_to",
-                  "target": "thanks"
-                }
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "id": "thanks",
-      "end": true,
-      "components": [
-        {
-          "type": "text",
-          "props": {
-            "text": "Thanks for your response!"
-          }
-        }
-      ]
-    }
-  ]
+	"schema_version": "0.1.0",
+	"initialPageId": "survey",
+	"nodes": [
+		{
+			"id": "survey",
+			"components": [
+				{
+					"type": "survey",
+					"props": {
+						"items": [
+							{
+								"id": "mood",
+								"text": "How are you feeling today?",
+								"answer": "likert5"
+							}
+						]
+					}
+				},
+				{
+					"type": "buttons",
+					"props": {
+						"buttons": [
+							{
+								"id": "done",
+								"text": "Submit",
+								"action": {
+									"type": "go_to",
+									"target": "thanks"
+								}
+							}
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "thanks",
+			"end": true,
+			"components": [
+				{
+					"type": "text",
+					"props": {
+						"text": "Thanks for your response!"
+					}
+				}
+			]
+		}
+	]
 }

@@ -1,0 +1,142 @@
+{
+	"schema_version": "0.1.0",
+	"initialPageId": "intro",
+	"nodes": [
+		{
+			"id": "intro",
+			"components": [
+				{
+					"type": "text",
+					"props": {
+						"text": "# Randomization Strategies\n\nPairit supports three treatment assignment strategies for experiments:\n\n**1. Random**\nPure random selection. Each group has equal probability of any condition.\nSimple but may result in unbalanced groups, especially with small samples.\n\n**2. Balanced Random**\nAssigns to the condition with fewest groups so far.\nEnsures equal distribution while maintaining unpredictability.\n\n**3. Block**\nRound-robin through conditions: A, B, A, B, A, B...\nDeterministic alternation for strict balance.\n"
+					}
+				},
+				{
+					"type": "buttons",
+					"props": {
+						"buttons": [
+							{
+								"id": "next",
+								"text": "See Examples",
+								"action": {
+									"type": "go_to",
+									"target": "examples"
+								}
+							}
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "examples",
+			"components": [
+				{
+					"type": "text",
+					"props": {
+						"text": "## Configuration Examples\n\nHere's how to configure each strategy in your YAML:\n\n```yaml\nmatchmaking:\n  - id: my_pool\n    num_users: 2\n    timeoutSeconds: 120\n    assignment:\n      type: random  # or balanced_random, or block\n      conditions:\n        - treatment\n        - control\n```\n\nThe assigned condition is stored in `user_state.treatment` and can be used for branching:\n\n```yaml\n- type: buttons\n  props:\n    buttons:\n      - id: continue\n        text: \"Continue\"\n        action:\n          type: go_to\n          branches:\n            - when: \"user_state.treatment == 'treatment'\"\n              target: treatment_page\n            - target: control_page\n```\n"
+					}
+				},
+				{
+					"type": "buttons",
+					"props": {
+						"buttons": [
+							{
+								"id": "next",
+								"text": "When to Use Each",
+								"action": {
+									"type": "go_to",
+									"target": "when_to_use"
+								}
+							}
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "when_to_use",
+			"components": [
+				{
+					"type": "text",
+					"props": {
+						"text": "## When to Use Each Strategy\n\n**Random**\n- Best for: Large samples, simple setup\n- Trade-off: May be unbalanced short-term\n\n**Balanced Random**\n- Best for: Most experiments\n- Trade-off: Slightly predictable near balance point\n\n**Block**\n- Best for: Strict alternation needed\n- Trade-off: Fully predictable sequence\n\n**Recommendation:** Use `balanced_random` for most experiments. It provides the best balance of randomization and equal distribution.\n"
+					}
+				},
+				{
+					"type": "buttons",
+					"props": {
+						"buttons": [
+							{
+								"id": "explore",
+								"text": "Explore Condition Paths",
+								"action": {
+									"type": "go_to",
+									"target": "explore"
+								}
+							}
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "explore",
+			"components": [
+				{
+					"type": "text",
+					"props": {
+						"text": "## Explore Condition Paths\n\nIn a real experiment, participants would be automatically assigned to one condition.\n\nFor this demo, click below to see what each path looks like:\n"
+					}
+				},
+				{
+					"type": "buttons",
+					"props": {
+						"buttons": [
+							{
+								"id": "treatment",
+								"text": "See Treatment Path",
+								"action": {
+									"type": "go_to",
+									"target": "result_treatment"
+								}
+							},
+							{
+								"id": "control",
+								"text": "See Control Path",
+								"action": {
+									"type": "go_to",
+									"target": "result_control"
+								}
+							}
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "result_treatment",
+			"end": true,
+			"components": [
+				{
+					"type": "text",
+					"props": {
+						"text": "# Treatment Condition\n\nIn a real experiment, this participant was assigned to **treatment**.\n\nTheir `user_state.treatment` would be set to `\"treatment\"`, and all subsequent branching logic would route them through the treatment experience.\n\nThis assignment is stored in MongoDB and available for data analysis.\n"
+					}
+				}
+			]
+		},
+		{
+			"id": "result_control",
+			"end": true,
+			"components": [
+				{
+					"type": "text",
+					"props": {
+						"text": "# Control Condition\n\nIn a real experiment, this participant was assigned to **control**.\n\nTheir `user_state.treatment` would be set to `\"control\"`, and all subsequent branching logic would route them through the control experience.\n\nThis assignment is stored in MongoDB and available for data analysis.\n"
+					}
+				}
+			]
+		}
+	]
+}

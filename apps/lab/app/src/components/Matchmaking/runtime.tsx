@@ -14,7 +14,8 @@ type MatchmakingProps = {
 	num_users?: number;
 	timeoutSeconds?: number;
 	timeoutTarget?: string;
-	assignment?: "random" | "round-robin";
+	assignmentType?: "random" | "balanced_random" | "block";
+	conditions?: string[];
 	onMatchTarget?: string;
 };
 
@@ -53,7 +54,8 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 		const targetCount = component.props.num_users ?? 2;
 		const timeoutSeconds = component.props.timeoutSeconds ?? 120;
 		const timeoutTarget = component.props.timeoutTarget;
-		const assignment = component.props.assignment;
+		const assignmentType = component.props.assignmentType;
+		const conditions = component.props.conditions;
 		const onMatchTarget = component.props.onMatchTarget;
 
 		// Handle match found
@@ -132,7 +134,8 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 						num_users: targetCount,
 						timeoutSeconds,
 						timeoutTarget,
-						assignment,
+						assignmentType,
+						conditions,
 					});
 
 					if (result.status === "waiting") {
@@ -182,7 +185,8 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 			targetCount,
 			timeoutSeconds,
 			timeoutTarget,
-			assignment,
+			assignmentType,
+			conditions,
 			handleMatchFound,
 			handleMatchTimeout,
 		]);

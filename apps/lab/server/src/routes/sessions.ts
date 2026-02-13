@@ -234,6 +234,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				configId: body.configId,
 				currentPageId: session.currentPageId,
 				page,
+				user_state: session.user_state,
 			};
 		},
 		{
@@ -268,6 +269,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				currentPageId: session.currentPageId,
 				page,
 				endedAt: session.endedAt ?? null,
+				user_state: session.user_state ?? {},
 			};
 		},
 		{
@@ -324,6 +326,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 					currentPageId: session.currentPageId,
 					page,
 					endedAt: session.endedAt ?? null,
+					user_state: session.user_state ?? {},
 					deduplicated: true,
 				};
 			}
@@ -355,6 +358,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				currentPageId: updated.currentPageId,
 				page,
 				endedAt: updated.endedAt ?? null,
+				user_state: updated.user_state ?? {},
 			};
 		},
 		{
