@@ -34,7 +34,8 @@ const targetConfigs: DemoConfig[] = [
 	{
 		id: "hello-world",
 		title: "Config 0: Hello world",
-		description: "Simplest possible — one question, one button, data in MongoDB.",
+		description:
+			"Simplest possible — one question, one button, data in MongoDB.",
 		icon: CheckCircle2,
 		issues: "P0-1, P0-2",
 	},
@@ -58,12 +59,17 @@ const targetConfigs: DemoConfig[] = [
 		description: "Matchmaking + group chat + AI facilitator.",
 		icon: Users,
 		issues: "P0-7, P0-8",
-		disabled: true,
 	},
 ];
 
 // Additional showcase configs
 const showcaseConfigs: DemoConfig[] = [
+	{
+		id: "matchmaking-test",
+		title: "Matchmaking test",
+		description: "Simple 2-person matchmaking test. Open in 2 tabs.",
+		icon: Users,
+	},
 	{
 		id: "survey-showcase",
 		title: "Survey showcase",
@@ -190,14 +196,14 @@ export function Landing() {
 										)}
 									</CardHeader>
 									<CardContent>
-									<Link
-										to="/$experimentId"
-										params={{ experimentId: id }}
-										search={{ view: true }}
-										className={`${buttonBase} ${disabled ? "opacity-50 pointer-events-none" : ""}`}
-									>
-										Open {id}
-									</Link>
+										<Link
+											to="/$experimentId"
+											params={{ experimentId: id }}
+											search={{ view: true }}
+											className={`${buttonBase} ${disabled ? "opacity-50 pointer-events-none" : ""}`}
+										>
+											Open {id}
+										</Link>
 									</CardContent>
 								</Card>
 							),
@@ -213,29 +219,31 @@ export function Landing() {
 						Additional demos for testing specific components.
 					</p>
 					<div className="grid gap-4 md:grid-cols-3">
-						{showcaseConfigs.map(({ id, title, description, icon: IconComp }) => (
-							<Card key={id} className="flex h-full flex-col justify-between">
-								<CardHeader className="space-y-2">
-									<CardTitle className="flex items-center gap-2 text-base">
-										<IconComp className="h-4 w-4 text-slate-500" />
-										{title}
-									</CardTitle>
-									<CardDescription className="text-xs">
-										{description}
-									</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<Link
-										to="/$experimentId"
-										params={{ experimentId: id }}
-										search={{ view: true }}
-										className={ghostButton}
-									>
-										Open
-									</Link>
-								</CardContent>
-							</Card>
-						))}
+						{showcaseConfigs.map(
+							({ id, title, description, icon: IconComp }) => (
+								<Card key={id} className="flex h-full flex-col justify-between">
+									<CardHeader className="space-y-2">
+										<CardTitle className="flex items-center gap-2 text-base">
+											<IconComp className="h-4 w-4 text-slate-500" />
+											{title}
+										</CardTitle>
+										<CardDescription className="text-xs">
+											{description}
+										</CardDescription>
+									</CardHeader>
+									<CardContent>
+										<Link
+											to="/$experimentId"
+											params={{ experimentId: id }}
+											search={{ view: true }}
+											className={ghostButton}
+										>
+											Open
+										</Link>
+									</CardContent>
+								</Card>
+							),
+						)}
 					</div>
 				</section>
 

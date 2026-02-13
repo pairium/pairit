@@ -163,3 +163,49 @@ export async function startChatAgents(
 	});
 	if (!r.ok) throw new Error("Failed to start chat agents");
 }
+
+// Matchmaking API
+
+export type MatchmakingParams = {
+	poolId: string;
+	num_users: number;
+	timeoutSeconds: number;
+	timeoutTarget?: string;
+	assignment?: "random" | "round-robin";
+};
+
+export type MatchmakingResponse =
+	| { status: "waiting"; position: number }
+	| { status: "matched"; groupId: string; treatment: string };
+
+export type CancelMatchmakingResponse =
+	| { status: "cancelled" }
+	| { status: "not_found" };
+
+export async function joinMatchmaking(
+	sessionId: string,
+	params: MatchmakingParams,
+): Promise<MatchmakingResponse> {
+	const r = await fetch(`${baseUrl}/sessions/${sessionId}/matchmake`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		credentials: "include",
+		body: JSON.stringify(params),
+	});
+	if (!r.ok) throw new Error("Failed to join matchmaking");
+	return r.json();
+}
+
+export async function cancelMatchmaking(
+	sessionId: string,
+	poolId: string,
+): Promise<CancelMatchmakingResponse> {
+	const r = await fetch(`${baseUrl}/sessions/${sessionId}/matchmake/cancel`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		credentials: "include",
+		body: JSON.stringify({ poolId }),
+	});
+	if (!r.ok) throw new Error("Failed to cancel matchmaking");
+	return r.json();
+}

@@ -90,6 +90,14 @@ class SSEClient {
 		this.eventSource.addEventListener("chat_message_delta", (event) => {
 			this.dispatchEvent("chat_message_delta", JSON.parse(event.data));
 		});
+
+		this.eventSource.addEventListener("match_found", (event) => {
+			this.dispatchEvent("match_found", JSON.parse(event.data));
+		});
+
+		this.eventSource.addEventListener("match_timeout", (event) => {
+			this.dispatchEvent("match_timeout", JSON.parse(event.data));
+		});
 	}
 
 	private handleDisconnect(): void {

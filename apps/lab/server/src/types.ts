@@ -93,3 +93,13 @@ export type ChatMessageDocument = {
 	createdAt: Date;
 	idempotencyKey?: string;
 };
+
+export type GroupDocument = {
+	groupId: string;
+	configId: string;
+	poolId: string;
+	memberSessionIds: string[];
+	treatment: string;
+	matchedAt: Date;
+	status: "active" | "completed";
+};
