@@ -212,3 +212,30 @@ export async function cancelMatchmaking(
 	if (!r.ok) throw new Error("Failed to cancel matchmaking");
 	return r.json();
 }
+
+// Randomization API
+
+export type RandomizeParams = {
+	assignmentType?: "random" | "balanced_random" | "block";
+	conditions?: string[];
+	stateKey?: string;
+};
+
+export type RandomizeResponse = {
+	condition: string;
+	existing: boolean;
+};
+
+export async function randomize(
+	sessionId: string,
+	params: RandomizeParams = {},
+): Promise<RandomizeResponse> {
+	const r = await fetch(`${baseUrl}/sessions/${sessionId}/randomize`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		credentials: "include",
+		body: JSON.stringify(params),
+	});
+	if (!r.ok) throw new Error("Failed to randomize");
+	return r.json();
+}

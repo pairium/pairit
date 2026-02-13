@@ -48,6 +48,14 @@ packages/
 - **Backend**: Elysia, MongoDB
 - **Auth**: Better Auth with Google OAuth
 
+## Experiment Configs
+
+Configs live in `apps/lab/app/public/configs/`:
+- `.yaml` files are user-facing source configs
+- `.json` files are compiled versions used by the runtime
+
+When updating configs, always update both YAML and JSON to keep them in sync.
+
 ## Conventions
 
 - Package names: `@pairit/{name}`

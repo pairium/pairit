@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import Header from "./components/Header";
 import {
 	AuthRequiredError,
-	type ProlificParams,
 	advance,
+	type ProlificParams,
 	startSession,
 } from "./lib/api";
 import { useSession } from "./lib/auth-client";

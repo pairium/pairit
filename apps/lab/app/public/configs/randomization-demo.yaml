@@ -1,5 +1,5 @@
-# Randomization Demo: Shows 3 assignment strategies
-# Educational walkthrough - no actual matchmaking
+# Randomization Demo: Shows standalone randomization component
+# Demonstrates 5 sequential randomizations
 
 schema_version: 0.1.0
 initialPageId: intro
@@ -10,152 +10,155 @@ pages:
       - type: text
         props:
           text: |
-            # Randomization Strategies
+            # Randomization Demo
 
-            Pairit supports three treatment assignment strategies for experiments:
+            This demo shows how the standalone `randomization` component assigns participants to experimental conditions.
 
-            **1. Random**
-            Pure random selection. Each group has equal probability of any condition.
-            Simple but may result in unbalanced groups, especially with small samples.
+            You will be randomized 5 times to see random assignment in action.
+      - type: buttons
+        props:
+          buttons:
+            - id: start
+              text: "Start Randomizations"
+              action:
+                type: go_to
+                target: randomize_1
 
-            **2. Balanced Random**
-            Assigns to the condition with fewest groups so far.
-            Ensures equal distribution while maintaining unpredictability.
-
-            **3. Block**
-            Round-robin through conditions: A, B, A, B, A, B...
-            Deterministic alternation for strict balance.
+  - id: randomize_1
+    components:
+      - type: text
+        props:
+          text: "## Randomization 1 of 5"
+      - type: randomization
+        props:
+          assignmentType: random
+          conditions:
+            - A
+            - B
+          stateKey: condition_1
+          showAssignment: true
       - type: buttons
         props:
           buttons:
             - id: next
-              text: "See Examples"
+              text: "Next"
               action:
                 type: go_to
-                target: examples
+                target: randomize_2
 
-  - id: examples
+  - id: randomize_2
     components:
       - type: text
         props:
-          text: |
-            ## Configuration Examples
-
-            Here's how to configure each strategy in your YAML:
-
-            ```yaml
-            matchmaking:
-              - id: my_pool
-                num_users: 2
-                timeoutSeconds: 120
-                assignment:
-                  type: random  # or balanced_random, or block
-                  conditions:
-                    - treatment
-                    - control
-            ```
-
-            The assigned condition is stored in `user_state.treatment` and can be used for branching:
-
-            ```yaml
-            - type: buttons
-              props:
-                buttons:
-                  - id: continue
-                    text: "Continue"
-                    action:
-                      type: go_to
-                      branches:
-                        - when: "user_state.treatment == 'treatment'"
-                          target: treatment_page
-                        - target: control_page
-            ```
+          text: "## Randomization 2 of 5"
+      - type: randomization
+        props:
+          assignmentType: random
+          conditions:
+            - A
+            - B
+          stateKey: condition_2
+          showAssignment: true
       - type: buttons
         props:
           buttons:
             - id: next
-              text: "When to Use Each"
+              text: "Next"
               action:
                 type: go_to
-                target: when_to_use
+                target: randomize_3
 
-  - id: when_to_use
+  - id: randomize_3
     components:
       - type: text
         props:
-          text: |
-            ## When to Use Each Strategy
-
-            **Random**
-            - Best for: Large samples, simple setup
-            - Trade-off: May be unbalanced short-term
-
-            **Balanced Random**
-            - Best for: Most experiments
-            - Trade-off: Slightly predictable near balance point
-
-            **Block**
-            - Best for: Strict alternation needed
-            - Trade-off: Fully predictable sequence
-
-            **Recommendation:** Use `balanced_random` for most experiments. It provides the best balance of randomization and equal distribution.
+          text: "## Randomization 3 of 5"
+      - type: randomization
+        props:
+          assignmentType: random
+          conditions:
+            - A
+            - B
+          stateKey: condition_3
+          showAssignment: true
       - type: buttons
         props:
           buttons:
-            - id: explore
-              text: "Explore Condition Paths"
+            - id: next
+              text: "Next"
               action:
                 type: go_to
-                target: explore
+                target: randomize_4
 
-  - id: explore
+  - id: randomize_4
     components:
       - type: text
         props:
-          text: |
-            ## Explore Condition Paths
-
-            In a real experiment, participants would be automatically assigned to one condition.
-
-            For this demo, click below to see what each path looks like:
+          text: "## Randomization 4 of 5"
+      - type: randomization
+        props:
+          assignmentType: random
+          conditions:
+            - A
+            - B
+          stateKey: condition_4
+          showAssignment: true
       - type: buttons
         props:
           buttons:
-            - id: treatment
-              text: "See Treatment Path"
+            - id: next
+              text: "Next"
               action:
                 type: go_to
-                target: result_treatment
-            - id: control
-              text: "See Control Path"
-              action:
-                type: go_to
-                target: result_control
+                target: randomize_5
 
-  - id: result_treatment
-    end: true
+  - id: randomize_5
+    components:
+      - type: text
+        props:
+          text: "## Randomization 5 of 5"
+      - type: randomization
+        props:
+          assignmentType: random
+          conditions:
+            - A
+            - B
+          stateKey: condition_5
+          showAssignment: true
+      - type: buttons
+        props:
+          buttons:
+            - id: next
+              text: "See Results"
+              action:
+                type: go_to
+                target: results
+
+  - id: results
     components:
       - type: text
         props:
           text: |
-            # Treatment Condition
+            # Results
 
-            In a real experiment, this participant was assigned to **treatment**.
+            You have been assigned to the following conditions:
 
-            Their `user_state.treatment` would be set to `"treatment"`, and all subsequent branching logic would route them through the treatment experience.
+            - **Randomization 1:** {{user_state.condition_1}}
+            - **Randomization 2:** {{user_state.condition_2}}
+            - **Randomization 3:** {{user_state.condition_3}}
+            - **Randomization 4:** {{user_state.condition_4}}
+            - **Randomization 5:** {{user_state.condition_5}}
 
-            This assignment is stored in MongoDB and available for data analysis.
-
-  - id: result_control
-    end: true
-    components:
-      - type: text
+            Each randomization is independent with 50/50 probability for A or B.
+      - type: buttons
         props:
-          text: |
-            # Control Condition
+          buttons:
+            - id: finish
+              text: "Finish"
+              action:
+                type: go_to
+                target: end
 
-            In a real experiment, this participant was assigned to **control**.
-
-            Their `user_state.treatment` would be set to `"control"`, and all subsequent branching logic would route them through the control experience.
-
-            This assignment is stored in MongoDB and available for data analysis.
+  - id: end
+    end: true
+    components: []

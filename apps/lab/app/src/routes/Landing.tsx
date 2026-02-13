@@ -46,7 +46,6 @@ const sampleConfigs: DemoConfig[] = [
 		title: "Randomization",
 		description: "Random, balanced, and block assignment.",
 		icon: Dices,
-		disabled: true,
 	},
 	{
 		id: "ai-chat",

@@ -6,7 +6,11 @@ import type {
 	TextComponent,
 } from "./types";
 
-type RawButton = Partial<Button> & { text?: unknown; action?: unknown; highlightWhen?: unknown };
+type RawButton = Partial<Button> & {
+	text?: unknown;
+	action?: unknown;
+	highlightWhen?: unknown;
+};
 
 type RawComponent =
 	| string

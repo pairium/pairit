@@ -5,3 +5,4 @@ import "./Survey/runtime";
 import "./PagedSurvey/runtime";
 import "./Chat/runtime";
 import "./Matchmaking/runtime";
+import "./Randomization/runtime";
