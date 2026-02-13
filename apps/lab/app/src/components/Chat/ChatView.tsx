@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
+import { ParticipantIcon } from "./ParticipantIcon";
 
 export type ChatMessage = {
 	messageId: string;
@@ -118,7 +119,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 
 	// Determine bubble styling
 	let bubbleClasses = "max-w-[80%] rounded-2xl px-4 py-2 text-sm";
-	let alignmentClasses = "flex";
+	let alignmentClasses = "flex items-start gap-2";
 
 	if (isSystem) {
 		// System messages: centered, muted
@@ -127,20 +128,27 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 			"rounded-lg bg-slate-100 px-3 py-1.5 text-xs text-slate-500 italic";
 	} else if (isOwn) {
 		// Own messages: right-aligned, dark background
-		alignmentClasses = "flex justify-end";
+		alignmentClasses = "flex items-start justify-end gap-2";
 		bubbleClasses += " bg-slate-700 text-white";
 	} else if (isAgent) {
 		// Agent messages: left-aligned, light background
-		alignmentClasses = "flex justify-start";
+		alignmentClasses = "flex items-start justify-start gap-2";
 		bubbleClasses += " bg-slate-100 text-slate-900";
 	} else {
 		// Other participant messages: left-aligned, light background
-		alignmentClasses = "flex justify-start";
+		alignmentClasses = "flex items-start justify-start gap-2";
 		bubbleClasses += " bg-slate-200 text-slate-900";
 	}
 
 	return (
 		<div className={alignmentClasses}>
+			{!isSystem && !isOwn && (
+				<ParticipantIcon
+					senderId={message.senderId}
+					senderType={message.senderType}
+					isOwn={false}
+				/>
+			)}
 			<div className={bubbleClasses}>
 				<div
 					className={`prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-headings:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 ${isOwn ? "prose-invert" : ""}`}
@@ -174,13 +182,25 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 					)}
 				</div>
 			</div>
+			{!isSystem && isOwn && (
+				<ParticipantIcon
+					senderId={message.senderId}
+					senderType={message.senderType}
+					isOwn={true}
+				/>
+			)}
 		</div>
 	);
 }
 
 function StreamingBubble({ message }: { message: StreamingMessage }) {
 	return (
-		<div className="flex justify-start">
+		<div className="flex items-start justify-start gap-2">
+			<ParticipantIcon
+				senderId={message.senderId}
+				senderType={message.senderType}
+				isOwn={false}
+			/>
 			<div className="max-w-[80%] rounded-2xl bg-slate-100 px-4 py-2 text-sm text-slate-900">
 				<div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-headings:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
 					{message.content ? (
