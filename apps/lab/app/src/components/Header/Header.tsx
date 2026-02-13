@@ -16,23 +16,32 @@ export default function Header({
 }: HeaderProps) {
 	const { user, isLoading, isAuthenticated } = useAuth();
 
+	const shortSessionId = sessionId?.slice(0, 8);
 	const status =
 		mode === "remote"
 			? sessionId
 				? compiledConfig
-					? `Session: ${sessionId} (HYBRID - local config, remote events)`
-					: `Session: ${sessionId} (REMOTE - events enabled)`
+					? `Session: ${shortSessionId}… (HYBRID)`
+					: `Session: ${shortSessionId}… (REMOTE)`
 				: "No session"
 			: mode === "local" && experimentId
-				? `Config: ${experimentId} (LOCAL - no events)`
+				? `Config: ${experimentId} (LOCAL)`
 				: "—";
+	const statusTitle =
+		mode === "remote" && sessionId
+			? compiledConfig
+				? `Session: ${sessionId} (HYBRID - local config, remote events)`
+				: `Session: ${sessionId} (REMOTE - events enabled)`
+			: mode === "local" && experimentId
+				? `Config: ${experimentId} (LOCAL - no events)`
+				: undefined;
 
 	return (
 		<header className="border-b border-slate-200 bg-white/80 backdrop-blur">
 			<div className="mx-auto flex w-full max-w-4xl items-center justify-between px-6 py-4">
 				<div className="text-lg font-semibold tracking-tight">Pairit Lab</div>
 				<div className="flex items-center gap-4">
-					<div className="text-sm text-slate-500">{status}</div>
+					<div className="text-sm text-slate-500" title={statusTitle}>{status}</div>
 					{!isLoading &&
 						(isAuthenticated ? (
 							<div className="flex items-center gap-3">
