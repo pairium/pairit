@@ -37,6 +37,7 @@
 		{
 			"id": "thanks",
 			"end": true,
+			"endRedirectUrl": "https://app.prolific.com/submissions/complete?cc=HELLO123",
 			"components": [
 				{
 					"type": "text",

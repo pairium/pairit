@@ -329,16 +329,28 @@ export default function App() {
 							<>
 								<div className="text-lg font-medium">Thanks, that's it.</div>
 								<div className="text-sm text-slate-500">
-									Continue to the next step below.
+									{endRedirectUrl.toLowerCase().includes("prolific")
+										? "Click below to complete on Prolific."
+										: "Continue to the next step below."}
 								</div>
-								<div className="flex justify-center">
+								<div className="flex justify-center gap-3">
+									<Button
+										variant="ghost"
+										onClick={() => {
+											window.location.href = "/";
+										}}
+									>
+										Back to samples
+									</Button>
 									<Button
 										onClick={() => {
 											if (!endRedirectUrl) return;
 											window.location.assign(endRedirectUrl);
 										}}
 									>
-										Continue
+										{endRedirectUrl.toLowerCase().includes("prolific")
+											? "Continue to Prolific"
+											: "Continue"}
 									</Button>
 								</div>
 							</>
@@ -347,6 +359,16 @@ export default function App() {
 								<div className="text-lg font-medium">Thanks, that's it.</div>
 								<div className="text-sm text-slate-500">
 									You can close this window.
+								</div>
+								<div className="flex justify-center">
+									<Button
+										variant="ghost"
+										onClick={() => {
+											window.location.href = "/";
+										}}
+									>
+										Back to samples
+									</Button>
 								</div>
 							</>
 						)}

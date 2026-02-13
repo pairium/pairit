@@ -79,6 +79,7 @@ pages:
 
   - id: outro
     end: true
+    endRedirectUrl: "https://app.prolific.com/submissions/complete?cc=SURVEY123"
     components:
       - type: text
         props:

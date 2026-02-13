@@ -224,6 +224,7 @@ pages:
 
   - id: outro
     end: true
+    endRedirectUrl: "https://app.prolific.com/submissions/complete?cc=EVENTS123"
     text: "Thank you for exploring the component events showcase! All your interactions have been recorded as events for analysis."
     buttons:
       - id: restart

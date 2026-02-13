@@ -176,9 +176,11 @@ pages:
   - id: disqualified
     text: "Thanks for your interest. You must be 18 or older to participate."
     end: true
+    endRedirectUrl: "https://app.prolific.com/submissions/complete?cc=DISQUAL"
 
   - id: outro
     text: |
       You're all set! We'll tailor your session based on these inputs.
       Look for a message from the research team soon.
     end: true
+    endRedirectUrl: "https://app.prolific.com/submissions/complete?cc=SHOWCASE123"
