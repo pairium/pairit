@@ -7,7 +7,7 @@ set -e
 
 # Resolve script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo "📂 Project Root: $PROJECT_ROOT"
 cd "$PROJECT_ROOT"
@@ -25,7 +25,7 @@ fi
 
 # Configuration (args override .env)
 PROJECT_ID=${1:-$PROJECT_ID}
-REGION=${2:-${REGION:-us-east4}}
+REGION=${2:-${REGION:-us-central1}}
 REPO_NAME="pairit-repo"
 
 # Service names
@@ -103,7 +103,7 @@ rm "$CLOUDBUILD_MANAGER"
 MANAGER_ENV="NODE_ENV=production"
 MANAGER_ENV="$MANAGER_ENV++MONGODB_URI=$MONGODB_URI"
 MANAGER_ENV="$MANAGER_ENV++STORAGE_BACKEND=gcs"
-MANAGER_ENV="$MANAGER_ENV++STORAGE_PATH=${STORAGE_PATH:-pairit-media-prod}"
+MANAGER_ENV="$MANAGER_ENV++STORAGE_PATH=${STORAGE_PATH:-pairit-lab-media}"
 MANAGER_ENV="$MANAGER_ENV++GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"
 MANAGER_ENV="$MANAGER_ENV++GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET"
 MANAGER_ENV="$MANAGER_ENV++AUTH_SECRET=$AUTH_SECRET"
@@ -157,7 +157,7 @@ rm "$CLOUDBUILD_LAB"
 LAB_ENV="NODE_ENV=production"
 LAB_ENV="$LAB_ENV++MONGODB_URI=$MONGODB_URI"
 LAB_ENV="$LAB_ENV++STORAGE_BACKEND=gcs"
-LAB_ENV="$LAB_ENV++STORAGE_PATH=${STORAGE_PATH:-pairit-media-prod}"
+LAB_ENV="$LAB_ENV++STORAGE_PATH=${STORAGE_PATH:-pairit-lab-media}"
 LAB_ENV="$LAB_ENV++GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"
 LAB_ENV="$LAB_ENV++GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET"
 LAB_ENV="$LAB_ENV++AUTH_SECRET=$AUTH_SECRET"
@@ -190,4 +190,4 @@ echo "1. Add OAuth redirect URIs to Google Cloud Console:"
 echo "   - ${MANAGER_URL}/api/auth/callback/google"
 echo "   - ${LAB_SERVICE_URL}/api/auth/callback/google"
 echo "2. Whitelist Cloud Run IPs in MongoDB Atlas (or use 0.0.0.0/0 for dev)"
-echo "3. Verify IAM permissions for GCS bucket '${STORAGE_PATH:-pairit-media-prod}'"
+echo "3. Verify IAM permissions for GCS bucket '${STORAGE_PATH:-pairit-lab-media}'"
