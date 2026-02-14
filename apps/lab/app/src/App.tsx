@@ -187,7 +187,7 @@ export default function App() {
 		return () => {
 			canceled = true;
 		};
-	}, [experimentId, authLoading, isAuthenticated]);
+	}, [experimentId, authLoading]);
 
 	// Connect SSE when session is available
 	useEffect(() => {

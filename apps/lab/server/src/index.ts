@@ -81,7 +81,7 @@ if (IS_DEV) {
 
 // Mount Better Auth handler - handles all paths under /api/auth/
 // Using onRequest hook to intercept all auth paths before other routes
-app.onRequest(({ request, set }) => {
+app.onRequest(({ request }) => {
 	const url = new URL(request.url);
 	if (url.pathname.startsWith("/api/auth/")) {
 		return auth.handler(request);

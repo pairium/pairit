@@ -1,9 +1,9 @@
 FROM oven/bun:1 AS base
 WORKDIR /app
 
-# Install dependencies
-FROM base AS deps
-COPY package.json ./
+# Build the app
+FROM base AS builder
+COPY package.json bun.lock ./
 COPY apps/lab/server/package.json ./apps/lab/server/
 COPY apps/lab/app/package.json ./apps/lab/app/
 COPY apps/manager/server/package.json ./apps/manager/server/
@@ -11,14 +11,8 @@ COPY packages/auth/package.json ./packages/auth/
 COPY packages/db/package.json ./packages/db/
 COPY packages/html/package.json ./packages/html/
 COPY packages/storage/package.json ./packages/storage/
-RUN bun install
-
-# Build the app
-FROM base AS builder
-COPY --from=deps /app/node_modules ./node_modules
-
 COPY . .
-RUN bun install
+RUN bun install --frozen-lockfile
 # Build frontend
 ARG VITE_MANAGER_URL
 ENV VITE_MANAGER_URL=$VITE_MANAGER_URL

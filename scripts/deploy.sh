@@ -54,9 +54,9 @@ LAB_SERVICE_URL="https://${LAB_SERVICE}-${PROJECT_NUMBER}.${REGION}.run.app"
 echo "📍 Manager URL: $MANAGER_SERVICE_URL"
 echo "📍 Lab URL: $LAB_SERVICE_URL"
 
-# Debug: Redact and show MONGODB_URI
+# Check MONGODB_URI is set
 if [ -n "$MONGODB_URI" ]; then
-    echo "🔍 MONGODB_URI is set (starts with ${MONGODB_URI:0:15}...)"
+    echo "✅ MONGODB_URI is set"
 else
     echo "❌ MONGODB_URI is NOT set in the deployment shell!"
 fi

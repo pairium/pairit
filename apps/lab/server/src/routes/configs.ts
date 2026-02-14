@@ -16,7 +16,7 @@ function isPage(
 	value: unknown,
 ): value is { id: string; end?: boolean; components?: unknown[] } {
 	if (!value || typeof value !== "object") return false;
-	const page = value as any;
+	const page = value as Record<string, unknown>;
 	if (typeof page.id !== "string") return false;
 	if (page.components && !Array.isArray(page.components)) return false;
 	return true;
@@ -43,7 +43,10 @@ function coerceConfig(raw: unknown): Config | null {
 		return null;
 	}
 
-	const pages: Record<string, any> = {};
+	const pages: Record<
+		string,
+		{ id: string; end?: boolean; components?: unknown[] }
+	> = {};
 
 	if (Array.isArray(pagesInput)) {
 		for (const entry of pagesInput) {
