@@ -336,19 +336,37 @@ app
 	.get("/", () => {
 		const content = `
         <section class="hero">
-            <h1>Platform Admin</h1>
-            <p class="subtitle">Consolidated management for your experiments, media assets, and configurations.</p>
+            <h1>Pairit Manager</h1>
+            <p class="subtitle">API server for the Pairit CLI.</p>
         </section>
 
-        <div class="card">
-            <div>
+        <div class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+            <div class="card">
                 <h2>
-                    <svg class="icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>
-                    Lab Environment
+                    <svg class="icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    CLI Login
                 </h2>
-                <p>Switch to the researcher environment to preview or participate in active experiments.</p>
+                <p>Authenticate the Pairit CLI to upload configs and export data.</p>
+                <a href="/login" class="btn btn-primary">Login with Google</a>
             </div>
-            <a href="${LAB_URL}" class="btn btn-primary">Go to Lab</a>
+
+            <div class="card">
+                <h2>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg>
+                    Documentation
+                </h2>
+                <p>Learn how to create experiments and use the CLI.</p>
+                <a href="https://pairium.github.io/pairit/" class="btn btn-secondary" target="_blank">Read the docs</a>
+            </div>
+
+            <div class="card">
+                <h2>
+                    <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>
+                    Lab
+                </h2>
+                <p>Run experiments with participants.</p>
+                <a href="${LAB_URL}" class="btn btn-secondary">Open Lab</a>
+            </div>
         </div>`;
 
 		return new Response(

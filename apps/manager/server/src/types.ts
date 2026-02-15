@@ -9,6 +9,7 @@ export type ConfigDocument = {
 	metadata: Record<string, unknown> | null;
 	config: unknown;
 	requireAuth?: boolean; // Optional auth for lab sessions
+	allowRetake?: boolean; // Allow completed participants to retake
 	createdAt?: Date;
 	updatedAt: Date;
 };
