@@ -17,6 +17,7 @@ import { type ChatMessage, ChatView } from "./ChatView";
 
 type ChatProps = {
 	placeholder?: string;
+	groupId?: string;
 };
 
 type SSEChatMessage = {
@@ -52,7 +53,7 @@ type StreamingMessage = {
 export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 	type: "chat",
 	renderer: ({ component, context }) => {
-		const { sessionId, userState } = context;
+		const { sessionId, userState, pageId } = context;
 		const [messages, setMessages] = useState<ChatMessage[]>([]);
 		const [loading, setLoading] = useState(true);
 		const [chatDisabled, setChatDisabled] = useState(false);
@@ -61,8 +62,14 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 		const seenMessageIds = useRef<Set<string>>(new Set());
 		const hasTriggeredAgents = useRef(false);
 
-		// Resolve groupId: use chat_group_id from userState or fall back to sessionId
-		const groupId = (userState?.chat_group_id as string) || sessionId || "";
+		// Resolve groupId: userState (matchmaking) > explicit prop > session:page (isolated by default)
+		// Explicit prop and default are prefixed with sessionId for security
+		const groupId =
+			(userState?.chat_group_id as string) ||
+			(component.props.groupId
+				? `${sessionId}:${component.props.groupId}`
+				: `${sessionId}:${pageId}`) ||
+			"";
 
 		// Convert API message to ChatMessage with isOwn flag
 		const toViewMessage = useCallback(

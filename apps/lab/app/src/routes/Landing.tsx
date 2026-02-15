@@ -9,6 +9,7 @@ import {
 	FlaskConical,
 	Mail,
 	MessageCircle,
+	MessagesSquare,
 	Undo2,
 	Users,
 } from "lucide-react";
@@ -64,6 +65,12 @@ const sampleConfigs: DemoConfig[] = [
 		title: "AI mediation",
 		description: "2-person chat with AI facilitator. Open in 2 tabs.",
 		icon: Bot,
+	},
+	{
+		id: "multi-chat",
+		title: "Multi-chat",
+		description: "Isolated vs shared chat memory across pages.",
+		icon: MessagesSquare,
 	},
 ];
 
