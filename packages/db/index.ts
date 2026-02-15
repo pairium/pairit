@@ -43,6 +43,7 @@ function buildClientOptions(): MongoClientOptions {
 		// Workaround for Bun TLS "subject" destructuring error in development only
 		// This bypasses certificate validation - NEVER use in production
 		// TODO: Remove when Bun fixes this issue
+		// biome-ignore lint/suspicious/noExplicitAny: Bun TLS workaround requires type bypass
 		(options as any).checkServerIdentity = () => undefined;
 		console.warn("[DB] TLS certificate validation disabled (development mode)");
 	}

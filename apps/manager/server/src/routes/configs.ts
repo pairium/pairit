@@ -94,7 +94,7 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 	)
 	.get(
 		"/",
-		async ({ query, set, user }) => {
+		async ({ set, user }) => {
 			if (!user) {
 				set.status = 401;
 				return { error: "unauthorized", message: "Not authenticated" };
