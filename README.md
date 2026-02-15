@@ -27,7 +27,7 @@ This monorepo hosts the Pairit stack.
 
 ### Experimenters
 
-1. Review the experimenter docs in `docs/` or at [pairit-lab-docs.web.app](https://pairit-lab-docs.web.app), starting with `docs/docs/quickstart.md` for a YAML template.
+1. Review the experimenter docs in `docs/` or at [pairium.github.io/pairit](https://pairium.github.io/pairit/), starting with `docs/docs/quickstart.md` for a YAML template.
 2. Use the CLI to validate or publish your config (see `apps/manager/cli/README.md`):
 
    ```bash
@@ -121,3 +121,7 @@ This uploads the 7 sample configs (hello-world, survey-showcase, ai-chat, etc.) 
 **Testing**
 - **Local**: `./scripts/test.sh local` (verifies health + runs integration tests)
 - **Cloud**: `./scripts/test.sh cloud` (discovers URLs + runs integration tests against prod)
+
+---
+
+© 2026 Pairium AI. All rights reserved.
