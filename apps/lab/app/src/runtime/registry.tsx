@@ -12,6 +12,7 @@ export interface RuntimeComponentContext {
 	sessionId?: string | null;
 	userState?: Record<string, unknown>;
 	onUserStateChange?: (updates: Record<string, unknown>) => void;
+	pageId?: string;
 }
 
 export type RuntimeComponentRenderer<

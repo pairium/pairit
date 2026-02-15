@@ -235,6 +235,14 @@ async function persistAndBroadcastMessage(
 }
 
 async function getGroupMembers(groupId: string): Promise<string[]> {
+	// Session-scoped groupId (format: "sessionId:something")
+	// Extract sessionId from prefix and return just that session
+	const colonIndex = groupId.indexOf(":");
+	if (colonIndex > 0) {
+		const sessionId = groupId.substring(0, colonIndex);
+		return [sessionId];
+	}
+
 	const sessionsCollection = await getSessionsCollection();
 	const sessions = await sessionsCollection
 		.find({ "user_state.chat_group_id": groupId })

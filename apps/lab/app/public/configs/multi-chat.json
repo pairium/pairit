@@ -1,0 +1,153 @@
+{
+	"schema_version": "0.1.0",
+	"initialPageId": "intro",
+	"nodes": [
+		{
+			"id": "intro",
+			"components": [
+				{
+					"type": "text",
+					"props": {
+						"text": "# Multi-Chat Demo\n\nThis experiment demonstrates chat groupId scoping:\n- **Isolated chats**: Each page has separate message history (default)\n- **Shared chats**: Multiple pages share the same conversation\n"
+					}
+				},
+				{
+					"type": "buttons",
+					"props": {
+						"buttons": [
+							{
+								"id": "start",
+								"text": "Start Demo",
+								"action": {
+									"type": "go_to",
+									"target": "chat_1"
+								}
+							}
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "chat_1",
+			"components": [
+				{
+					"type": "text",
+					"props": {
+						"text": "## Round 1: Financial Advisor\n\nThis chat uses `groupId: \"consultation\"`. Messages will carry over to Round 2.\n"
+					}
+				},
+				{
+					"type": "chat",
+					"props": {
+						"groupId": "consultation",
+						"agents": ["advisor"],
+						"placeholder": "Ask about investment strategies..."
+					}
+				},
+				{
+					"type": "buttons",
+					"props": {
+						"buttons": [
+							{
+								"id": "next",
+								"text": "Continue to Round 2",
+								"action": {
+									"type": "go_to",
+									"target": "chat_2"
+								}
+							}
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "chat_2",
+			"components": [
+				{
+					"type": "text",
+					"props": {
+						"text": "## Round 2: Same Advisor (Shared Memory)\n\nSame `groupId: \"consultation\"` - the advisor remembers Round 1 conversation.\n"
+					}
+				},
+				{
+					"type": "chat",
+					"props": {
+						"groupId": "consultation",
+						"agents": ["advisor"],
+						"placeholder": "Continue the conversation..."
+					}
+				},
+				{
+					"type": "buttons",
+					"props": {
+						"buttons": [
+							{
+								"id": "next",
+								"text": "Try Isolated Chat",
+								"action": {
+									"type": "go_to",
+									"target": "chat_isolated"
+								}
+							}
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "chat_isolated",
+			"components": [
+				{
+					"type": "text",
+					"props": {
+						"text": "## Isolated Chat\n\nNo `groupId` prop - this chat is isolated to this page only.\nMessages here won't appear on other pages.\n"
+					}
+				},
+				{
+					"type": "chat",
+					"props": {
+						"agents": ["advisor"],
+						"placeholder": "Start a fresh conversation..."
+					}
+				},
+				{
+					"type": "buttons",
+					"props": {
+						"buttons": [
+							{
+								"id": "finish",
+								"text": "Finish Demo",
+								"action": {
+									"type": "go_to",
+									"target": "outro"
+								}
+							}
+						]
+					}
+				}
+			]
+		},
+		{
+			"id": "outro",
+			"end": true,
+			"components": [
+				{
+					"type": "text",
+					"props": {
+						"text": "# Demo Complete\n\nYou've seen how `groupId` controls chat memory:\n- **Explicit groupId**: Share messages across pages\n- **No groupId**: Isolated per-page history (default)\n"
+					}
+				}
+			]
+		}
+	],
+	"agents": [
+		{
+			"id": "advisor",
+			"model": "gpt-5-mini",
+			"reasoningEffort": "minimal",
+			"system": "You are a friendly financial advisor. Give brief, helpful responses.\nIf the user has spoken to you before in this session, acknowledge the prior conversation.\nKeep responses SHORT - 2-3 sentences max.\n"
+		}
+	]
+}

@@ -98,6 +98,7 @@ export function PageRenderer({
 			sessionId,
 			userState,
 			onUserStateChange: wrappedOnUserStateChange,
+			pageId: page.id,
 		}),
 		[
 			guardedAction,
@@ -105,6 +106,7 @@ export function PageRenderer({
 			sessionId,
 			userState,
 			wrappedOnUserStateChange,
+			page.id,
 		],
 	);
 

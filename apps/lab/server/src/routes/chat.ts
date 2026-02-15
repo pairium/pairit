@@ -13,19 +13,25 @@ import type { ChatMessageDocument } from "../types";
 
 /**
  * Verify that a session is a member of a chat group.
- * - Human-AI chat: groupId === sessionId
- * - Group chat: session.user_state.chat_group_id === groupId
+ * - Human-AI chat: groupId === sessionId (legacy)
+ * - Session-scoped: groupId starts with sessionId: (e.g., "sessionId:pageId" or "sessionId:customGroup")
+ * - Matchmaking: session.user_state.chat_group_id === groupId
  */
 async function verifyMembership(
 	sessionId: string,
 	groupId: string,
 ): Promise<boolean> {
-	// Human-AI chat: groupId equals sessionId
+	// Human-AI chat: groupId equals sessionId (legacy)
 	if (sessionId === groupId) {
 		return true;
 	}
 
-	// Group chat: check user_state.chat_group_id
+	// Session-scoped: groupId starts with "sessionId:"
+	if (groupId.startsWith(`${sessionId}:`)) {
+		return true;
+	}
+
+	// Matchmaking: check user_state.chat_group_id
 	const sessionsCollection = await getSessionsCollection();
 	const session = await sessionsCollection.findOne({ id: sessionId });
 	if (!session) {
@@ -39,9 +45,17 @@ async function verifyMembership(
  * Get all session IDs that are members of a chat group
  */
 async function getGroupMembers(groupId: string): Promise<string[]> {
+	// Session-scoped groupId (format: "sessionId:something")
+	// Extract sessionId from prefix and return just that session
+	const colonIndex = groupId.indexOf(":");
+	if (colonIndex > 0) {
+		const sessionId = groupId.substring(0, colonIndex);
+		return [sessionId];
+	}
+
 	const sessionsCollection = await getSessionsCollection();
 
-	// Find sessions where user_state.chat_group_id matches
+	// Find sessions where user_state.chat_group_id matches (matchmaking)
 	const sessions = await sessionsCollection
 		.find({ "user_state.chat_group_id": groupId })
 		.project({ id: 1 })
