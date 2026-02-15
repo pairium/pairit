@@ -1,24 +1,22 @@
 # Quickstart
 
-Get your first experiment running in minutes.
+Get your first experiment running in minutes using the Pairit CLI.
 
-## Prerequisites
-
-- [Bun](https://bun.sh) v1.1+
-- MongoDB Atlas account or local MongoDB
-- Google Cloud project (for OAuth)
-
-## Setup
+## Install the CLI
 
 ```bash
-git clone https://github.com/pairium/pairit.git
-cd pairit
-bun install
-cp .env.example .env  # Fill in MONGODB_URI, GOOGLE_CLIENT_ID, etc.
-bun run dev
+npm install -g @pairit/cli
+# or
+bun install -g @pairit/cli
 ```
 
-This starts the lab app at http://localhost:3000 and API at http://localhost:3001.
+## Authenticate
+
+```bash
+pairit login
+```
+
+This opens a browser window for Google OAuth. Once authenticated, you can manage experiments.
 
 ## Create Your First Experiment
 
@@ -37,13 +35,10 @@ pages:
         action: { type: go_to, target: survey }
 
   - id: survey
-    components:
-      - type: survey
-        props:
-          questions:
-            - id: age
-              text: "What is your age?"
-              answer: numeric
+    survey:
+      - id: age
+        text: "What is your age?"
+        answer: numeric
     buttons:
       - id: submit
         text: "Submit"
@@ -54,19 +49,29 @@ pages:
     end: true
 ```
 
-**2. Validate and upload:**
+**2. Validate your config:**
 
 ```bash
 pairit config lint my-experiment.yaml
-pairit config upload my-experiment.yaml
 ```
 
-**3. Open the survey link** (e.g., `http://localhost:3000/abc123`)
+**3. Upload to the server:**
+
+```bash
+pairit config upload my-experiment.yaml --config-id my-experiment
+```
+
+**4. Share the experiment link** with participants: `https://lab.pairium.ai/my-experiment`
+
+## Export Data
+
+```bash
+pairit data export my-experiment --format csv --output results.csv
+```
 
 ## Next Steps
 
 - [Configuration](configuration.md) - Pages, routing, expressions
-- [Components](components.md) - Survey, chat, matchmaking, etc.
-- [CLI](cli.md) - All commands including data export
-
-
+- [Components](components.md) - Survey, chat, matchmaking, agents
+- [CLI](cli.md) - All commands and options
+- [Examples](examples.md) - Full experiment templates

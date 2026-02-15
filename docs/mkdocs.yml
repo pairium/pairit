@@ -22,6 +22,7 @@ nav:
       - Form: components/form.md
       - Custom Components: components/custom.md
   - Developer:
+      - Getting Started: dev/getting-started.md
       - Architecture: dev/architecture.md
       - Runtime: dev/runtime.md
       - Backend: dev/backend.md
