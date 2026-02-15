@@ -44,6 +44,8 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
       use_pygments: true
+      pygments_lang_class: true
+      css_class: codehilite
   - pymdownx.superfences
   - pymdownx.inlinehilite
 extra_css:
