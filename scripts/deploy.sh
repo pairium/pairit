@@ -81,24 +81,6 @@ fi
 LAB_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/pairit-lab"
 MANAGER_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/pairit-manager"
 
-# 1. Build and Deploy Manager Server
-echo "🔨 Building Manager Server Image: $MANAGER_IMAGE"
-CLOUDBUILD_MANAGER=$(mktemp)
-cat > "$CLOUDBUILD_MANAGER" <<EOF
-steps:
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', '\$_IMAGE', '-f', 'Dockerfile.manager', '.']
-images:
-- '\$_IMAGE'
-EOF
-
-gcloud builds submit \
-    --config "$CLOUDBUILD_MANAGER" \
-    --substitutions=_IMAGE="$MANAGER_IMAGE" \
-    --project "$PROJECT_ID" \
-    .
-rm "$CLOUDBUILD_MANAGER"
-
 # Prepare env vars with ++ delimiter to avoid comma conflicts in MONGODB_URI
 MANAGER_ENV="NODE_ENV=production"
 MANAGER_ENV="$MANAGER_ENV++MONGODB_URI=$MONGODB_URI"
@@ -111,49 +93,6 @@ MANAGER_ENV="$MANAGER_ENV++AUTH_BASE_URL=${MANAGER_SERVICE_URL}"
 MANAGER_ENV="$MANAGER_ENV++AUTH_TRUSTED_ORIGINS=${MANAGER_SERVICE_URL}"
 MANAGER_ENV="$MANAGER_ENV++PAIRIT_LAB_URL=${LAB_SERVICE_URL}"
 
-echo "📦 Deploying Manager Server..."
-if ! DEPLOY_OUTPUT=$(gcloud run deploy "$MANAGER_SERVICE" \
-        --image "$MANAGER_IMAGE" \
-        --region "$REGION" \
-        --project "$PROJECT_ID" \
-        --set-env-vars "^++^$MANAGER_ENV" \
-        --allow-unauthenticated 2>&1); then
-        echo "❌ Manager Deployment Failed!"
-        echo "$DEPLOY_OUTPUT"
-        exit 1
-    fi
-
-echo "$DEPLOY_OUTPUT"
-
-# Extract Service URL
-MANAGER_URL=$(gcloud run services list --filter="SERVICE:$MANAGER_SERVICE" --project "$PROJECT_ID" --region "$REGION" --format="value(URL)")
-
-if [ -z "$MANAGER_URL" ]; then
-    echo "⚠️  Could not find Manager URL via list. Checking via describe as fallback..."
-    MANAGER_URL=$(gcloud run services describe "$MANAGER_SERVICE" --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)' 2>/dev/null)
-fi
-
-echo "🔗 Final Manager URL: $MANAGER_URL"
-
-# 2. Build and Deploy Lab Server
-echo "🔨 Building Lab Server Image: $LAB_IMAGE with MANAGER_URL=$MANAGER_URL"
-CLOUDBUILD_LAB=$(mktemp)
-cat > "$CLOUDBUILD_LAB" <<EOF
-steps:
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', '\$_IMAGE', '-f', 'Dockerfile.lab', '--build-arg', 'VITE_MANAGER_URL=\$_VITE_MANAGER_URL', '.']
-images:
-- '\$_IMAGE'
-EOF
-
-gcloud builds submit \
-    --config "$CLOUDBUILD_LAB" \
-    --substitutions=_IMAGE="$LAB_IMAGE",_VITE_MANAGER_URL="$MANAGER_URL" \
-    --project "$PROJECT_ID" \
-    .
-rm "$CLOUDBUILD_LAB"
-
-# Prepare env vars with ++ delimiter
 LAB_ENV="NODE_ENV=production"
 LAB_ENV="$LAB_ENV++MONGODB_URI=$MONGODB_URI"
 LAB_ENV="$LAB_ENV++STORAGE_BACKEND=gcs"
@@ -165,19 +104,142 @@ LAB_ENV="$LAB_ENV++AUTH_BASE_URL=${LAB_SERVICE_URL}"
 LAB_ENV="$LAB_ENV++AUTH_TRUSTED_ORIGINS=${LAB_SERVICE_URL}"
 LAB_ENV="$LAB_ENV++OPENAI_API_KEY=${OPENAI_API_KEY}"
 
-echo "📦 Deploying Lab Server..."
-if ! LAB_DEPLOY_OUTPUT=$(gcloud run deploy "$LAB_SERVICE" \
+# Create temp files for Cloud Build configs
+CLOUDBUILD_MANAGER=$(mktemp)
+CLOUDBUILD_LAB=$(mktemp)
+
+cat > "$CLOUDBUILD_MANAGER" <<EOF
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', '\$_IMAGE', '-f', 'Dockerfile.manager', '.']
+images:
+- '\$_IMAGE'
+EOF
+
+cat > "$CLOUDBUILD_LAB" <<EOF
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', '\$_IMAGE', '-f', 'Dockerfile.lab', '--build-arg', 'VITE_MANAGER_URL=\$_VITE_MANAGER_URL', '.']
+images:
+- '\$_IMAGE'
+EOF
+
+# 1. Build both images in parallel
+echo "🔨 Building images in parallel..."
+echo "   Manager: $MANAGER_IMAGE"
+echo "   Lab: $LAB_IMAGE (with VITE_MANAGER_URL=$MANAGER_SERVICE_URL)"
+
+# Create log files for build output
+MANAGER_BUILD_LOG=$(mktemp)
+LAB_BUILD_LOG=$(mktemp)
+
+# Start Manager build in background
+(
+    gcloud builds submit \
+        --config "$CLOUDBUILD_MANAGER" \
+        --substitutions=_IMAGE="$MANAGER_IMAGE" \
+        --project "$PROJECT_ID" \
+        . > "$MANAGER_BUILD_LOG" 2>&1
+) &
+MANAGER_BUILD_PID=$!
+
+# Start Lab build in background (using deterministic MANAGER_SERVICE_URL)
+(
+    gcloud builds submit \
+        --config "$CLOUDBUILD_LAB" \
+        --substitutions=_IMAGE="$LAB_IMAGE",_VITE_MANAGER_URL="$MANAGER_SERVICE_URL" \
+        --project "$PROJECT_ID" \
+        . > "$LAB_BUILD_LOG" 2>&1
+) &
+LAB_BUILD_PID=$!
+
+# Wait for both builds to complete
+MANAGER_BUILD_FAILED=0
+LAB_BUILD_FAILED=0
+
+wait $MANAGER_BUILD_PID || MANAGER_BUILD_FAILED=1
+wait $LAB_BUILD_PID || LAB_BUILD_FAILED=1
+
+# Check for build failures
+if [ $MANAGER_BUILD_FAILED -eq 1 ]; then
+    echo "❌ Manager Build Failed!"
+    cat "$MANAGER_BUILD_LOG"
+    rm -f "$CLOUDBUILD_MANAGER" "$CLOUDBUILD_LAB" "$MANAGER_BUILD_LOG" "$LAB_BUILD_LOG"
+    exit 1
+fi
+
+if [ $LAB_BUILD_FAILED -eq 1 ]; then
+    echo "❌ Lab Build Failed!"
+    cat "$LAB_BUILD_LOG"
+    rm -f "$CLOUDBUILD_MANAGER" "$CLOUDBUILD_LAB" "$MANAGER_BUILD_LOG" "$LAB_BUILD_LOG"
+    exit 1
+fi
+
+echo "✅ Both images built successfully"
+rm -f "$CLOUDBUILD_MANAGER" "$CLOUDBUILD_LAB" "$MANAGER_BUILD_LOG" "$LAB_BUILD_LOG"
+
+# 2. Deploy both services in parallel
+echo "📦 Deploying services in parallel..."
+
+# Create log files for deployment output
+MANAGER_DEPLOY_LOG=$(mktemp)
+LAB_DEPLOY_LOG=$(mktemp)
+
+# Start Manager deployment in background
+(
+    gcloud run deploy "$MANAGER_SERVICE" \
+        --image "$MANAGER_IMAGE" \
+        --region "$REGION" \
+        --project "$PROJECT_ID" \
+        --set-env-vars "^++^$MANAGER_ENV" \
+        --allow-unauthenticated > "$MANAGER_DEPLOY_LOG" 2>&1
+) &
+MANAGER_DEPLOY_PID=$!
+
+# Start Lab deployment in background
+(
+    gcloud run deploy "$LAB_SERVICE" \
         --image "$LAB_IMAGE" \
         --region "$REGION" \
         --project "$PROJECT_ID" \
         --port 3001 \
         --set-env-vars "^++^$LAB_ENV" \
-        --allow-unauthenticated 2>&1); then
-        echo "❌ Lab Deployment Failed!"
-        echo "$LAB_DEPLOY_OUTPUT"
-        exit 1
-    fi
-echo "$LAB_DEPLOY_OUTPUT"
+        --allow-unauthenticated > "$LAB_DEPLOY_LOG" 2>&1
+) &
+LAB_DEPLOY_PID=$!
+
+# Wait for both deployments to complete
+MANAGER_DEPLOY_FAILED=0
+LAB_DEPLOY_FAILED=0
+
+wait $MANAGER_DEPLOY_PID || MANAGER_DEPLOY_FAILED=1
+wait $LAB_DEPLOY_PID || LAB_DEPLOY_FAILED=1
+
+# Check for deployment failures
+if [ $MANAGER_DEPLOY_FAILED -eq 1 ]; then
+    echo "❌ Manager Deployment Failed!"
+    cat "$MANAGER_DEPLOY_LOG"
+    rm -f "$MANAGER_DEPLOY_LOG" "$LAB_DEPLOY_LOG"
+    exit 1
+fi
+
+if [ $LAB_DEPLOY_FAILED -eq 1 ]; then
+    echo "❌ Lab Deployment Failed!"
+    cat "$LAB_DEPLOY_LOG"
+    rm -f "$MANAGER_DEPLOY_LOG" "$LAB_DEPLOY_LOG"
+    exit 1
+fi
+
+echo "✅ Both services deployed successfully"
+cat "$MANAGER_DEPLOY_LOG"
+cat "$LAB_DEPLOY_LOG"
+rm -f "$MANAGER_DEPLOY_LOG" "$LAB_DEPLOY_LOG"
+
+# Get final Manager URL
+MANAGER_URL=$(gcloud run services list --filter="SERVICE:$MANAGER_SERVICE" --project "$PROJECT_ID" --region "$REGION" --format="value(URL)")
+if [ -z "$MANAGER_URL" ]; then
+    MANAGER_URL=$(gcloud run services describe "$MANAGER_SERVICE" --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)' 2>/dev/null)
+fi
 
 echo ""
 echo "✅ Deployment complete!"
