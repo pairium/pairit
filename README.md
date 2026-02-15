@@ -109,6 +109,15 @@ We use Google Cloud Run for a serverless, scalable deployment.
 **Deployment**
 - **Cloud**: `./scripts/deploy.sh [PROJECT_ID] [REGION]` (deploys to Cloud Run)
 
+**Sample Configs**
+
+After deploying, upload sample configs to MongoDB for the landing page demos to work:
+```bash
+./scripts/upload-sample-configs.sh
+```
+
+This uploads the 7 sample configs (hello-world, survey-showcase, ai-chat, etc.) to the production database. The server loads configs from MongoDB, not from bundled files.
+
 **Testing**
 - **Local**: `./scripts/test.sh local` (verifies health + runs integration tests)
 - **Cloud**: `./scripts/test.sh cloud` (discovers URLs + runs integration tests against prod)
