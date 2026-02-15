@@ -73,12 +73,12 @@ function coerceConfig(raw: unknown): Config | null {
 
 async function loadConfig(
 	configId: string,
-): Promise<{ config: Config } | null> {
+): Promise<{ config: Config; allowRetake: boolean } | null> {
 	const collection = await getConfigsCollection();
 	const data = await collection.findOne({ configId });
 	if (data && typeof data.config !== "undefined") {
 		const config = coerceConfig(data.config);
-		if (config) return { config };
+		if (config) return { config, allowRetake: data.allowRetake ?? false };
 	}
 	// Fallback: local configs directory (development only)
 	if (IS_DEV) {
@@ -95,12 +95,39 @@ async function loadConfig(
 			const configContent = await readFile(configPath, "utf8");
 			const raw = JSON.parse(configContent);
 			const config = coerceConfig(raw);
-			if (config) return { config };
+			// Local configs default to allowRetake: true for development convenience
+			if (config) return { config, allowRetake: true };
 		} catch (error) {
 			console.log(`Local config fallback failed for ${configId}:`, error);
 		}
 	}
 	return null;
+}
+
+/**
+ * Find an existing session for session resumption
+ * Priority: Prolific PID > OAuth userId
+ * Returns the most recent session for the given identity + config combination
+ */
+async function findExistingSession(
+	configId: string,
+	userId: string | null,
+	prolificPid: string | null,
+): Promise<SessionDocument | null> {
+	// Anonymous users (no userId and no prolificPid) always get new sessions
+	if (!userId && !prolificPid) return null;
+
+	const collection = await getSessionsCollection();
+	const query: Record<string, unknown> = { configId };
+
+	if (prolificPid) {
+		// Prolific takes priority - participants are identified by their PID
+		query["prolific.prolificPid"] = prolificPid;
+	} else {
+		query.userId = userId;
+	}
+
+	return collection.findOne(query, { sort: { createdAt: -1 } });
 }
 
 function uid(): string {
@@ -212,10 +239,54 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				return { error: "config_not_found" };
 			}
 
-			const { config } = loaded;
+			const { config, allowRetake } = loaded;
 
 			const userId = user ? user.id : null;
+			const prolificPid = body.prolific?.prolificPid ?? null;
 
+			// Check for existing session (for resumption or blocking)
+			const existingSession = await findExistingSession(
+				body.configId,
+				userId,
+				prolificPid,
+			);
+
+			if (existingSession) {
+				const isCompleted = !!existingSession.endedAt;
+
+				if (!isCompleted) {
+					// Session in progress → resume
+					const page = config.pages[existingSession.currentPageId];
+					return {
+						status: "resumed" as const,
+						sessionId: existingSession.id,
+						configId: body.configId,
+						currentPageId: existingSession.currentPageId,
+						page,
+						user_state: existingSession.user_state,
+						endedAt: existingSession.endedAt,
+					};
+				}
+
+				if (isCompleted && !allowRetake) {
+					// Session completed and retakes not allowed → block
+					set.status = 409;
+					return {
+						status: "blocked" as const,
+						sessionId: existingSession.id,
+						configId: body.configId,
+						currentPageId: existingSession.currentPageId,
+						page: config.pages[existingSession.currentPageId],
+						endedAt: existingSession.endedAt,
+						error: "session_completed",
+						message: "You have already completed this experiment.",
+					};
+				}
+
+				// Session completed but retakes allowed → fall through to create new
+			}
+
+			// Create new session
 			const prolific: ProlificParams | null = body.prolific ?? null;
 
 			const id = uid();
@@ -232,6 +303,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 			const page = config.pages[session.currentPageId];
 
 			return {
+				status: "created" as const,
 				sessionId: id,
 				configId: body.configId,
 				currentPageId: session.currentPageId,

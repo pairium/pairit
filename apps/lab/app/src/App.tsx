@@ -7,6 +7,7 @@ import {
 	AuthRequiredError,
 	advance,
 	type ProlificParams,
+	SessionBlockedError,
 	startSession,
 } from "./lib/api";
 import { useSession } from "./lib/auth-client";
@@ -33,6 +34,7 @@ export default function App() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [authRequired, setAuthRequired] = useState(false);
+	const [sessionBlocked, setSessionBlocked] = useState(false);
 
 	useEffect(() => {
 		let canceled = false;
@@ -68,6 +70,7 @@ export default function App() {
 				setEndedAt(null);
 				setEndRedirectUrl(null);
 				setAuthRequired(false);
+				setSessionBlocked(false);
 				return;
 			}
 			setMode(null);
@@ -79,6 +82,7 @@ export default function App() {
 			setEndRedirectUrl(null);
 			setUserState({});
 			setAuthRequired(false);
+			setSessionBlocked(false);
 			setLoading(true);
 			setError(null);
 
@@ -158,6 +162,13 @@ export default function App() {
 				// Handle auth-required experiments
 				if (e instanceof AuthRequiredError) {
 					setAuthRequired(true);
+					setLoading(false);
+					return;
+				}
+
+				// Handle session blocked (already completed, no retakes allowed)
+				if (e instanceof SessionBlockedError) {
+					setSessionBlocked(true);
 					setLoading(false);
 					return;
 				}
@@ -307,6 +318,17 @@ export default function App() {
 						</div>
 						<div className="flex justify-center">
 							<Login />
+						</div>
+					</div>
+				)}
+
+				{!loading && sessionBlocked && (
+					<div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-8 text-center">
+						<div className="text-lg font-medium">
+							Experiment Already Completed
+						</div>
+						<div className="text-sm text-slate-500">
+							You have already completed this experiment and cannot retake it.
 						</div>
 					</div>
 				)}

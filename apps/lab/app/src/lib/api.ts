@@ -15,12 +15,23 @@ export class AuthRequiredError extends Error {
 	}
 }
 
+export class SessionBlockedError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "SessionBlockedError";
+	}
+}
+
 type StartResponse = {
+	status?: "created" | "resumed" | "blocked";
 	sessionId: string;
 	configId: string;
 	currentPageId: string;
 	page: Page;
 	user_state?: Record<string, unknown>;
+	endedAt?: string | null;
+	error?: string;
+	message?: string;
 };
 type GetResponse = {
 	sessionId: string;
@@ -44,6 +55,12 @@ export async function startSession(
 	});
 	if (r.status === 401) {
 		throw new AuthRequiredError();
+	}
+	if (r.status === 409) {
+		const data = await r.json();
+		throw new SessionBlockedError(
+			data.message || "You have already completed this experiment.",
+		);
 	}
 	if (!r.ok) throw new Error("Failed to start session");
 	return r.json();
