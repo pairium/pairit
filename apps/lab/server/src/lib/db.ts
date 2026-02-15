@@ -91,5 +91,19 @@ export async function ensureIndexes(): Promise<void> {
 		.collection("groups")
 		.createIndex({ groupId: 1 }, { unique: true });
 
+	// Session resumption indexes
+	// OAuth user lookup: find sessions by userId + configId
+	await database
+		.collection("sessions")
+		.createIndex({ userId: 1, configId: 1, createdAt: -1 }, { sparse: true });
+
+	// Prolific participant lookup: find sessions by prolificPid + configId
+	await database
+		.collection("sessions")
+		.createIndex(
+			{ "prolific.prolificPid": 1, configId: 1, createdAt: -1 },
+			{ sparse: true },
+		);
+
 	console.log("[DB] All indexes ensured");
 }

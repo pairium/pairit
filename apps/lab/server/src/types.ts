@@ -27,6 +27,7 @@ export type ConfigDocument = {
 	metadata?: Record<string, unknown> | null;
 	config: unknown;
 	requireAuth?: boolean; // Optional auth for lab sessions
+	allowRetake?: boolean; // Allow re-taking completed sessions (defaults to false)
 	createdAt?: Date | null;
 	updatedAt?: Date | null;
 };
