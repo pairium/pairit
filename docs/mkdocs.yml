@@ -50,4 +50,4 @@ markdown_extensions:
   - pymdownx.inlinehilite
 extra_css:
   - stylesheets/extra.css
-  - css/pygments/github-dark.css
+  - stylesheets/pygments.css
