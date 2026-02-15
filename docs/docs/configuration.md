@@ -2,6 +2,53 @@
 
 Configuration files describe how a run moves between pages, what components each page renders, and when elements appear. This guide combines the previous `Pages`, `Routing & Actions`, and `Expressions` docs into one reference.
 
+## Top-Level Fields
+
+Every config file supports these top-level fields:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `schema_version` | string | Yes | Config schema version (currently `"v2"`) |
+| `initialPageId` | string | Yes | The page to start on |
+| `pages` | array | Yes | Page definitions |
+| `agents` | array | No | AI agent definitions (see [Agents](components/agents.md)) |
+| `matchmaking` | array | No | Matchmaking pool configurations |
+| `user_state` | object | No | User state schema with types and defaults |
+| `allowRetake` | boolean | No | Whether completed participants can start a new session (default: `false`) |
+
+### schema_version
+
+Required field for config validation. Currently use `"v2"`:
+
+```yaml
+schema_version: v2
+initialPageId: intro
+pages:
+  # ...
+```
+
+The CLI's `pairit config lint` command validates that `schema_version` is present.
+
+### allowRetake
+
+Controls whether participants who have completed the experiment can start a new session:
+
+```yaml
+schema_version: v2
+allowRetake: true  # Allow participants to retake
+initialPageId: intro
+pages:
+  # ...
+```
+
+When `allowRetake: false` (default):
+- Completed participants see a "You have already completed this experiment" message
+- Session resumption still works for in-progress sessions
+
+When `allowRetake: true`:
+- Completed participants can start a fresh session
+- Useful for testing or experiments that allow multiple completions
+
 ## Pages
 
 Pages declare which components appear and which buttons can advance the run. Built-in components cover common UI; custom components mount via a registry entry.

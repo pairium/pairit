@@ -1,61 +1,72 @@
 # Quickstart
 
-Get a minimal study running using the canonical pages/components model.
+Get your first experiment running in minutes.
 
-1) Create a YAML config
+## Prerequisites
+
+- [Bun](https://bun.sh) v1.1+
+- MongoDB Atlas account or local MongoDB
+- Google Cloud project (for OAuth)
+
+## Setup
+
+```bash
+git clone https://github.com/pairium/pairit.git
+cd pairit
+bun install
+cp .env.example .env  # Fill in MONGODB_URI, GOOGLE_CLIENT_ID, etc.
+bun run dev
+```
+
+This starts the lab app at http://localhost:3000 and API at http://localhost:3001.
+
+## Create Your First Experiment
+
+**1. Create `my-experiment.yaml`:**
 
 ```yaml
+schema_version: v2
 initialPageId: intro
 
 pages:
   - id: intro
-    text: |
-      Welcome. Please complete this short survey.
+    text: "Welcome to the study!"
     buttons:
-      - id: intro-start
-        text: "Begin"
-        action:
-          type: go_to
-          target: survey_1
+      - id: start
+        text: "Start"
+        action: { type: go_to, target: survey }
 
-  - id: survey_1
-    text: "Pretend survey question"
+  - id: survey
+    components:
+      - type: survey
+        props:
+          questions:
+            - id: age
+              text: "What is your age?"
+              answer: numeric
     buttons:
-      - id: survey-submit
+      - id: submit
         text: "Submit"
-        action:
-          type: go_to
-          branches:
-            - when: "$event.payload.choice == 'follow_up'"
-              target: survey_follow_up
-            - target: outro
+        action: { type: go_to, target: thanks }
 
-  - id: survey_follow_up
-    text: "Thanks for opting in to the follow-up."
-    buttons:
-      - id: follow_up_continue
-        text: "Continue"
-        action:
-          type: go_to
-          target: outro
-
-  - id: outro
+  - id: thanks
+    text: "Thank you for participating!"
     end: true
-
-user_state:
-  choice: string
 ```
 
-2) Validate, simulate, or publish with the CLI
+**2. Validate and upload:**
 
-```zsh
-pairit config lint your_experiment.yaml
-pairit config compile your_experiment.yaml
-pairit config upload your_experiment.yaml --owner you@example.com
+```bash
+pairit config lint my-experiment.yaml
+pairit config upload my-experiment.yaml
 ```
 
-3) Share the experiment link with participants
+**3. Open the survey link** (e.g., `http://localhost:3000/abc123`)
 
-Next: read Configuration → Pages, Routing & Actions, and Expressions.
+## Next Steps
+
+- [Configuration](configuration.md) - Pages, routing, expressions
+- [Components](components.md) - Survey, chat, matchmaking, etc.
+- [CLI](cli.md) - All commands including data export
 
 

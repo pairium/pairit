@@ -20,7 +20,21 @@ Component-first architecture
 
 Result: a consistent, declarative system where pages stay lightweight and features drop in as components.
 
+## Available Components
 
+| Component | Description |
+|-----------|-------------|
+| [Text](components/text.md) | Display text and markdown content |
+| [Buttons](components/buttons.md) | Navigation and action buttons |
+| [Survey](components/survey.md) | Multi-question forms with validation |
+| [Form](components/form.md) | General-purpose form fields |
+| [Chat](components/chat.md) | Real-time messaging |
+| [Matchmaking](components/matchmaking.md) | Group participants together |
+| [Randomization](components/randomization.md) | Assign treatment conditions |
+| [Agents](components/agents.md) | Server-hosted AI agents |
+| [Media](components/media.md) | Images, videos, and audio |
+| [Workspace](components/workspace.md) | Collaborative workspaces |
+| [Custom](components/custom.md) | Mount custom React components |
 
 ## Runtime adapters
 

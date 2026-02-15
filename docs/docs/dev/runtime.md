@@ -11,6 +11,7 @@ export const componentRegistry = {
   button: Button,
   survey: SurveyForm,
   matchmaking: MatchmakingPanel,
+  randomization: RandomizationPanel,
   chat: ChatView,
   media: MediaBlock,
   form: GenericForm,

@@ -15,6 +15,7 @@ nav:
       - Survey: components/survey.md
       - Matchmaking: components/matchmaking.md
       - Chat: components/chat.md
+      - Randomization: components/randomization.md
       - Agents: components/agents.md
       - Workspace: components/workspace.md
       - Media: components/media.md
@@ -25,11 +26,10 @@ nav:
       - Runtime: dev/runtime.md
       - Backend: dev/backend.md
       - Realtime: dev/realtime.md
+      - Matchmaking: dev/matchmaking.md
       - Storage: dev/storage.md
       - Validation: dev/validation.md
-      - Survey: dev/survey.md
-      - Component Registry: dev/registry.md
-      - Matchmaking: dev/matchmaking.md
+      - Deployment: dev/deployment.md
 theme:
   name: shadcn
   show_title: true

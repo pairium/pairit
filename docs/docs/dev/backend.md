@@ -66,13 +66,38 @@ Authentication is handled by [Better Auth](https://www.better-auth.com/).
 -   `GET /media`: List media objects.
 -   `DELETE /media/:object`: Delete a media object.
 
-## Live Updates (SSE) -- Planned
+## Live Updates (SSE)
 
--   `GET /sessions/:sessionId/stream`: Server-Sent Events for session updates (matchmaking, timeouts).
--   `GET /chat/:groupId/stream`: SSE for chat messages.
+-   `GET /sse/:sessionId`: Server-Sent Events stream for the session. Events include:
+    -   `match_found`: Matchmaking succeeded with group info
+    -   `match_timeout`: Matchmaking timed out
+    -   `chat_message`: New chat message in group
+    -   `chat_message_delta`: Streaming agent response chunk
+    -   `chat_ended`: Chat session terminated (by agent tool)
+    -   `state_updated`: User state changed
 
-## AI Agents  -- Planned
+## Chat
 
--   `POST /agents/:agentId/call`: Server-side invocation of LLM agents. Keys are kept secure on the server.
+-   `GET /chat/:groupId/history`: Get chat message history
+-   `POST /chat/:groupId/message`: Send a message to the group
+-   `POST /chat/:groupId/agents/start`: Trigger agents with `sendFirstMessage: true`
+
+## Matchmaking
+
+-   `POST /matchmaking/join`: Join a matchmaking pool
+-   `POST /matchmaking/cancel`: Leave the matchmaking queue
+
+## Randomization
+
+-   `POST /sessions/:id/randomize`: Assign treatment condition (idempotent)
+
+## AI Agents
+
+Agents are server-hosted LLM participants that join chat rooms. Configuration is stored in the experiment config's `agents` array.
+
+-   Supported providers: OpenAI, Anthropic (inferred from model name)
+-   Streaming: Agent responses stream via SSE `chat_message_delta` events
+-   Tools: Agents can invoke tools like `end_chat` and `assign_state`
+-   Keys: API keys stay server-side (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`)
 
 

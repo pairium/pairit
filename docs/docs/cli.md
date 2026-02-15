@@ -49,6 +49,27 @@ pairit media list --prefix onboarding/
 pairit media delete onboarding/hero.png
 ```
 
+## Data Export
+
+Export experiment data for analysis.
+
+```zsh
+pairit data export <configId>                    # Export as CSV (default)
+pairit data export <configId> --format json      # Export as JSON
+pairit data export <configId> --format jsonl     # Export as JSONL
+pairit data export <configId> --out ./exports    # Custom output directory
+```
+
+Creates three files per export:
+
+| File | Contents |
+|------|----------|
+| `{configId}-sessions.csv` | Session records: sessionId, configId, status, user_state.*, prolific.*, timestamps |
+| `{configId}-events.csv` | Component events: sessionId, type, pageId, componentType, data.*, timestamp |
+| `{configId}-chat-messages.csv` | Chat history: messageId, groupId, senderId, senderType, content, createdAt |
+
+**Formats**: CSV flattens nested objects with dot notation (`user_state.treatment`). JSON/JSONL preserve full nesting.
+
 ## Database layout (MongoDB)
 
 Published configs live in the `configs` collection (keyed by `configId`) with metadata and a checksum. Runs create:

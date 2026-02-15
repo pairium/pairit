@@ -1,8 +1,38 @@
 # Matchmaking
 
-Enqueue the current session into a server-managed pool until enough participants arrive to form a group. On match, the server initializes `$.user_group` (including `chat_group_id`). On timeout, it emits a timeout outcome.
+Enqueue the current session into a server-managed pool until enough participants arrive to form a group. On match, the server initializes `$.user_state` (including `chat_group_id`). On timeout, it can auto-navigate to a fallback page.
 
-Events
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `poolId` | string | `"default"` | Pool identifier for grouping participants |
+| `num_users` | number | `2` | Number of participants required to form a group |
+| `timeoutSeconds` | number | `120` | Seconds to wait before timeout |
+| `timeoutTarget` | string | - | Page to navigate to on timeout |
+| `onMatchTarget` | string | - | Page to navigate to on successful match |
+| `assignmentType` | string | - | Treatment assignment type (random, balanced_random, block) |
+| `conditions` | string[] | - | Treatment conditions to assign |
+
+## timeoutTarget
+
+When matchmaking times out, automatically navigate to a fallback page:
+
+```yaml
+components:
+  - type: matchmaking
+    props:
+      num_users: 2
+      timeoutSeconds: 120
+      timeoutTarget: solo_experience  # Navigate here if no match found
+      onMatchTarget: group_chat       # Navigate here on successful match
+```
+
+This enables graceful degradation:
+- Matched participants → group experience
+- Timed-out participants → solo experience or survey
+
+## Events
 - `onRequestStart`: emitted when matchmaking begins
 - `onMatchFound`: emitted when a suitable group is found
 - `onTimeout`: emitted when matchmaking times out

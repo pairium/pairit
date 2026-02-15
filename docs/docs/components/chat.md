@@ -1,9 +1,72 @@
 # Chat
 
-Open a chat view. With matchmaking, the server writes `$.user_group.chat_group_id` for the room. Optionally attach server-hosted AI agents by id.
+Open a chat view for real-time messaging. Supports human-human chat (via matchmaking) and human-AI chat (via agents).
 
-Props
-- agents?: string[] — list of agent ids to join the chat
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `agents` | string[] | `[]` | List of agent ids to join the chat (see [Agents](agents.md)) |
+| `groupId` | string | - | Explicit chat group identifier for shared contexts |
+| `placeholder` | string | `"Type a message..."` | Placeholder text in the message input |
+
+## Group Resolution
+
+Chat rooms are identified by `groupId`. The resolution order is:
+
+1. **Matchmaking**: If participant was matched, uses `$.user_state.chat_group_id` (shared with matched participants)
+2. **Explicit prop**: If `groupId` prop is set, uses `{sessionId}:{groupId}` (session-scoped)
+3. **Default**: Uses `{sessionId}:{pageId}` (isolated to this session and page)
+
+### Shared Chat (via Matchmaking)
+
+When participants are matched, they share a `chat_group_id` and see each other's messages:
+
+```yaml
+pages:
+  - id: matchmaking
+    components:
+      - type: matchmaking
+        props:
+          num_users: 2
+
+  - id: discussion
+    components:
+      - type: chat  # Uses $.user_state.chat_group_id from matchmaking
+```
+
+### Isolated Chat (AI Only)
+
+Without matchmaking, each participant has their own chat context:
+
+```yaml
+pages:
+  - id: ai_chat
+    components:
+      - type: chat
+        props:
+          agents: [assistant]
+          placeholder: "Ask me anything..."
+```
+
+### Explicit Group Sharing
+
+Use `groupId` to share context across pages within a session:
+
+```yaml
+pages:
+  - id: chat_1
+    components:
+      - type: chat
+        props:
+          groupId: main_conversation
+
+  - id: chat_2
+    components:
+      - type: chat
+        props:
+          groupId: main_conversation  # Same conversation continues
+```
 
 Events
 - `onMessageSend`: emitted when user sends a message

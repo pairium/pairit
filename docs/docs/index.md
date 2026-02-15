@@ -9,10 +9,14 @@ Pairit is a platform for running human‑AI experiments. Author a single YAML fi
 3. Human–human and human–AI setups
 4. Real‑time collaboration and chat
 5. Server‑hosted AI agents (keys stay on the server)
+6. Randomization and treatment assignment
+7. Data export in CSV, JSON, and JSONL formats
 
 ### Get started
 
-- Start here: [Quickstart](quickstart.md)
-- Configure pages and routing: [Configuration](configuration.md)
-- Browse building blocks: [Components](components.md)
+- [Quickstart](quickstart.md) - Setup and first experiment
+- [Configuration](configuration.md) - Pages, routing, expressions
+- [Components](components.md) - Survey, chat, matchmaking, etc.
+- [Concepts](concepts.md) - Flow logic, state, randomization
+- [CLI](cli.md) - Commands and data export
 

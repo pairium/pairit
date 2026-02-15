@@ -1,32 +1,43 @@
-# Matchmaking 
+# Matchmaking
 
-Optionally enable backfill to form groups using ghost seats when necessary.
+Server-side matchmaking groups participants into pools before chat or collaborative tasks.
 
-> Note: Matchmaking is **not yet implemented** in the current Bun/Elysia + MongoDB stack in this repo. This page is a design note for the intended behavior.
-
-Config extension
+## Pool Configuration
 
 ```yaml
 matchmaking:
   - id: default_pool
     num_users: 2
-    backfill:
-      enabled: true
-      policy: fifo
-      ghostAgents:
-        - agentId: default_agent
+    timeoutSeconds: 120
+    timeoutTarget: solo_fallback
+    assignment:
+      type: balanced_random
+      conditions: [control, treatment]
 ```
 
-Auditing
-- Record backfilled outcomes alongside other matchmaking outcomes.
-- When a ghost seat is used, emit a `backfilled` event and persist the flag alongside the group record.
+## Matching Policy
 
-Runtime behavior
-- Entering a `matchmaking` page enqueues the session in the specified pool (implementation TBD).
-- Matching policy: FIFO by arrival time, fill groups of `num_users`.
-- Timeout policy: configurable per pool (`timeoutSeconds`), defaulting to 120 seconds.
-- On `match`, the runtime writes `$.user_group.chat_group_id` and `groupId`, then advances using routing defined on the button action.
-- On `timeout`, the runtime emits a `timeout` event so routing branches can handle fallback pages.
-- Backfill enables forming groups with fewer real participants by inserting configured ghost agents. Use sparingly and surface the outcome in analysis via the stored `backfilled` flag.
+- **FIFO**: Participants matched in arrival order
+- **Group size**: Forms groups of exactly `num_users`
+- **Timeout**: After `timeoutSeconds`, unmatched participants receive `match_timeout` event
 
+## State Written on Match
 
+When a group forms, these values are written to each participant's `user_state`:
+
+| Key | Value |
+|-----|-------|
+| `group_id` | Shared group identifier |
+| `chat_group_id` | Chat room identifier (same as group_id) |
+| `treatment` | Assigned condition (if `assignment` configured) |
+
+## Navigation
+
+- **On match**: If `onMatchTarget` is set, auto-navigate there
+- **On timeout**: If `timeoutTarget` is set, auto-navigate there
+
+## Auditing
+
+All matchmaking outcomes are logged:
+- `match_found` events include `groupId`, `treatment`, `memberCount`
+- `match_timeout` events include `poolId`, `waitDurationSeconds`
