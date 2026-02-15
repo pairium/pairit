@@ -50,12 +50,21 @@ packages/
 
 ## Experiment Configs
 
-Configs are stored in MongoDB. Source YAML files live in `apps/lab/app/public/configs/`.
+Configs are stored in MongoDB.
 
 ```bash
-./scripts/upload-sample-configs.sh              # Upload all sample configs
 pairit config upload config.yaml --config-id id # Upload single config
 ```
+
+## Documentation
+
+Docs are at https://pairium.github.io/pairit/ (GitHub Pages + MkDocs).
+
+```bash
+gh workflow run docs.yml          # Manually deploy docs
+```
+
+Auto-deploys on push to `docs/**`.
 
 ## Conventions
 
