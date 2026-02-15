@@ -41,6 +41,7 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 					metadata: body.metadata ?? null,
 					config: body.config,
 					requireAuth: body.requireAuth ?? true, // Default to true
+					allowRetake: body.allowRetake ?? false, // Default to false
 					updatedAt: new Date(),
 				};
 
@@ -61,6 +62,7 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 					checksum: updated?.checksum ?? body.checksum,
 					metadata: updated?.metadata ?? null,
 					requireAuth: updated?.requireAuth ?? true,
+					allowRetake: updated?.allowRetake ?? false,
 					updatedAt:
 						updated?.updatedAt instanceof Date
 							? updated.updatedAt.toISOString()
@@ -89,6 +91,7 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 				),
 				config: t.Unknown(),
 				requireAuth: t.Optional(t.Boolean()),
+				allowRetake: t.Optional(t.Boolean()),
 			}),
 		},
 	)

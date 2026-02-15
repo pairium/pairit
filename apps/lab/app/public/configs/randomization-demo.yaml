@@ -2,6 +2,7 @@
 # Demonstrates 5 sequential randomizations
 
 schema_version: 0.1.0
+allowRetake: true
 initialPageId: intro
 
 pages:

@@ -12,7 +12,7 @@ import {
 } from "./lib/api";
 import { useSession } from "./lib/auth-client";
 import { sseClient } from "./lib/sse";
-import { loadConfig } from "./runtime";
+import "./runtime"; // Register component renderers
 import type { CompiledConfig } from "./runtime/config";
 import { PageRenderer } from "./runtime/renderer";
 import type { ButtonAction, Page } from "./runtime/types";
@@ -21,11 +21,9 @@ export default function App() {
 	const { experimentId } = useParams({ from: "/$experimentId" });
 	const { data: session, isPending: authLoading } = useSession();
 	const isAuthenticated = !!session?.user;
-	const [mode, setMode] = useState<"local" | "remote" | null>(null);
 	const [compiledConfig, setCompiledConfig] = useState<CompiledConfig | null>(
 		null,
 	);
-	const [, setCurrentPageId] = useState<string | null>(null);
 	const [sessionId, setSessionId] = useState<string | null>(null);
 	const [page, setPage] = useState<Page | null>(null);
 	const [endedAt, setEndedAt] = useState<string | null>(null);
@@ -39,15 +37,9 @@ export default function App() {
 	useEffect(() => {
 		let canceled = false;
 		async function bootstrap() {
-			// Wait for auth state to be determined before making API calls
 			if (authLoading) return;
 
-			// Check for view-only mode
 			const searchParams = new URLSearchParams(window.location.search);
-			const isViewMode =
-				searchParams.get("view") === "true" ||
-				searchParams.get("mode") === "view";
-
 			const prolificPid = searchParams.get("PROLIFIC_PID");
 			const studyId = searchParams.get("STUDY_ID");
 			const prolificSessionId = searchParams.get("SESSION_ID");
@@ -62,20 +54,11 @@ export default function App() {
 
 			if (!experimentId) {
 				setError("Missing experiment ID");
-				setMode(null);
-				setCompiledConfig(null);
-				setCurrentPageId(null);
-				setSessionId(null);
-				setPage(null);
-				setEndedAt(null);
-				setEndRedirectUrl(null);
-				setAuthRequired(false);
-				setSessionBlocked(false);
 				return;
 			}
-			setMode(null);
+
+			// Reset state
 			setCompiledConfig(null);
-			setCurrentPageId(null);
 			setSessionId(null);
 			setPage(null);
 			setEndedAt(null);
@@ -86,110 +69,31 @@ export default function App() {
 			setLoading(true);
 			setError(null);
 
-			// Try to load local config first
-			let localConfig = null;
-			try {
-				localConfig = await loadConfig(experimentId);
-				if (canceled) return;
-			} catch (error) {
-				console.error("Local config load failed", error);
-				if (canceled) return;
-			}
-
-			// VIEW MODE: Frontend-only, no backend session
-			if (isViewMode) {
-				if (localConfig) {
-					console.log("Loading in VIEW mode - no backend session");
-					const initialPageId = localConfig.initialPageId;
-					const initialPage = localConfig.pages[initialPageId] ?? null;
-					setMode("local");
-					setCompiledConfig(localConfig);
-					setCurrentPageId(initialPageId);
-					setSessionId(null); // No session ID
-					setPage(initialPage);
-					setEndRedirectUrl(initialPage?.endRedirectUrl ?? null);
-					setEndedAt(initialPage?.end ? new Date().toISOString() : null);
-				} else {
-					setError(`Config not found: ${experimentId}`);
-				}
-				if (!canceled) setLoading(false);
-				return;
-			}
-
-			// Try to create a remote session (works even with local config for event testing)
 			try {
 				const r = await startSession(experimentId, prolific);
 				if (canceled) return;
-				console.log(
-					"Loading in REMOTE mode - sessionId:",
-					r.sessionId,
-					"- events will be submitted",
-				);
-
-				if (localConfig) {
-					console.log("Using local config with remote session (hybrid mode)");
-					console.log("Session currentPageId:", r.currentPageId);
-					console.log(
-						"Local config has page:",
-						!!localConfig.pages[r.currentPageId],
-					);
-					console.log("Local page:", localConfig.pages[r.currentPageId]);
-
-					setMode("remote");
-					setCompiledConfig(localConfig); // Use local config but with remote session
-					setCurrentPageId(r.currentPageId);
-					setSessionId(r.sessionId);
-					setPage(localConfig.pages[r.currentPageId]); // Use local page instead of remote page
-					setEndRedirectUrl(
-						localConfig.pages[r.currentPageId]?.endRedirectUrl ?? null,
-					);
-					setEndedAt(null);
-					if (r.user_state) setUserState(r.user_state);
-				} else {
-					setMode("remote");
-					setCompiledConfig(null);
-					setCurrentPageId(r.currentPageId);
-					setSessionId(r.sessionId);
-					setPage(r.page);
-					setEndRedirectUrl(r.page?.endRedirectUrl ?? null);
-					setEndedAt(null);
-					if (r.user_state) setUserState(r.user_state);
-				}
+				setCompiledConfig(r.config);
+				setSessionId(r.sessionId);
+				setPage(r.page);
+				setEndRedirectUrl(r.page?.endRedirectUrl ?? null);
+				setEndedAt(r.endedAt ?? null);
+				if (r.user_state) setUserState(r.user_state);
 			} catch (e: unknown) {
 				if (canceled) return;
-				console.error("Remote session start failed:", e);
 
-				// Handle auth-required experiments
 				if (e instanceof AuthRequiredError) {
 					setAuthRequired(true);
 					setLoading(false);
 					return;
 				}
 
-				// Handle session blocked (already completed, no retakes allowed)
 				if (e instanceof SessionBlockedError) {
 					setSessionBlocked(true);
 					setLoading(false);
 					return;
 				}
 
-				// Fall back to pure local mode if no backend available
-				if (localConfig) {
-					console.log(
-						"Loading in LOCAL mode - no events will be submitted (backend unavailable)",
-					);
-					const initialPageId = localConfig.initialPageId;
-					const initialPage = localConfig.pages[initialPageId] ?? null;
-					setMode("local");
-					setCompiledConfig(localConfig);
-					setCurrentPageId(initialPageId);
-					setSessionId(null);
-					setPage(initialPage);
-					setEndRedirectUrl(initialPage?.endRedirectUrl ?? null);
-					setEndedAt(initialPage?.end ? new Date().toISOString() : null);
-				} else {
-					setError(e instanceof Error ? e.message : "Failed to start");
-				}
+				setError(e instanceof Error ? e.message : "Failed to start");
 			} finally {
 				if (!canceled) setLoading(false);
 			}
@@ -222,65 +126,24 @@ export default function App() {
 	}, [sessionId]);
 
 	async function onAction(a: ButtonAction) {
-		if (!a.target) {
-			setError("No target specified for action");
-			return;
-		}
+		if (!a.target || !sessionId || !compiledConfig) return;
+
 		const target = a.target;
-
-		if (mode === "local" && compiledConfig) {
-			const nextPage = compiledConfig.pages[target];
-			if (!nextPage) {
-				setError(`Unknown target: ${target}`);
-				return;
-			}
-			setError(null);
-			setCurrentPageId(target);
-			setPage(nextPage);
-			setEndRedirectUrl(nextPage.endRedirectUrl ?? null);
-			setEndedAt(nextPage.end ? new Date().toISOString() : null);
+		const nextPage = compiledConfig.pages[target];
+		if (!nextPage) {
+			setError(`Unknown target: ${target}`);
 			return;
 		}
 
-		if (!sessionId) return;
-
-		// In hybrid mode, use local config for navigation but still update remote session
-		if (mode === "remote" && compiledConfig) {
-			const nextPage = compiledConfig.pages[target];
-			if (!nextPage) {
-				setError(`Unknown target: ${target}`);
-				return;
-			}
-			setLoading(true);
-			setError(null);
-			try {
-				// Update remote session state
-				const r = await advance(sessionId, target);
-				// Sync user_state from server
-				if (r.user_state) setUserState(r.user_state);
-				// But use local page for rendering
-				setCurrentPageId(target);
-				setPage(nextPage);
-				setEndRedirectUrl(nextPage.endRedirectUrl ?? null);
-				setEndedAt(nextPage.end ? new Date().toISOString() : null);
-			} catch (error: unknown) {
-				setError(error instanceof Error ? error.message : "Failed to advance");
-			} finally {
-				setLoading(false);
-			}
-			return;
-		}
-
-		// Pure remote mode (no local config)
 		setLoading(true);
 		setError(null);
 		try {
 			const r = await advance(sessionId, target);
-			// Sync user_state from server
 			if (r.user_state) setUserState(r.user_state);
-			setPage(r.page);
-			setEndRedirectUrl(r.page?.endRedirectUrl ?? null);
-			setEndedAt(r.endedAt);
+			(target);
+			setPage(nextPage);
+			setEndRedirectUrl(nextPage.endRedirectUrl ?? null);
+			setEndedAt(nextPage.end ? new Date().toISOString() : null);
 		} catch (error: unknown) {
 			setError(error instanceof Error ? error.message : "Failed to advance");
 		} finally {
@@ -290,12 +153,7 @@ export default function App() {
 
 	return (
 		<div className="min-h-screen bg-slate-50 text-slate-900">
-			<Header
-				mode={mode}
-				sessionId={sessionId}
-				compiledConfig={compiledConfig}
-				experimentId={experimentId}
-			/>
+			<Header sessionId={sessionId} />
 
 			<main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-6 py-12">
 				{error && (

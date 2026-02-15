@@ -3,6 +3,7 @@
 # Demonstrates: Isolated vs shared chat memory patterns
 
 schema_version: 0.1.0
+allowRetake: true
 initialPageId: intro
 
 pages:

@@ -2,6 +2,7 @@
 # Demonstrates: Matchmaking with AI-facilitated group chat
 
 schema_version: 0.1.0
+allowRetake: true
 initialPageId: consent
 
 pages:
