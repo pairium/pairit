@@ -26,7 +26,7 @@ jobs:
           python-version: '3.x'
 
       - name: Install MkDocs and theme
-        run: pip install mkdocs mkdocs-shadcn
+        run: pip install mkdocs mkdocs-shadcn pymdown-extensions pygments
 
       - name: Build docs
         run: mkdocs build -f mkdocs.yml -d site
