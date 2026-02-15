@@ -41,4 +41,10 @@ theme:
   icon: heroicons:rocket-launch
   topbar_sections: false
 markdown_extensions:
-  - codehilite
+  - pymdownx.highlight:
+      anchor_linenums: true
+      use_pygments: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+extra_css:
+  - stylesheets/extra.css
