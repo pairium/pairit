@@ -3,6 +3,7 @@
 # Status: Requires P0-3/4/5 to be implemented
 
 schema_version: 0.1.0
+allowRetake: true
 initialPageId: intro
 
 pages:

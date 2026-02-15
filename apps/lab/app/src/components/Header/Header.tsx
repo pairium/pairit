@@ -1,40 +1,15 @@
-import type { CompiledConfig } from "@app/runtime/config";
 import { Login, Logout, useAuth } from "@components/Auth";
 
 type HeaderProps = {
-	mode: "local" | "remote" | null;
 	sessionId: string | null;
-	compiledConfig: CompiledConfig | null;
-	experimentId?: string;
 };
 
-export default function Header({
-	mode,
-	sessionId,
-	compiledConfig,
-	experimentId,
-}: HeaderProps) {
+export default function Header({ sessionId }: HeaderProps) {
 	const { user, isLoading, isAuthenticated } = useAuth();
 
 	const shortSessionId = sessionId?.slice(0, 8);
-	const status =
-		mode === "remote"
-			? sessionId
-				? compiledConfig
-					? `Session: ${shortSessionId}… (HYBRID)`
-					: `Session: ${shortSessionId}… (REMOTE)`
-				: "No session"
-			: mode === "local" && experimentId
-				? `Config: ${experimentId} (LOCAL)`
-				: "—";
-	const statusTitle =
-		mode === "remote" && sessionId
-			? compiledConfig
-				? `Session: ${sessionId} (HYBRID - local config, remote events)`
-				: `Session: ${sessionId} (REMOTE - events enabled)`
-			: mode === "local" && experimentId
-				? `Config: ${experimentId} (LOCAL - no events)`
-				: undefined;
+	const status = sessionId ? `Session: ${shortSessionId}…` : "—";
+	const statusTitle = sessionId ? `Session: ${sessionId}` : undefined;
 
 	return (
 		<header className="border-b border-slate-200 bg-white/80 backdrop-blur">

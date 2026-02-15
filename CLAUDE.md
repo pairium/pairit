@@ -50,11 +50,12 @@ packages/
 
 ## Experiment Configs
 
-Configs live in `apps/lab/app/public/configs/`:
-- `.yaml` files are user-facing source configs
-- `.json` files are compiled versions used by the runtime
+Configs are stored in MongoDB. Source YAML files live in `apps/lab/app/public/configs/`.
 
-When updating configs, always update both YAML and JSON to keep them in sync.
+```bash
+./scripts/upload-sample-configs.sh              # Upload all sample configs
+pairit config upload config.yaml --config-id id # Upload single config
+```
 
 ## Conventions
 

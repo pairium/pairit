@@ -5,10 +5,7 @@
  * POST /sessions/:id/advance - Advance to next page
  */
 
-// Import the loadConfig function (duplicated from configs.ts for now)
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
 import { Elysia, t } from "elysia";
 import { MongoServerError } from "mongodb";
 import { deriveAuthContext } from "../lib/auth-middleware";
@@ -24,7 +21,6 @@ import type {
 	SessionDocument,
 } from "../types";
 
-const IS_DEV = process.env.NODE_ENV === "development";
 const FORCE_AUTH = process.env.FORCE_AUTH === "true";
 
 function isPage(
@@ -79,27 +75,6 @@ async function loadConfig(
 	if (data && typeof data.config !== "undefined") {
 		const config = coerceConfig(data.config);
 		if (config) return { config, allowRetake: data.allowRetake ?? false };
-	}
-	// Fallback: local configs directory (development only)
-	if (IS_DEV) {
-		try {
-			const configsDir = resolve(process.cwd(), "../app/public/configs");
-			const configPath = resolve(configsDir, `${configId}.json`);
-
-			// Prevent path traversal attacks
-			if (!configPath.startsWith(configsDir)) {
-				console.warn(`[Config] Path traversal attempt blocked: ${configId}`);
-				return null;
-			}
-
-			const configContent = await readFile(configPath, "utf8");
-			const raw = JSON.parse(configContent);
-			const config = coerceConfig(raw);
-			// Local configs default to allowRetake: true for development convenience
-			if (config) return { config, allowRetake: true };
-		} catch (error) {
-			console.log(`Local config fallback failed for ${configId}:`, error);
-		}
 	}
 	return null;
 }
@@ -261,6 +236,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 						status: "resumed" as const,
 						sessionId: existingSession.id,
 						configId: body.configId,
+						config,
 						currentPageId: existingSession.currentPageId,
 						page,
 						user_state: existingSession.user_state,
@@ -275,6 +251,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 						status: "blocked" as const,
 						sessionId: existingSession.id,
 						configId: body.configId,
+						config,
 						currentPageId: existingSession.currentPageId,
 						page: config.pages[existingSession.currentPageId],
 						endedAt: existingSession.endedAt,
@@ -306,6 +283,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				status: "created" as const,
 				sessionId: id,
 				configId: body.configId,
+				config,
 				currentPageId: session.currentPageId,
 				page,
 				user_state: session.user_state,

@@ -21,6 +21,7 @@ type ExperimentConfig = {
 	pages?: ExperimentPage[];
 	agents?: unknown[];
 	matchmaking?: unknown;
+	allowRetake?: boolean;
 };
 
 const program = new Command();
@@ -447,12 +448,17 @@ type UploadPayload = {
 	checksum: string;
 	metadata?: Record<string, unknown> | null;
 	config: unknown;
+	allowRetake?: boolean;
 };
 
 async function buildUploadPayload(
 	configPath: string,
 	options: UploadOptions,
 ): Promise<{ payload: UploadPayload; checksum: string }> {
+	// Load source YAML to read allowRetake (not preserved in compiled output)
+	const sourceConfig = await loadConfig(configPath);
+	const allowRetake = sourceConfig.allowRetake === true;
+
 	const compiledPath = await compileConfig(configPath);
 	const compiledContent = await readFile(compiledPath, "utf8");
 	const hashBuffer = createHash("sha256").update(compiledContent).digest();
@@ -476,6 +482,7 @@ async function buildUploadPayload(
 			checksum,
 			metadata: metadata ?? null,
 			config: parsed,
+			allowRetake,
 		},
 		checksum,
 	};

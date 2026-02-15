@@ -9,7 +9,6 @@ import { auth } from "@pairit/auth";
 import { Elysia } from "elysia";
 import { ensureIndexes } from "./lib/db";
 import { chatRoutes } from "./routes/chat";
-import { configsRoutes } from "./routes/configs";
 import { eventsRoutes } from "./routes/events";
 import { matchmakingRoutes } from "./routes/matchmaking";
 import { randomizeRoutes } from "./routes/randomize";
@@ -91,7 +90,6 @@ app.onRequest(({ request }) => {
 app
 
 	// API Routes
-	.use(configsRoutes)
 	.use(sessionsRoutes)
 	.use(eventsRoutes)
 	.use(streamRoutes)
@@ -115,11 +113,15 @@ if (!IS_DEV) {
 			}
 			return Bun.file(fullPath);
 		})
-		.get("/static-configs/*", ({ params: { "*": path }, set }) => {
+		// Serve config files (YAML) for viewing
+		.get("/configs/*", ({ params: { "*": path }, set }) => {
 			const fullPath = resolve(distPath, "configs", path);
 			if (!fullPath.startsWith(resolve(distPath, "configs"))) {
 				set.status = 403;
 				return "Forbidden";
+			}
+			if (path.endsWith(".yaml")) {
+				set.headers["content-type"] = "text/yaml";
 			}
 			return Bun.file(fullPath);
 		})

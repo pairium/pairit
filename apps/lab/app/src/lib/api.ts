@@ -1,3 +1,4 @@
+import type { CompiledConfig } from "../runtime/config";
 import type { EventPayload, Page } from "../runtime/types";
 
 const baseUrl = import.meta.env.VITE_API_URL || "";
@@ -26,6 +27,7 @@ type StartResponse = {
 	status?: "created" | "resumed" | "blocked";
 	sessionId: string;
 	configId: string;
+	config: CompiledConfig;
 	currentPageId: string;
 	page: Page;
 	user_state?: Record<string, unknown>;
