@@ -1,14 +1,56 @@
 # Examples
 
-## Simple Survey
+Ready-to-use experiment templates. Click "Try it" to run the live demo.
+
+## Hello World
+
+The simplest experiment: one question, one button.
+
+[Try it →](https://lab-432501290611.us-central1.run.app/hello-world)
+
+<details>
+<summary>View config</summary>
 
 ```yaml
+schema_version: v2
+initialPageId: survey
+
+pages:
+  - id: survey
+    survey:
+      - id: mood
+        text: "How are you feeling today?"
+        answer: likert5
+    buttons:
+      - id: done
+        text: "Submit"
+        action: { type: go_to, target: thanks }
+
+  - id: thanks
+    text: "Thanks for your response!"
+    end: true
+```
+
+</details>
+
+---
+
+## Survey
+
+Multi-page survey with different question types.
+
+[Try it →](https://lab-432501290611.us-central1.run.app/survey-showcase)
+
+<details>
+<summary>View config</summary>
+
+```yaml
+schema_version: v2
 initialPageId: intro
 
 pages:
   - id: intro
-    text: |
-      Welcome. Please complete this short survey.
+    text: "Welcome. Please complete this short survey."
     buttons:
       - id: begin
         text: "Begin"
@@ -32,91 +74,233 @@ pages:
         action: { type: go_to, target: outro }
 
   - id: outro
+    text: "Thank you for participating!"
     end: true
-
-user_state:
-  age: int
-  gender: string
-  satisfaction: int
 ```
 
-## Matchmaking + Chat (+ optional agents)
+</details>
+
+---
+
+## Randomization
+
+Randomly assign participants to conditions.
+
+[Try it →](https://lab-432501290611.us-central1.run.app/randomization-demo)
+
+<details>
+<summary>View config</summary>
 
 ```yaml
-initialPageId: intro
+schema_version: v2
+initialPageId: randomize
 
 pages:
-  - id: intro
-    text: |
-      Welcome to the experiment!
-      Press "Start" to begin.
+  - id: randomize
+    randomize:
+      stateKey: condition
+      conditions: [control, treatment_a, treatment_b]
+      assignmentType: balanced_random
     buttons:
-      - id: start
-        text: "Start"
-        action: { type: go_to, target: start_survey }
-
-  - id: start_survey
-    survey:
-      - id: age
-        text: "How old are you?"
-        answer: numeric
-    buttons:
-      - id: proceed
-        text: "Proceed"
-        action: { type: go_to, target: matchmaking }
-
-  - id: matchmaking
-    matchmaking: default_pool
-    buttons:
-      - id: on_match
+      - id: continue
         text: "Continue"
         action:
           type: go_to
           branches:
-            - when: "$.user_state.treated == true"
-              target: chat_treated
-            - target: chat_control
+            - when: "$.user_state.condition == 'control'"
+              target: control_page
+            - when: "$.user_state.condition == 'treatment_a'"
+              target: treatment_a_page
+            - target: treatment_b_page
 
-  - id: chat_control
-    chat:
-    buttons:
-      - id: to_outro_control
-        text: "Finish"
-        action: { type: go_to, target: outro }
+  - id: control_page
+    text: "You are in the **control** group."
+    end: true
 
-  - id: chat_treated
-    chat:
-      agents: [default_agent]
-    buttons:
-      - id: to_outro_treated
-        text: "Finish"
-        action: { type: go_to, target: outro }
+  - id: treatment_a_page
+    text: "You are in **treatment A**."
+    end: true
 
-  - id: outro
-    text: "Thank you for participating in our study."
-    buttons:
-      - id: return
-        text: "Return to Prolific"
-        action: { type: end }
-
-user_state:
-  treated: bool
-
-matchmaking:
-  - id: default_pool
-    num_users: 2
-    timeoutSeconds: 120
-
-agents:
-  - id: default_agent
-    model: "grok-4-fast-non-reasoning"
+  - id: treatment_b_page
+    text: "You are in **treatment B**."
+    end: true
 ```
 
-## Component Events Showcase
+</details>
 
-This comprehensive example demonstrates how to configure custom events for all interactive components. Events are optional and allow you to track user interactions with detailed metadata.
+---
+
+## AI Chat
+
+One-on-one conversation with an AI agent.
+
+[Try it →](https://lab-432501290611.us-central1.run.app/ai-chat)
+
+<details>
+<summary>View config</summary>
 
 ```yaml
+schema_version: v2
+initialPageId: intro
+
+pages:
+  - id: intro
+    text: "Chat with our AI assistant about any topic."
+    buttons:
+      - id: start
+        text: "Start Chat"
+        action: { type: go_to, target: chat }
+
+  - id: chat
+    chat:
+      agents: [assistant]
+      placeholder: "Type your message..."
+    buttons:
+      - id: finish
+        text: "End Chat"
+        action: { type: go_to, target: thanks }
+
+  - id: thanks
+    text: "Thanks for chatting!"
+    end: true
+
+agents:
+  - id: assistant
+    model: gpt-4o
+    systemPrompt: "You are a helpful assistant. Be concise and friendly."
+```
+
+</details>
+
+---
+
+## Team Decision
+
+Match 2 participants and let them chat together.
+
+[Try it →](https://lab-432501290611.us-central1.run.app/team-decision) (open in 2 tabs)
+
+<details>
+<summary>View config</summary>
+
+```yaml
+schema_version: v2
+initialPageId: intro
+
+pages:
+  - id: intro
+    text: "You'll be matched with another participant to discuss a decision."
+    buttons:
+      - id: start
+        text: "Find Partner"
+        action: { type: go_to, target: waiting }
+
+  - id: waiting
+    matchmaking: team_pool
+    onMatchTarget: discussion
+    timeoutTarget: solo
+
+  - id: discussion
+    text: "Discuss with your partner: **Should we invest in renewable energy?**"
+    chat:
+      groupId: "$.groupId"
+    buttons:
+      - id: done
+        text: "Submit Decision"
+        action: { type: go_to, target: thanks }
+
+  - id: solo
+    text: "No partner found. Thanks for trying!"
+    end: true
+
+  - id: thanks
+    text: "Thanks for participating!"
+    end: true
+
+matchmaking:
+  - id: team_pool
+    num_users: 2
+    timeoutSeconds: 60
+```
+
+</details>
+
+---
+
+## AI Mediation
+
+Two participants chat with an AI facilitator observing and guiding.
+
+[Try it →](https://lab-432501290611.us-central1.run.app/ai-mediation) (open in 2 tabs)
+
+<details>
+<summary>View config</summary>
+
+```yaml
+schema_version: v2
+initialPageId: intro
+
+pages:
+  - id: intro
+    text: "You'll discuss a topic with another participant. An AI mediator will help guide the conversation."
+    buttons:
+      - id: start
+        text: "Join Discussion"
+        action: { type: go_to, target: waiting }
+
+  - id: waiting
+    matchmaking: mediation_pool
+    onMatchTarget: mediated_chat
+    timeoutTarget: timeout
+
+  - id: mediated_chat
+    text: "**Topic:** Should social media be regulated?"
+    chat:
+      groupId: "$.groupId"
+      agents: [mediator]
+    buttons:
+      - id: finish
+        text: "End Discussion"
+        action: { type: go_to, target: thanks }
+
+  - id: timeout
+    text: "No partner found."
+    end: true
+
+  - id: thanks
+    text: "Thanks for participating!"
+    end: true
+
+matchmaking:
+  - id: mediation_pool
+    num_users: 2
+    timeoutSeconds: 90
+
+agents:
+  - id: mediator
+    model: gpt-4o
+    systemPrompt: |
+      You are a neutral discussion facilitator. Your role:
+      - Encourage both participants to share their views
+      - Ask clarifying questions
+      - Summarize points of agreement and disagreement
+      - Keep the conversation respectful and productive
+      Only speak when helpful. Don't dominate the conversation.
+```
+
+</details>
+
+---
+
+## Component Events
+
+Track custom analytics events on user interactions.
+
+<details>
+<summary>View config</summary>
+
+```yaml
+schema_version: v2
 initialPageId: intro
 
 pages:
@@ -124,104 +308,38 @@ pages:
     text: "Welcome to the component events showcase."
     buttons:
       - id: start
-        text: "Begin showcase"
-        action:
-          type: go_to
-          target: button_examples
+        text: "Begin"
+        action: { type: go_to, target: survey }
         events:
           onClick:
             type: "button_click"
             data:
               button_id: "start"
-              label: "Begin showcase"
               section: "navigation"
 
-  - id: button_examples
-    text: "Button event examples."
-    components:
-      - type: buttons
-        props:
-          buttons:
-            - id: primary_action
-              text: "Primary Action"
-              action:
-                type: go_to
-                target: survey_examples
-              events:
-                onClick:
-                  type: "button_click"
-                  data:
-                    button_id: "primary_action"
-                    category: "primary"
-                    priority: "high"
-
-  - id: survey_examples
-    text: "Survey components automatically emit survey_submission events."
+  - id: survey
     survey:
-      - id: user_satisfaction
+      - id: satisfaction
         text: "How satisfied are you?"
         answer: likert5
     buttons:
-      - id: survey_continue
-        text: "Continue"
-        action:
-          type: go_to
-          target: media_examples
+      - id: submit
+        text: "Submit"
+        action: { type: go_to, target: thanks }
 
-  - id: media_examples
-    text: "Media components can emit various interaction events."
-    components:
-      - type: media
-        props:
-          kind: video
-          src: "https://example.com/demo.mp4"
-        events:
-          onPlay:
-            type: "media_play"
-            data:
-              media_id: "demo_video"
-              media_type: "video"
-          onPause:
-            type: "media_pause"
-            data:
-              media_id: "demo_video"
-          onComplete:
-            type: "media_complete"
-            data:
-              media_id: "demo_video"
-
-  - id: matchmaking_examples
-    text: "Matchmaking components emit events during the matching process."
-    components:
-      - type: matchmaking
-        props:
-          num_users: 2
-          timeoutSeconds: 30
-        events:
-          onRequestStart:
-            type: "matchmaking_start"
-            data:
-              pool_id: "demo_pool"
-          onMatchFound:
-            type: "matchmaking_success"
-            data:
-              pool_id: "demo_pool"
-          onTimeout:
-            type: "matchmaking_timeout"
-            data:
-              pool_id: "demo_pool"
-
-  - id: outro
+  - id: thanks
+    text: "Thank you!"
     end: true
-    text: "Thank you for exploring the component events showcase!"
 ```
 
-Available event hooks by component:
-- **buttons**: `onClick` (default)
-- **survey**: `onSubmit` (automatic)
-- **media**: `onPlay`, `onPause`, `onSeek`, `onComplete`, `onError`
-- **matchmaking**: `onRequestStart`, `onMatchFound`, `onTimeout`, `onCancel`
-- **chat**: `onMessageSend`, `onMessageReceive`, `onTypingStart`, `onTypingStop`
-- **form**: `onSubmit`, `onFieldChange`
+</details>
 
-Event data is flexible and can include any metadata relevant to your research. All events include standard fields like `sessionId`, `configId`, `pageId`, `componentType`, and `componentId`.
+**Available event hooks:**
+
+| Component | Events |
+|-----------|--------|
+| buttons | `onClick` |
+| survey | `onSubmit` (automatic) |
+| media | `onPlay`, `onPause`, `onSeek`, `onComplete`, `onError` |
+| matchmaking | `onRequestStart`, `onMatchFound`, `onTimeout`, `onCancel` |
+| chat | `onMessageSend`, `onMessageReceive` |
