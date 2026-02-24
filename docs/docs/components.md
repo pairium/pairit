@@ -20,6 +20,18 @@ Component-first architecture
 
 Result: a consistent, declarative system where pages stay lightweight and features drop in as components.
 
+## Conditional Rendering
+
+Any component supports a `when` property to conditionally show or hide it based on `user_state`:
+
+```yaml
+- type: text
+  when: "user_state.treatment == 'A'"
+  props: { text: "Instructions for group A." }
+```
+
+Components without `when` always render. See [Expressions](configuration.md#expressions) for the full syntax.
+
 ## Available Components
 
 | Component | Description |

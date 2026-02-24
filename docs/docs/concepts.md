@@ -37,6 +37,22 @@ buttons:
 
 Branches are evaluated in order; the first matching condition determines the target. A branch without `when` serves as the default fallback.
 
+### Conditional Rendering
+
+Use `when` on any component to show or hide it based on `user_state`. This lets a single page display different content per condition without duplicating pages:
+
+```yaml
+components:
+  - type: text
+    when: "user_state.treatment == 'A'"
+    props: { text: "You are in group A." }
+  - type: text
+    when: "user_state.treatment == 'B'"
+    props: { text: "You are in group B." }
+```
+
+Components without `when` always render. The expression syntax is the same as branch conditions: `user_state.{key} {op} {value}`.
+
 ### Action Types
 
 - `go_to`: Navigate to a specific page by id

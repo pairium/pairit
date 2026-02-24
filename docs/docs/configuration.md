@@ -70,6 +70,8 @@ Component instance shapes:
 - Built-in chat: `{ type: "chat", props: { agents?: string[] } }`
 - Custom component host: `{ type: "component", props: { component: string, props: object, unknownEvents?: "error" | "warn" | "ignore" } }`
 
+All component instances also accept an optional `when` field to conditionally render based on `user_state` (see [Expressions](#expressions)).
+
 Example page:
 
 ```yaml
