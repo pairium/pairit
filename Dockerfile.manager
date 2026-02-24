@@ -8,7 +8,6 @@ COPY apps/lab/server/package.json ./apps/lab/server/
 COPY apps/manager/server/package.json ./apps/manager/server/
 COPY packages/auth/package.json ./packages/auth/
 COPY packages/db/package.json ./packages/db/
-COPY packages/storage/package.json ./packages/storage/
 COPY . .
 RUN bun install --frozen-lockfile
 
