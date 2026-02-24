@@ -372,6 +372,7 @@ type MatchmakingPoolConfig = {
 
 type ComponentWithProps = {
 	type: string;
+	id?: string;
 	props?: Record<string, unknown>;
 };
 
@@ -392,17 +393,22 @@ async function compileConfig(configPath: string): Promise<string> {
 	for (const page of config.pages ?? []) {
 		const { id, ...rest } = page;
 
-		// Merge pool config into matchmaking components
+		// Process components: auto-generate IDs and merge pool configs
 		if (Array.isArray(rest.components)) {
 			rest.components = (rest.components as ComponentWithProps[]).map(
-				(comp) => {
-					if (comp.type === "matchmaking" && comp.props?.poolId) {
-						const poolConfig = poolConfigs.get(comp.props.poolId as string);
+				(comp, index) => {
+					// Auto-generate component ID if missing
+					const withId = comp.id
+						? comp
+						: { ...comp, id: `${comp.type}-${index}` };
+
+					if (withId.type === "matchmaking" && withId.props?.poolId) {
+						const poolConfig = poolConfigs.get(withId.props.poolId as string);
 						if (poolConfig) {
 							return {
-								...comp,
+								...withId,
 								props: {
-									...comp.props,
+									...withId.props,
 									num_users: poolConfig.num_users,
 									timeoutSeconds: poolConfig.timeoutSeconds,
 									timeoutTarget: poolConfig.timeoutTarget,
@@ -412,7 +418,7 @@ async function compileConfig(configPath: string): Promise<string> {
 							};
 						}
 					}
-					return comp;
+					return withId;
 				},
 			);
 		}
@@ -717,21 +723,30 @@ async function exportData(
 	console.log(`Exporting data for ${configId} in ${format} format...`);
 
 	// Fetch all data in parallel
-	const [sessionsRes, eventsRes, messagesRes] = await Promise.all([
-		callFunctions(`/data/${encodeURIComponent(configId)}/sessions`, {
-			method: "GET",
-		}) as Promise<{ sessions: SessionExport[] }>,
-		callFunctions(`/data/${encodeURIComponent(configId)}/events`, {
-			method: "GET",
-		}) as Promise<{ events: EventExport[] }>,
-		callFunctions(`/data/${encodeURIComponent(configId)}/chat-messages`, {
-			method: "GET",
-		}) as Promise<{ messages: ChatMessageExport[] }>,
-	]);
+	const [sessionsRes, eventsRes, messagesRes, groupsRes, surveyRes] =
+		await Promise.all([
+			callFunctions(`/data/${encodeURIComponent(configId)}/sessions`, {
+				method: "GET",
+			}) as Promise<{ sessions: SessionExport[] }>,
+			callFunctions(`/data/${encodeURIComponent(configId)}/events`, {
+				method: "GET",
+			}) as Promise<{ events: EventExport[] }>,
+			callFunctions(`/data/${encodeURIComponent(configId)}/chat-messages`, {
+				method: "GET",
+			}) as Promise<{ messages: ChatMessageExport[] }>,
+			callFunctions(`/data/${encodeURIComponent(configId)}/groups`, {
+				method: "GET",
+			}) as Promise<{ groups: GroupExport[] }>,
+			callFunctions(`/data/${encodeURIComponent(configId)}/survey-responses`, {
+				method: "GET",
+			}) as Promise<{ surveyResponses: SurveyResponseExport[] }>,
+		]);
 
 	const sessions = sessionsRes.sessions ?? [];
 	const events = eventsRes.events ?? [];
 	const messages = messagesRes.messages ?? [];
+	const groups = groupsRes.groups ?? [];
+	const surveyResponses = surveyRes.surveyResponses ?? [];
 
 	// Write each data type to its own file
 	await writeExportFile(
@@ -754,9 +769,25 @@ async function exportData(
 		path.join(outDir, `${configId}-chat-messages`),
 		messages,
 		format,
-		(msg) => msg,
+		(msg) => msg as unknown as Record<string, unknown>,
 	);
 	console.log(`✓ Exported ${messages.length} chat messages`);
+
+	await writeExportFile(
+		path.join(outDir, `${configId}-groups`),
+		groups,
+		format,
+		(group) => group as unknown as Record<string, unknown>,
+	);
+	console.log(`✓ Exported ${groups.length} groups`);
+
+	await writeExportFile(
+		path.join(outDir, `${configId}-survey-responses`),
+		surveyResponses,
+		format,
+		flattenSurveyResponse,
+	);
+	console.log(`✓ Exported ${surveyResponses.length} survey responses`);
 
 	console.log(`\nFiles written to: ${outDir}`);
 }
@@ -788,11 +819,27 @@ type EventExport = {
 type ChatMessageExport = {
 	messageId: string | null;
 	groupId: string;
-	sessionId: string;
 	senderId: string;
 	senderType: string;
 	content: string;
 	createdAt: string | null;
+};
+
+type GroupExport = {
+	groupId: string;
+	sessionId: string;
+	poolId: string;
+	treatment: string;
+	matchedAt: string | null;
+	status: string;
+};
+
+type SurveyResponseExport = {
+	sessionId: string;
+	pageId: string;
+	componentId: string;
+	timestamp: string;
+	data: Record<string, unknown>;
 };
 
 function flattenSession(session: SessionExport): Record<string, unknown> {
@@ -827,6 +874,38 @@ function flattenEvent(event: EventExport): Record<string, unknown> {
 		for (const [key, value] of Object.entries(data)) {
 			flattened[`data.${key}`] = serializeValue(value);
 		}
+	}
+
+	return flattened;
+}
+
+function deepFlatten(
+	obj: Record<string, unknown>,
+	prefix: string,
+): Record<string, string | number | boolean | null> {
+	const result: Record<string, string | number | boolean | null> = {};
+	for (const [key, value] of Object.entries(obj)) {
+		const fullKey = `${prefix}.${key}`;
+		if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+			Object.assign(
+				result,
+				deepFlatten(value as Record<string, unknown>, fullKey),
+			);
+		} else {
+			result[fullKey] = serializeValue(value);
+		}
+	}
+	return result;
+}
+
+function flattenSurveyResponse(
+	response: SurveyResponseExport,
+): Record<string, unknown> {
+	const { data, ...rest } = response;
+	const flattened: Record<string, unknown> = { ...rest };
+
+	if (data && typeof data === "object") {
+		Object.assign(flattened, deepFlatten(data, "data"));
 	}
 
 	return flattened;

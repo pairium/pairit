@@ -9,6 +9,7 @@ import type {
 	ChatMessageDocument,
 	ConfigDocument,
 	EventDocument,
+	GroupDocument,
 	SessionDocument,
 } from "../types";
 
@@ -40,4 +41,11 @@ export async function getChatMessagesCollection(): Promise<
 > {
 	const database = await connectDB();
 	return database.collection<ChatMessageDocument>("chat_messages");
+}
+
+export async function getGroupsCollection(): Promise<
+	Collection<GroupDocument>
+> {
+	const database = await connectDB();
+	return database.collection<GroupDocument>("groups");
 }

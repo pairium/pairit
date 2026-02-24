@@ -10,6 +10,7 @@ import {
 	getChatMessagesCollection,
 	getConfigsCollection,
 	getEventsCollection,
+	getGroupsCollection,
 	getSessionsCollection,
 } from "../lib/db";
 
@@ -168,7 +169,6 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 			const exportData = messages.map((msg) => ({
 				messageId: msg._id?.toString() ?? null,
 				groupId: msg.groupId,
-				sessionId: msg.sessionId,
 				senderId: msg.senderId,
 				senderType: msg.senderType,
 				content: msg.content,
@@ -176,6 +176,108 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 			}));
 
 			return { messages: exportData };
+		},
+		{
+			params: t.Object({
+				configId: t.String(),
+			}),
+		},
+	)
+	.get(
+		"/:configId/groups",
+		async ({ params: { configId }, set, user }) => {
+			if (!user) {
+				set.status = 401;
+				return { error: "unauthorized", message: "Not authenticated" };
+			}
+
+			const configsCollection = await getConfigsCollection();
+			const config = await configsCollection.findOne({ configId });
+			if (!config) {
+				set.status = 404;
+				return { error: "not_found", message: "Config not found" };
+			}
+			if (config.owner !== user.id) {
+				set.status = 403;
+				return {
+					error: "forbidden",
+					message: "Not authorized to export this config's data",
+				};
+			}
+
+			const groupsCollection = await getGroupsCollection();
+			const groups = await groupsCollection
+				.find({ configId })
+				.sort({ matchedAt: 1 })
+				.toArray();
+
+			// Explode memberSessionIds → one row per (group, session)
+			const exportData = groups.flatMap((group) =>
+				group.memberSessionIds.map((sessionId) => ({
+					groupId: group.groupId,
+					sessionId,
+					poolId: group.poolId,
+					treatment: group.treatment,
+					matchedAt: group.matchedAt?.toISOString() ?? null,
+					status: group.status,
+				})),
+			);
+
+			return { groups: exportData };
+		},
+		{
+			params: t.Object({
+				configId: t.String(),
+			}),
+		},
+	)
+	.get(
+		"/:configId/survey-responses",
+		async ({ params: { configId }, set, user }) => {
+			if (!user) {
+				set.status = 401;
+				return { error: "unauthorized", message: "Not authenticated" };
+			}
+
+			const configsCollection = await getConfigsCollection();
+			const config = await configsCollection.findOne({ configId });
+			if (!config) {
+				set.status = 404;
+				return { error: "not_found", message: "Config not found" };
+			}
+			if (config.owner !== user.id) {
+				set.status = 403;
+				return {
+					error: "forbidden",
+					message: "Not authorized to export this config's data",
+				};
+			}
+
+			const eventsCollection = await getEventsCollection();
+			const events = await eventsCollection
+				.find({
+					configId,
+					componentType: { $in: ["survey", "paged_survey"] },
+				})
+				.sort({ createdAt: 1 })
+				.toArray();
+
+			// Filter out paged survey per-page events (keep only completions)
+			const filtered = events.filter(
+				(event) =>
+					event.componentType !== "paged_survey" ||
+					event.data?.status === "completed",
+			);
+
+			const exportData = filtered.map((event) => ({
+				sessionId: event.sessionId,
+				pageId: event.pageId,
+				componentId: event.componentId,
+				timestamp: event.timestamp,
+				data: event.data ?? {},
+			}));
+
+			return { surveyResponses: exportData };
 		},
 		{
 			params: t.Object({
