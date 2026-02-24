@@ -10,7 +10,9 @@ const KEYCHAIN_SERVICE = "pairit-cli";
 const KEYCHAIN_ACCOUNT = "default";
 const KEYTAR_MODULE_SPECIFIER = "keytar";
 
-const BASE_URL = process.env.PAIRIT_API_URL || "http://localhost:3002";
+const BASE_URL =
+	process.env.PAIRIT_API_URL ||
+	"https://manager-432501290611.us-central1.run.app";
 
 /**
  * Exchange an authorization code for a session token

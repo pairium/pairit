@@ -670,16 +670,14 @@ function getFunctionsBaseUrl(): string {
 	if (process.env.PAIRIT_API_URL) {
 		return process.env.PAIRIT_API_URL;
 	}
-	// Default to local development server
-	return "http://localhost:3002";
+	return "https://manager-432501290611.us-central1.run.app";
 }
 
 function getLabUrl(): string {
 	if (process.env.PAIRIT_LAB_URL) {
 		return process.env.PAIRIT_LAB_URL;
 	}
-	// Default fallback
-	return "http://localhost:3000";
+	return "https://lab-432501290611.us-central1.run.app";
 }
 
 function getInlineMediaLimit(): number {
