@@ -127,6 +127,18 @@ async function runAgent(
 		const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 		const senderId = `agent:${agent.id}`;
 
+		// Show typing indicator immediately
+		for (const memberId of memberIds) {
+			broadcastToSession(memberId, "chat_message_delta", {
+				streamId,
+				groupId,
+				senderId,
+				senderType: "agent",
+				delta: "",
+				fullText: "",
+			});
+		}
+
 		let fullText = "";
 		const toolCalls: Array<{ name: string; args: Record<string, unknown> }> =
 			[];
