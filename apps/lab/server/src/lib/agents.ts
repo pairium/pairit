@@ -114,14 +114,17 @@ export async function getPageAgentIds(
 		return tryLocalPageAgents(configId, pageId);
 	}
 
+	type PageShape = {
+		id: string;
+		components?: Array<{ type: string; props?: { agents?: string[] } }>;
+	};
 	const config = doc.config as {
-		nodes?: Array<{
-			id: string;
-			components?: Array<{ type: string; props?: { agents?: string[] } }>;
-		}>;
+		pages?: Record<string, PageShape>;
+		nodes?: PageShape[];
 	};
 
-	const page = config.nodes?.find((n) => n.id === pageId);
+	const page =
+		config.pages?.[pageId] ?? config.nodes?.find((n) => n.id === pageId);
 	if (!page) {
 		return [];
 	}
@@ -145,14 +148,17 @@ async function tryLocalPageAgents(
 			`${configId}.json`,
 		);
 		const content = await readFile(configPath, "utf8");
+		type PageShape = {
+			id: string;
+			components?: Array<{ type: string; props?: { agents?: string[] } }>;
+		};
 		const parsed = JSON.parse(content) as {
-			nodes?: Array<{
-				id: string;
-				components?: Array<{ type: string; props?: { agents?: string[] } }>;
-			}>;
+			pages?: Record<string, PageShape>;
+			nodes?: PageShape[];
 		};
 
-		const page = parsed.nodes?.find((n) => n.id === pageId);
+		const page =
+			parsed.pages?.[pageId] ?? parsed.nodes?.find((n) => n.id === pageId);
 		if (!page) return [];
 
 		const chatComponent = page.components?.find((c) => c.type === "chat");

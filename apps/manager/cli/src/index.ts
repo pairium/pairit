@@ -388,7 +388,8 @@ async function compileConfig(configPath: string): Promise<string> {
 		}
 	}
 
-	const nodes = (config.pages ?? []).map((page) => {
+	const pages: Record<string, Record<string, unknown>> = {};
+	for (const page of config.pages ?? []) {
 		const { id, ...rest } = page;
 
 		// Merge pool config into matchmaking components
@@ -416,16 +417,14 @@ async function compileConfig(configPath: string): Promise<string> {
 			);
 		}
 
-		return {
-			id,
-			...rest,
-		};
-	});
+		pages[id] = { id, ...rest };
+	}
 
+	const pageIds = Object.keys(pages);
 	const output: Record<string, unknown> = {
 		schema_version: config.schema_version ?? "0.1.0",
-		initialPageId: config.initialPageId ?? nodes[0]?.id ?? "intro",
-		nodes,
+		initialPageId: config.initialPageId ?? pageIds[0] ?? "intro",
+		pages,
 	};
 	if (config.agents) {
 		output.agents = config.agents;

@@ -7,7 +7,6 @@ export interface RuntimeComponentDefinition<
 > {
 	type: Type;
 	renderer: RuntimeComponentRenderer<Type, Props>;
-	normalize?: (input: unknown) => Props | null;
 }
 
 export function defineRuntimeComponent<
