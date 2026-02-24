@@ -48,6 +48,7 @@ export interface ComponentInstance<
 	id?: string;
 	props: Props;
 	events?: ComponentEventsConfig<Type>;
+	when?: string;
 }
 
 export type TextComponent = ComponentInstance<

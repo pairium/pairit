@@ -9,6 +9,14 @@ import {
 } from "./registry";
 import type { ButtonAction, ComponentInstance, Page } from "./types";
 
+function isComponentVisible(
+	component: ComponentInstance,
+	userState: Record<string, unknown>,
+): boolean {
+	if (!component.when) return true;
+	return evaluateExpression(component.when, { user_state: userState });
+}
+
 function resolveTarget(
 	action: ButtonAction,
 	userState: Record<string, unknown>,
@@ -111,14 +119,18 @@ export function PageRenderer({
 	);
 
 	if (page.layout === "split") {
-		const leftComponents =
-			page.components?.filter(
-				(c) => c.type !== "live-workspace" && c.type !== "buttons",
-			) ?? [];
-		const rightComponents =
-			page.components?.filter((c) => c.type === "live-workspace") ?? [];
-		const bottomComponents =
-			page.components?.filter((c) => c.type === "buttons") ?? [];
+		const visibleComponents =
+			page.components?.filter((c) => isComponentVisible(c, userState ?? {})) ??
+			[];
+		const leftComponents = visibleComponents.filter(
+			(c) => c.type !== "live-workspace" && c.type !== "buttons",
+		);
+		const rightComponents = visibleComponents.filter(
+			(c) => c.type === "live-workspace",
+		);
+		const bottomComponents = visibleComponents.filter(
+			(c) => c.type === "buttons",
+		);
 
 		return (
 			<div className="flex justify-center">
@@ -165,12 +177,16 @@ export function PageRenderer({
 		);
 	}
 
+	const visibleComponents =
+		page.components?.filter((c) => isComponentVisible(c, userState ?? {})) ??
+		[];
+
 	return (
 		<div className="flex justify-center">
 			<Card className="w-full max-w-3xl">
 				<CardContent className="space-y-8">
-					{page?.components?.length ? (
-						page.components.map((component, index) =>
+					{visibleComponents.length ? (
+						visibleComponents.map((component, index) =>
 							renderComponentInstance(component, index, runtimeContext),
 						)
 					) : (
