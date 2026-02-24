@@ -1,5 +1,6 @@
 site_name: "Pairit Docs"
 site_url: https://pairium.github.io/pairit/
+repo_url: https://github.com/pairium/pairit
 nav:
   - Experimenter:
       - Overview: index.md
