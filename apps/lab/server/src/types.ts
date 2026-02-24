@@ -12,6 +12,7 @@ export type ComponentInstance =
 export type Page = {
 	id: string;
 	end?: boolean;
+	layout?: "split";
 	components?: ComponentInstance[];
 };
 
@@ -103,4 +104,16 @@ export type GroupDocument = {
 	treatment: string;
 	matchedAt: Date;
 	status: "active" | "completed";
+};
+
+export type WorkspaceDocumentDocument = {
+	_id?: import("mongodb").ObjectId;
+	groupId: string;
+	mode: "freeform" | "structured";
+	content?: string;
+	fields?: Record<string, unknown>;
+	updatedBy: string;
+	configId: string;
+	updatedAt: Date;
+	createdAt: Date;
 };

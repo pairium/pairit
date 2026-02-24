@@ -723,30 +723,40 @@ async function exportData(
 	console.log(`Exporting data for ${configId} in ${format} format...`);
 
 	// Fetch all data in parallel
-	const [sessionsRes, eventsRes, messagesRes, groupsRes, surveyRes] =
-		await Promise.all([
-			callFunctions(`/data/${encodeURIComponent(configId)}/sessions`, {
-				method: "GET",
-			}) as Promise<{ sessions: SessionExport[] }>,
-			callFunctions(`/data/${encodeURIComponent(configId)}/events`, {
-				method: "GET",
-			}) as Promise<{ events: EventExport[] }>,
-			callFunctions(`/data/${encodeURIComponent(configId)}/chat-messages`, {
-				method: "GET",
-			}) as Promise<{ messages: ChatMessageExport[] }>,
-			callFunctions(`/data/${encodeURIComponent(configId)}/groups`, {
-				method: "GET",
-			}) as Promise<{ groups: GroupExport[] }>,
-			callFunctions(`/data/${encodeURIComponent(configId)}/survey-responses`, {
-				method: "GET",
-			}) as Promise<{ surveyResponses: SurveyResponseExport[] }>,
-		]);
+	const [
+		sessionsRes,
+		eventsRes,
+		messagesRes,
+		groupsRes,
+		surveyRes,
+		workspaceRes,
+	] = await Promise.all([
+		callFunctions(`/data/${encodeURIComponent(configId)}/sessions`, {
+			method: "GET",
+		}) as Promise<{ sessions: SessionExport[] }>,
+		callFunctions(`/data/${encodeURIComponent(configId)}/events`, {
+			method: "GET",
+		}) as Promise<{ events: EventExport[] }>,
+		callFunctions(`/data/${encodeURIComponent(configId)}/chat-messages`, {
+			method: "GET",
+		}) as Promise<{ messages: ChatMessageExport[] }>,
+		callFunctions(`/data/${encodeURIComponent(configId)}/groups`, {
+			method: "GET",
+		}) as Promise<{ groups: GroupExport[] }>,
+		callFunctions(`/data/${encodeURIComponent(configId)}/survey-responses`, {
+			method: "GET",
+		}) as Promise<{ surveyResponses: SurveyResponseExport[] }>,
+		callFunctions(`/data/${encodeURIComponent(configId)}/workspace-documents`, {
+			method: "GET",
+		}) as Promise<{ workspaceDocuments: WorkspaceDocumentExport[] }>,
+	]);
 
 	const sessions = sessionsRes.sessions ?? [];
 	const events = eventsRes.events ?? [];
 	const messages = messagesRes.messages ?? [];
 	const groups = groupsRes.groups ?? [];
 	const surveyResponses = surveyRes.surveyResponses ?? [];
+	const workspaceDocuments = workspaceRes.workspaceDocuments ?? [];
 
 	// Write each data type to its own file
 	await writeExportFile(
@@ -788,6 +798,14 @@ async function exportData(
 		flattenSurveyResponse,
 	);
 	console.log(`✓ Exported ${surveyResponses.length} survey responses`);
+
+	await writeExportFile(
+		path.join(outDir, `${configId}-workspace-documents`),
+		workspaceDocuments,
+		format,
+		flattenWorkspaceDocument,
+	);
+	console.log(`✓ Exported ${workspaceDocuments.length} workspace documents`);
 
 	console.log(`\nFiles written to: ${outDir}`);
 }
@@ -840,6 +858,16 @@ type SurveyResponseExport = {
 	componentId: string;
 	timestamp: string;
 	data: Record<string, unknown>;
+};
+
+type WorkspaceDocumentExport = {
+	groupId: string;
+	mode: string;
+	content: string | null;
+	fields: Record<string, unknown> | null;
+	updatedBy: string;
+	createdAt: string | null;
+	updatedAt: string | null;
 };
 
 function flattenSession(session: SessionExport): Record<string, unknown> {
@@ -906,6 +934,21 @@ function flattenSurveyResponse(
 
 	if (data && typeof data === "object") {
 		Object.assign(flattened, deepFlatten(data, "data"));
+	}
+
+	return flattened;
+}
+
+function flattenWorkspaceDocument(
+	doc: WorkspaceDocumentExport,
+): Record<string, unknown> {
+	const { fields, ...rest } = doc;
+	const flattened: Record<string, unknown> = { ...rest };
+
+	if (fields && typeof fields === "object") {
+		for (const [key, value] of Object.entries(fields)) {
+			flattened[`fields.${key}`] = serializeValue(value);
+		}
 	}
 
 	return flattened;

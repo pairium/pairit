@@ -12,6 +12,7 @@ import {
 	getEventsCollection,
 	getGroupsCollection,
 	getSessionsCollection,
+	getWorkspaceDocumentsCollection,
 } from "../lib/db";
 
 export const dataRoutes = new Elysia({ prefix: "/data" })
@@ -278,6 +279,52 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 			}));
 
 			return { surveyResponses: exportData };
+		},
+		{
+			params: t.Object({
+				configId: t.String(),
+			}),
+		},
+	)
+	.get(
+		"/:configId/workspace-documents",
+		async ({ params: { configId }, set, user }) => {
+			if (!user) {
+				set.status = 401;
+				return { error: "unauthorized", message: "Not authenticated" };
+			}
+
+			const configsCollection = await getConfigsCollection();
+			const config = await configsCollection.findOne({ configId });
+			if (!config) {
+				set.status = 404;
+				return { error: "not_found", message: "Config not found" };
+			}
+			if (config.owner !== user.id) {
+				set.status = 403;
+				return {
+					error: "forbidden",
+					message: "Not authorized to export this config's data",
+				};
+			}
+
+			const wsCollection = await getWorkspaceDocumentsCollection();
+			const documents = await wsCollection
+				.find({ configId })
+				.sort({ updatedAt: 1 })
+				.toArray();
+
+			const exportData = documents.map((doc) => ({
+				groupId: doc.groupId,
+				mode: doc.mode,
+				content: doc.content ?? null,
+				fields: doc.fields ?? null,
+				updatedBy: doc.updatedBy,
+				createdAt: doc.createdAt?.toISOString() ?? null,
+				updatedAt: doc.updatedAt?.toISOString() ?? null,
+			}));
+
+			return { workspaceDocuments: exportData };
 		},
 		{
 			params: t.Object({

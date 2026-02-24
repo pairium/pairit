@@ -11,6 +11,7 @@ import type {
 	EventDocument,
 	GroupDocument,
 	SessionDocument,
+	WorkspaceDocumentDocument,
 } from "../types";
 
 export { connectDB } from "@pairit/db";
@@ -48,4 +49,11 @@ export async function getGroupsCollection(): Promise<
 > {
 	const database = await connectDB();
 	return database.collection<GroupDocument>("groups");
+}
+
+export async function getWorkspaceDocumentsCollection(): Promise<
+	Collection<WorkspaceDocumentDocument>
+> {
+	const database = await connectDB();
+	return database.collection<WorkspaceDocumentDocument>("workspace_documents");
 }

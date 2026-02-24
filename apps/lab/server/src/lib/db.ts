@@ -12,6 +12,7 @@ import type {
 	GroupDocument,
 	IdempotencyRecord,
 	SessionDocument,
+	WorkspaceDocumentDocument,
 } from "../types";
 
 export { connectDB } from "@pairit/db";
@@ -56,6 +57,13 @@ export async function getGroupsCollection(): Promise<
 > {
 	const database = await connectDB();
 	return database.collection<GroupDocument>("groups");
+}
+
+export async function getWorkspaceDocumentsCollection(): Promise<
+	Collection<WorkspaceDocumentDocument>
+> {
+	const database = await connectDB();
+	return database.collection<WorkspaceDocumentDocument>("workspace_documents");
 }
 
 export async function ensureIndexes(): Promise<void> {
@@ -104,6 +112,13 @@ export async function ensureIndexes(): Promise<void> {
 			{ "prolific.prolificPid": 1, configId: 1, createdAt: -1 },
 			{ sparse: true },
 		);
+
+	await database
+		.collection("workspace_documents")
+		.createIndex({ groupId: 1 }, { unique: true });
+	await database
+		.collection("workspace_documents")
+		.createIndex({ configId: 1, updatedAt: 1 });
 
 	console.log("[DB] All indexes ensured");
 }

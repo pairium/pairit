@@ -14,6 +14,7 @@ import { matchmakingRoutes } from "./routes/matchmaking";
 import { randomizeRoutes } from "./routes/randomize";
 import { sessionsRoutes } from "./routes/sessions";
 import { streamRoutes } from "./routes/stream";
+import { workspaceRoutes } from "./routes/workspace";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 const RAW_CORS_ORIGINS = process.env.CORS_ORIGINS;
@@ -95,7 +96,8 @@ app
 	.use(streamRoutes)
 	.use(chatRoutes)
 	.use(matchmakingRoutes)
-	.use(randomizeRoutes);
+	.use(randomizeRoutes)
+	.use(workspaceRoutes);
 
 // Static file serving (production only - in dev, Vite handles this)
 if (!IS_DEV) {

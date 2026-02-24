@@ -619,6 +619,101 @@ agents:
 
 ---
 
+## Workspace
+
+AI-assisted document editing with a split-panel layout.
+
+<details>
+<summary>View config</summary>
+
+```yaml
+schema_version: 0.1.0
+initialPageId: intro
+
+pages:
+  - id: intro
+    components:
+      - type: text
+        props:
+          text: |
+            # Workspace Demo
+
+            You'll collaborate with an AI assistant to draft a document.
+            The chat is on the left, the shared workspace is on the right.
+      - type: buttons
+        props:
+          buttons:
+            - id: start
+              text: "Start"
+              action:
+                type: go_to
+                target: workspace
+
+  - id: workspace
+    layout: split
+    components:
+      - type: chat
+        props:
+          agents:
+            - writer
+          placeholder: "Ask the AI for help..."
+      - type: live-workspace
+        props:
+          mode: freeform
+          editableBy: both
+          initialContent: |
+            # Project Proposal
+
+            ## Objective
+
+
+            ## Approach
+
+
+            ## Timeline
+
+          agents:
+            - writer
+      - type: buttons
+        props:
+          buttons:
+            - id: done
+              text: "Finish"
+              action:
+                type: go_to
+                target: thanks
+
+  - id: thanks
+    end: true
+    components:
+      - type: text
+        props:
+          text: "Thank you for participating!"
+
+agents:
+  - id: writer
+    model: "gpt-5-mini"
+    system: |
+      You are a writing assistant helping the user draft a project proposal.
+      The shared workspace contains the current document.
+      Use the write_workspace tool to update the document when the user asks for edits.
+      Keep chat responses SHORT - 1-2 sentences. Do the real work in the workspace.
+    tools:
+      - name: write_workspace
+        description: "Update the workspace document with new content"
+        parameters:
+          type: object
+          properties:
+            content:
+              type: string
+              description: "The full updated markdown content for the workspace"
+          required: [content]
+```
+
+</details>
+
+---
+
 ## Component Events
 
 Track custom analytics events on user interactions.
@@ -687,3 +782,4 @@ pages:
 | media | `onPlay`, `onPause`, `onSeek`, `onComplete`, `onError` |
 | matchmaking | `onRequestStart`, `onMatchFound`, `onTimeout`, `onCancel` |
 | chat | `onMessageSend`, `onMessageReceive` |
+| live-workspace | `onEdit` |

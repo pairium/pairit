@@ -20,6 +20,7 @@ type ComponentEventMap = {
 	media: "onPlay" | "onPause" | "onSeek" | "onComplete" | "onError";
 	matchmaking: "onRequestStart" | "onMatchFound" | "onTimeout" | "onCancel";
 	chat: "onMessageSend" | "onMessageReceive" | "onTypingStart" | "onTypingStop";
+	"live-workspace": "onEdit";
 	form: "onSubmit" | "onFieldChange";
 };
 
@@ -73,6 +74,7 @@ export type Page = {
 	id: string;
 	end?: boolean;
 	endRedirectUrl?: string;
+	layout?: "split";
 	components?: ComponentInstance[];
 };
 

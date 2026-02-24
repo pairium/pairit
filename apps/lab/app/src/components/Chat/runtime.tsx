@@ -219,6 +219,20 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			return unsubscribe;
 		}, [sessionId, groupId]);
 
+		// Subscribe to SSE chat_stream_end events (tool-only responses)
+		useEffect(() => {
+			if (!sessionId || !groupId) return;
+
+			const unsubscribe = sseClient.on("chat_stream_end", (data) => {
+				const event = data as { groupId: string };
+				if (event.groupId === groupId) {
+					setStreamingMessage(null);
+				}
+			});
+
+			return unsubscribe;
+		}, [sessionId, groupId]);
+
 		// Subscribe to SSE chat_message_delta events (streaming)
 		useEffect(() => {
 			if (!sessionId || !groupId) return;
@@ -321,7 +335,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 
 		if (!resolvedGroupId || loading) {
 			return (
-				<div className="flex h-[500px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
+				<div className="flex min-h-0 flex-1 items-center justify-center">
 					<div className="text-sm text-slate-400">Loading chat...</div>
 				</div>
 			);

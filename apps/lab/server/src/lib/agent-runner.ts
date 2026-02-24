@@ -8,6 +8,7 @@ import {
 	getChatMessagesCollection,
 	getEventsCollection,
 	getSessionsCollection,
+	getWorkspaceDocumentsCollection,
 } from "./db";
 import type { AgentConfig, ChatMessage } from "./llm";
 import { streamAgentResponse } from "./llm";
@@ -122,6 +123,18 @@ async function runAgent(
 			return;
 		}
 
+		// Inject workspace content into agent system prompt if available
+		const agentWithWorkspace = { ...agent };
+		const workspaceCollection = await getWorkspaceDocumentsCollection();
+		const workspaceDoc = await workspaceCollection.findOne({ groupId });
+		if (workspaceDoc) {
+			const workspaceSection =
+				workspaceDoc.mode === "freeform"
+					? `\n\n--- Current Workspace Content ---\n${workspaceDoc.content ?? "(empty)"}\n--- End Workspace Content ---`
+					: `\n\n--- Current Workspace Fields ---\n${JSON.stringify(workspaceDoc.fields ?? {}, null, 2)}\n--- End Workspace Fields ---`;
+			agentWithWorkspace.system = agent.system + workspaceSection;
+		}
+
 		// Get members early so we can stream deltas to them
 		const memberIds = await getGroupMembers(groupId);
 		const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -144,7 +157,7 @@ async function runAgent(
 			[];
 
 		for await (const delta of streamAgentResponse(
-			agent,
+			agentWithWorkspace,
 			history,
 			abortController.signal,
 		)) {
@@ -178,6 +191,17 @@ async function runAgent(
 				sessionId,
 				memberIds,
 			);
+		}
+
+		// Clear streaming indicator if agent produced no text (tool-only response)
+		if (!fullText.trim()) {
+			for (const memberId of memberIds) {
+				broadcastToSession(memberId, "chat_stream_end", {
+					streamId,
+					groupId,
+					senderId,
+				});
+			}
 		}
 	} catch (error) {
 		if ((error as Error).name === "AbortError") {
@@ -325,6 +349,50 @@ async function handleToolCall(
 				});
 			}
 			broadcastToSession(memberId, "chat_ended", { groupId });
+		}
+	}
+
+	if (name === "write_workspace") {
+		const { content, fields } = args as {
+			content?: string;
+			fields?: Record<string, unknown>;
+		};
+		console.log(`[Agent] Tool: write_workspace for group ${groupId}`);
+
+		const wsCollection = await getWorkspaceDocumentsCollection();
+		const now = new Date();
+
+		const updateFields: Record<string, unknown> = {
+			updatedBy: `agent:${sessionId}`,
+			updatedAt: now,
+		};
+		if (content !== undefined) updateFields.content = content;
+		if (fields !== undefined) updateFields.fields = fields;
+
+		await wsCollection.updateOne(
+			{ groupId },
+			{
+				$set: updateFields,
+				$setOnInsert: {
+					groupId,
+					mode: content !== undefined ? "freeform" : "structured",
+					configId: "",
+					createdAt: now,
+				},
+			},
+			{ upsert: true },
+		);
+
+		const eventData = {
+			groupId,
+			content,
+			fields,
+			updatedBy: `agent:${sessionId}`,
+			updatedAt: now.toISOString(),
+		};
+
+		for (const memberId of memberIds) {
+			broadcastToSession(memberId, "workspace_updated", eventData);
 		}
 	}
 

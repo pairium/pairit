@@ -242,6 +242,62 @@ export async function cancelMatchmaking(
 	return r.json();
 }
 
+// Workspace API
+
+export type WorkspaceDocument = {
+	groupId: string;
+	mode: "freeform" | "structured";
+	content?: string;
+	fields?: Record<string, unknown>;
+	updatedBy: string;
+	updatedAt: string;
+};
+
+type GetWorkspaceResponse = {
+	document: WorkspaceDocument | null;
+};
+
+type UpdateWorkspaceResponse = {
+	ok: boolean;
+	updatedAt: string;
+};
+
+export async function getWorkspace(
+	groupId: string,
+	sessionId: string,
+): Promise<GetWorkspaceResponse> {
+	const r = await fetch(
+		`${baseUrl}/workspace/${groupId}?sessionId=${encodeURIComponent(sessionId)}`,
+		{
+			credentials: "include",
+		},
+	);
+	if (r.status === 403) throw new NotAMemberError();
+	if (!r.ok) throw new Error("Failed to get workspace");
+	return r.json();
+}
+
+export async function updateWorkspace(
+	groupId: string,
+	sessionId: string,
+	update: {
+		content?: string;
+		fields?: Record<string, unknown>;
+		mode?: "freeform" | "structured";
+		configId?: string;
+	},
+): Promise<UpdateWorkspaceResponse> {
+	const r = await fetch(`${baseUrl}/workspace/${groupId}/update`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		credentials: "include",
+		body: JSON.stringify({ sessionId, ...update }),
+	});
+	if (r.status === 403) throw new NotAMemberError();
+	if (!r.ok) throw new Error("Failed to update workspace");
+	return r.json();
+}
+
 // Randomization API
 
 export type RandomizeParams = {

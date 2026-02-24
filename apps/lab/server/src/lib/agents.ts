@@ -129,8 +129,13 @@ export async function getPageAgentIds(
 		return [];
 	}
 
-	const chatComponent = page.components?.find((c) => c.type === "chat");
-	return (chatComponent?.props?.agents as string[]) ?? [];
+	const agentIds: string[] = [];
+	for (const c of page.components ?? []) {
+		if ((c.type === "chat" || c.type === "live-workspace") && c.props?.agents) {
+			agentIds.push(...(c.props.agents as string[]));
+		}
+	}
+	return agentIds;
 }
 
 async function tryLocalPageAgents(
@@ -161,8 +166,16 @@ async function tryLocalPageAgents(
 			parsed.pages?.[pageId] ?? parsed.nodes?.find((n) => n.id === pageId);
 		if (!page) return [];
 
-		const chatComponent = page.components?.find((c) => c.type === "chat");
-		return (chatComponent?.props?.agents as string[]) ?? [];
+		const agentIds: string[] = [];
+		for (const c of page.components ?? []) {
+			if (
+				(c.type === "chat" || c.type === "live-workspace") &&
+				c.props?.agents
+			) {
+				agentIds.push(...(c.props.agents as string[]));
+			}
+		}
+		return agentIds;
 	} catch {
 		return [];
 	}

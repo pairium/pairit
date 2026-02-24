@@ -110,6 +110,61 @@ export function PageRenderer({
 		],
 	);
 
+	if (page.layout === "split") {
+		const leftComponents =
+			page.components?.filter(
+				(c) => c.type !== "live-workspace" && c.type !== "buttons",
+			) ?? [];
+		const rightComponents =
+			page.components?.filter((c) => c.type === "live-workspace") ?? [];
+		const bottomComponents =
+			page.components?.filter((c) => c.type === "buttons") ?? [];
+
+		return (
+			<div className="flex justify-center">
+				<div className="w-full max-w-6xl space-y-4">
+					<div className="grid h-[calc(100vh-14rem)] grid-cols-2 gap-4">
+						<Card className="overflow-hidden">
+							<CardContent className="flex h-full flex-col space-y-4 p-4">
+								{leftComponents.length ? (
+									leftComponents.map((component, index) =>
+										renderComponentInstance(component, index, runtimeContext),
+									)
+								) : (
+									<div className="text-center text-sm text-slate-500">
+										No components provided.
+									</div>
+								)}
+							</CardContent>
+						</Card>
+						<Card className="overflow-hidden">
+							<CardContent className="flex h-full flex-col p-4">
+								{rightComponents.length ? (
+									rightComponents.map((component, index) =>
+										renderComponentInstance(component, index, runtimeContext),
+									)
+								) : (
+									<div className="text-center text-sm text-slate-500">
+										No workspace component provided.
+									</div>
+								)}
+							</CardContent>
+						</Card>
+					</div>
+					{bottomComponents.length > 0 && (
+						<div className="flex justify-center">
+							<div className="space-y-4">
+								{bottomComponents.map((component, index) =>
+									renderComponentInstance(component, index, runtimeContext),
+								)}
+							</div>
+						</div>
+					)}
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className="flex justify-center">
 			<Card className="w-full max-w-3xl">

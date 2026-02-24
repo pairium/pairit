@@ -94,6 +94,14 @@ class SSEClient {
 		this.eventSource.addEventListener("match_timeout", (event) => {
 			this.dispatchEvent("match_timeout", JSON.parse(event.data));
 		});
+
+		this.eventSource.addEventListener("workspace_updated", (event) => {
+			this.dispatchEvent("workspace_updated", JSON.parse(event.data));
+		});
+
+		this.eventSource.addEventListener("chat_stream_end", (event) => {
+			this.dispatchEvent("chat_stream_end", JSON.parse(event.data));
+		});
 	}
 
 	private handleDisconnect(): void {
