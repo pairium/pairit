@@ -24,6 +24,16 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 			stateKey = "treatment",
 		} = body;
 
+		// Validate stateKey to prevent MongoDB operator injection
+		if (
+			stateKey.includes("$") ||
+			stateKey.startsWith(".") ||
+			stateKey.endsWith(".")
+		) {
+			set.status = 400;
+			return { error: "invalid_state_key" };
+		}
+
 		// Idempotent: return existing assignment if present
 		const existingValue = session.user_state?.[stateKey];
 		if (existingValue) {

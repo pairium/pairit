@@ -45,7 +45,11 @@ export async function triggerAgents(
 			continue;
 		}
 
-		await runAgent(agent, groupId, sessionId, { requireHistory: true });
+		await runAgent(agent, groupId, sessionId, {
+			requireHistory: true,
+			configId,
+			pageId: currentPageId,
+		});
 	}
 }
 
@@ -85,12 +89,18 @@ export async function triggerFirstMessageAgents(
 			continue;
 		}
 
-		await runAgent(agent, groupId, sessionId, { requireHistory: false });
+		await runAgent(agent, groupId, sessionId, {
+			requireHistory: false,
+			configId,
+			pageId: currentPageId,
+		});
 	}
 }
 
 type RunAgentOptions = {
 	requireHistory?: boolean;
+	configId?: string;
+	pageId?: string;
 };
 
 async function runAgent(
@@ -99,7 +109,7 @@ async function runAgent(
 	sessionId: string,
 	options: RunAgentOptions = {},
 ): Promise<void> {
-	const { requireHistory = true } = options;
+	const { requireHistory = true, configId = "" } = options;
 	const abortController = new AbortController();
 	activeRuns.set(groupId, abortController);
 
@@ -204,6 +214,7 @@ async function runAgent(
 				groupId,
 				sessionId,
 				memberIds,
+				configId,
 			);
 		}
 
@@ -314,8 +325,9 @@ async function handleToolCall(
 	groupId: string,
 	sessionId: string,
 	memberIds: string[],
+	configId: string,
 ): Promise<void> {
-	await logToolCallEvent(name, args, sessionId);
+	await logToolCallEvent(name, args, sessionId, configId);
 
 	if (name === "end_chat") {
 		const { deal_reached, agreed_price } = args as {
@@ -390,7 +402,7 @@ async function handleToolCall(
 				$setOnInsert: {
 					groupId,
 					mode: content !== undefined ? "freeform" : "structured",
-					configId: "",
+					configId,
 					createdAt: now,
 				},
 			},
@@ -417,6 +429,11 @@ async function handleToolCall(
 			return;
 		}
 
+		if (path.includes("$") || path.startsWith(".") || path.endsWith(".")) {
+			console.error(`[Agent] assign_state invalid path: ${path}`);
+			return;
+		}
+
 		console.log(
 			`[Agent] Tool: assign_state path=${path} value=${JSON.stringify(value)}`,
 		);
@@ -439,6 +456,7 @@ async function logToolCallEvent(
 	toolName: string,
 	args: Record<string, unknown>,
 	sessionId: string,
+	configId: string,
 ): Promise<void> {
 	try {
 		const collection = await getEventsCollection();
@@ -446,7 +464,7 @@ async function logToolCallEvent(
 			type: "agent_tool_call",
 			timestamp: new Date().toISOString(),
 			sessionId,
-			configId: "",
+			configId,
 			pageId: "",
 			componentType: "chat",
 			componentId: "",

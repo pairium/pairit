@@ -83,6 +83,11 @@ export const streamRoutes = new Elysia({ prefix: "/sessions" })
 	.get(
 		"/:id/test-broadcast",
 		async ({ params: { id }, set }) => {
+			if (process.env.NODE_ENV !== "development") {
+				set.status = 404;
+				return { error: "not_found" };
+			}
+
 			const session = await loadSession(id);
 			if (!session) {
 				set.status = 404;

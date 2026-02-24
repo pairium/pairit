@@ -333,6 +333,11 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 	.post(
 		"/:id/state",
 		async ({ params: { id }, body, set }) => {
+			const { duplicate } = await checkIdempotency(body.idempotencyKey);
+			if (duplicate) {
+				return { success: true };
+			}
+
 			const session = await loadSession(id);
 			if (!session) {
 				set.status = 404;

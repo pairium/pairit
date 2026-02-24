@@ -118,7 +118,23 @@ export default function App() {
 		const unsubscribe = sseClient.on("state_updated", (data: unknown) => {
 			const { path, value } = data as { path: string; value: unknown };
 			if (path) {
-				setUserState((prev) => ({ ...prev, [path]: value }));
+				setUserState((prev) => {
+					const keys = path.split(".");
+					if (keys.length === 1) {
+						return { ...prev, [path]: value };
+					}
+					const next = structuredClone(prev);
+					// biome-ignore lint/suspicious/noExplicitAny: nested state traversal
+					let obj: any = next;
+					for (let i = 0; i < keys.length - 1; i++) {
+						if (obj[keys[i]] == null || typeof obj[keys[i]] !== "object") {
+							obj[keys[i]] = {};
+						}
+						obj = obj[keys[i]];
+					}
+					obj[keys[keys.length - 1]] = value;
+					return next;
+				});
 			}
 		});
 

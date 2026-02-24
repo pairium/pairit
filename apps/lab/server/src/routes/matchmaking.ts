@@ -92,7 +92,11 @@ export const matchmakingRoutes = new Elysia({ prefix: "/sessions" })
 	// Debug endpoint (development only)
 	.get(
 		"/matchmaking/status",
-		async () => {
+		async ({ set }) => {
+			if (process.env.NODE_ENV !== "development") {
+				set.status = 404;
+				return { error: "not_found" };
+			}
 			return { pools: getPoolStatus() };
 		},
 		{},
