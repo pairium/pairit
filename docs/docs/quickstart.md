@@ -5,9 +5,9 @@ Get your first experiment running in minutes using the Pairit CLI.
 ## Install the CLI
 
 ```bash
-npm install -g @pairit/cli
+npm install -g pairit
 # or
-bun install -g @pairit/cli
+bun install -g pairit
 ```
 
 ## Authenticate

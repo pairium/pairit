@@ -60,23 +60,23 @@
       },
     },
     "apps/manager/cli": {
-      "name": "@pairit/cli",
+      "name": "pairit",
       "version": "0.1.0",
       "bin": {
         "pairit": "dist/index.js",
       },
-      "dependencies": {
-        "better-auth": "^1.4.7",
-        "commander": "^12.1.0",
-        "dotenv": "^17.2.3",
-        "keytar": "^7.9.0",
-        "open": "^11.0.0",
-        "yaml": "^2.6.0",
-      },
       "devDependencies": {
         "@types/bun": "^1.1.13",
         "@types/open": "^6.2.1",
+        "better-auth": "^1.4.7",
+        "commander": "^12.1.0",
+        "dotenv": "^17.2.3",
+        "open": "^11.0.0",
         "typescript": "^5.9.3",
+        "yaml": "^2.6.0",
+      },
+      "optionalDependencies": {
+        "keytar": "^7.9.0",
       },
     },
     "apps/manager/server": {
@@ -293,8 +293,6 @@
     "@noble/hashes": ["@noble/hashes@2.0.1", "", {}, "sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw=="],
 
     "@pairit/auth": ["@pairit/auth@workspace:packages/auth"],
-
-    "@pairit/cli": ["@pairit/cli@workspace:apps/manager/cli"],
 
     "@pairit/db": ["@pairit/db@workspace:packages/db"],
 
@@ -935,6 +933,8 @@
     "openapi-types": ["openapi-types@12.1.3", "", {}, "sha512-N4YtSYJqghVu4iek2ZUvcN/0aqH1kRDuNqzcycDxhOUpg7GdvLa2F3DgS6yBNhInhv2r/6I0Flkn7CqL8+nIcw=="],
 
     "p-limit": ["p-limit@3.1.0", "", { "dependencies": { "yocto-queue": "^0.1.0" } }, "sha512-TYOanM3wGwNGsZN2cVTYPArw454xnXj5qmWF1bEoAc4+cU/ol7GVh7odevjp1FNHduHc3KZMcFduxU5Xc6uJRQ=="],
+
+    "pairit": ["pairit@workspace:apps/manager/cli"],
 
     "parse-entities": ["parse-entities@4.0.2", "", { "dependencies": { "@types/unist": "^2.0.0", "character-entities-legacy": "^3.0.0", "character-reference-invalid": "^2.0.0", "decode-named-character-reference": "^1.0.0", "is-alphanumerical": "^2.0.0", "is-decimal": "^2.0.0", "is-hexadecimal": "^2.0.0" } }, "sha512-GG2AQYWoLgL877gQIKeRPGO1xF9+eG1ujIb5soS5gPvLQ1y2o8FL90w2QWNdf9I361Mpp7726c+lj3U0qK1uGw=="],
 
