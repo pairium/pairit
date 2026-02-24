@@ -97,24 +97,24 @@ pages:
         action:
           type: go_to
           branches:
-            - when: "$.user_state.treatment == 'treatment'"
+            - when: "user_state.treatment == 'treatment'"
               target: treatment_flow
             - target: control_flow
 ```
 
 ## State
 
-After randomization, the assigned condition is stored at `$.user_state.{stateKey}`:
+After randomization, the assigned condition is stored at `user_state.{stateKey}`:
 
 ```yaml
 # If stateKey is "treatment" and assigned "A":
-# $.user_state.treatment = "A"
+# user_state.treatment = "A"
 ```
 
 Access this value in expressions:
 
 ```yaml
-- when: "$.user_state.treatment == 'A'"
+- when: "user_state.treatment == 'A'"
   target: treatment_a_page
 ```
 

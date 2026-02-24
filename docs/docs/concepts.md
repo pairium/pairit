@@ -28,9 +28,9 @@ buttons:
     action:
       type: go_to
       branches:
-        - when: "$.user_state.age < 18"
+        - when: "user_state.age < 18"
           target: ineligible_page
-        - when: "$.user_state.consent == true"
+        - when: "user_state.consent == true"
           target: main_study
         - target: declined_page  # default fallback
 ```
@@ -71,7 +71,7 @@ Components that assign values use `stateKey` to specify where data is stored:
 components:
   - type: randomization
     props:
-      stateKey: treatment        # writes to $.user_state.treatment
+      stateKey: treatment        # writes to user_state.treatment
       conditions: [control, A, B]
 ```
 
@@ -86,10 +86,10 @@ User state is persisted to MongoDB with each update. If a participant closes and
 
 ### Accessing State in Expressions
 
-Use `$.user_state.{fieldName}` in `when` conditions and branch expressions:
+Use `user_state.{fieldName}` in `when` conditions and branch expressions:
 
 ```yaml
-- when: "$.user_state.treatment == 'A'"
+- when: "user_state.treatment == 'A'"
   target: treatment_a_page
 ```
 
@@ -105,7 +105,7 @@ Assign participants to experimental conditions using the `randomization` compone
     stateKey: treatment
 ```
 
-The assigned condition is stored at `$.user_state.{stateKey}` and persists across page refreshes.
+The assigned condition is stored at `user_state.{stateKey}` and persists across page refreshes.
 
 See [Randomization](components/randomization.md) for full documentation.
 

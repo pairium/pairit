@@ -202,7 +202,7 @@ async function formGroup(
 
 	// Generate group ID and treatment
 	const groupId = crypto.randomUUID();
-	const treatment = assignTreatment(
+	const treatment = await assignTreatment(
 		poolKey,
 		poolConfig.conditions ?? [],
 		poolConfig.assignmentType ?? "random",

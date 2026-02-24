@@ -100,9 +100,9 @@ tools:
 
 ### Built-in Tool Behaviors
 
-**`end_chat`**: Ends the chat for all participants in the group. Sets `$.user_state.chat_ended = true` and broadcasts a `chat_ended` event. Optional `deal_reached` and `agreed_price` parameters are written to user state.
+**`end_chat`**: Ends the chat for all participants in the group. Sets `user_state.chat_ended = true` and broadcasts a `chat_ended` event. Optional `deal_reached` and `agreed_price` parameters are written to user state.
 
-**`assign_state`**: Writes a value to `$.user_state.{path}` for all participants and broadcasts a `state_updated` event.
+**`assign_state`**: Writes a value to `user_state.{path}` for all participants and broadcasts a `state_updated` event.
 
 ## Usage with Chat
 

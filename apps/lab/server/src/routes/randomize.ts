@@ -45,7 +45,11 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 
 		// Use configId + stateKey as balance key (allows separate balance per key)
 		const balanceKey = `${session.configId}:${stateKey}`;
-		const treatment = assignTreatment(balanceKey, conditions, assignmentType);
+		const treatment = await assignTreatment(
+			balanceKey,
+			conditions,
+			assignmentType,
+		);
 
 		// Persist treatment to session
 		const sessionsCollection = await getSessionsCollection();

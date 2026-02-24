@@ -37,8 +37,6 @@ apps/
 packages/
   auth/          # Better Auth + Google OAuth
   db/            # MongoDB connection singleton
-  storage/       # Storage abstraction (Local/GCS)
-  html/          # HTML utilities
 ```
 
 ## Tech Stack

@@ -29,6 +29,7 @@ export const RandomizationRuntime = defineRuntimeComponent<
 		const [status, setStatus] = useState<RandomizationStatus>("loading");
 		const [condition, setCondition] = useState<string>();
 		const hasCalledRef = useRef(false);
+		const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 		const assignmentType = component.props.assignmentType ?? "random";
 		const conditions = component.props.conditions ?? [];
@@ -65,7 +66,7 @@ export const RandomizationRuntime = defineRuntimeComponent<
 					// Auto-advance to target page if specified
 					if (target) {
 						const delay = showAssignment ? 1500 : 500;
-						setTimeout(() => {
+						navTimerRef.current = setTimeout(() => {
 							onAction({ type: "go_to", target });
 						}, delay);
 					}
@@ -76,6 +77,13 @@ export const RandomizationRuntime = defineRuntimeComponent<
 			}
 
 			assign();
+
+			return () => {
+				if (navTimerRef.current) {
+					clearTimeout(navTimerRef.current);
+					navTimerRef.current = null;
+				}
+			};
 		}, [
 			sessionId,
 			assignmentType,

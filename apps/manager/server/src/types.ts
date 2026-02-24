@@ -1,18 +1,17 @@
 /**
- * Shared types for manager server
+ * Types for manager server
+ * Re-exports shared document types and defines manager-specific types
  */
 
-export type ConfigDocument = {
-	configId: string;
-	owner: string;
-	checksum: string;
-	metadata: Record<string, unknown> | null;
-	config: unknown;
-	requireAuth?: boolean; // Optional auth for lab sessions
-	allowRetake?: boolean; // Allow completed participants to retake
-	createdAt?: Date;
-	updatedAt: Date;
-};
+export type {
+	ChatMessageDocument,
+	ConfigDocument,
+	EventDocument,
+	GroupDocument,
+	ProlificParams,
+	SessionDocument,
+	WorkspaceDocument as WorkspaceDocumentDocument,
+} from "@pairit/db/types";
 
 export type MediaListItem = {
 	name: string;
@@ -22,69 +21,4 @@ export type MediaListItem = {
 	contentType?: string | null;
 	publicUrl?: string;
 	metadata?: Record<string, unknown> | null;
-};
-
-export type ProlificParams = {
-	prolificPid: string;
-	studyId: string;
-	sessionId: string;
-};
-
-export type SessionDocument = {
-	id: string;
-	configId: string;
-	config: unknown;
-	currentPageId: string;
-	user_state: Record<string, unknown>;
-	prolific?: ProlificParams | null;
-	endedAt: string | null;
-	userId?: string | null;
-	createdAt: Date;
-	updatedAt: Date;
-};
-
-export type EventDocument = {
-	type: string;
-	timestamp: string;
-	sessionId: string;
-	configId: string;
-	pageId: string;
-	componentType: string;
-	componentId: string;
-	data: Record<string, unknown>;
-	idempotencyKey: string;
-	createdAt: Date;
-};
-
-export type ChatMessageDocument = {
-	_id?: import("mongodb").ObjectId;
-	groupId: string;
-	sessionId: string;
-	senderId: string;
-	senderType: "participant" | "agent" | "system";
-	content: string;
-	createdAt: Date;
-	idempotencyKey?: string;
-};
-
-export type GroupDocument = {
-	groupId: string;
-	configId: string;
-	poolId: string;
-	memberSessionIds: string[];
-	treatment: string;
-	matchedAt: Date;
-	status: "active" | "completed";
-};
-
-export type WorkspaceDocumentDocument = {
-	_id?: import("mongodb").ObjectId;
-	groupId: string;
-	mode: "freeform" | "structured";
-	content?: string;
-	fields?: Record<string, unknown>;
-	updatedBy: string;
-	configId: string;
-	updatedAt: Date;
-	createdAt: Date;
 };

@@ -65,7 +65,7 @@ Component instance shapes:
 
 - Built-in text: `{ type: "text", props: { text: string, markdown?: bool } }`
 - Built-in buttons: `{ type: "buttons", props: { buttons: [ { text: string, action: Action } ] } }`
-- Built-in survey: `{ type: "survey", props: { questions: [{ id, text, answer, choices? }] } }`
+- Built-in survey: `{ type: "survey", props: { items: [{ id, text, answer, choices? }] } }`
 - Built-in matchmaking: `{ type: "matchmaking", props: { poolId: string } }`
 - Built-in chat: `{ type: "chat", props: { agents?: string[] } }`
 - Custom component host: `{ type: "component", props: { component: string, props: object, unknownEvents?: "error" | "warn" | "ignore" } }`
@@ -124,7 +124,7 @@ pages:
               action:
                 type: go_to
                 branches:
-                  - when: "$.user_state.sleep_hours < 5"
+                  - when: "user_state.sleep_hours < 5"
                     target: short_sleep_followup
                   - target: outro
 
@@ -148,21 +148,25 @@ pages:
 
 Use expressions to conditionally render components and route between pages. Expressions evaluate with a safe `expr-eval` subset.
 
+The expression evaluator currently supports `user_state.{key} {op} {value}` patterns.
+
 Context roots available:
 
-- `$event`
-- `$.user_state`
-- `$.user_group`
-- `$.env`
-- `$.now`
-- `$.run`
+- `user_state` -- participant-scoped state fields
+
+Planned (not yet implemented):
+
+- `event`, `env`, `now`, `run`
 
 Whitelisted functions:
 
-- `min`, `max`, `abs`, `floor`, `ceil`, `round`
+- `floor`, `ceil`, `round`
 - `and`, `or`, `not`
-- `coalesce`, `len`, `includes`, `lower`, `upper`, `trim`
-- `rand`
+- `includes`, `lower`, `upper`, `trim`
+
+Planned (not yet implemented):
+
+- `min`, `max`, `abs`, `coalesce`, `len`, `rand`
 
 Example component-level conditional rendering:
 
@@ -174,12 +178,12 @@ pages:
         props: { text: "How many hours did you sleep last night?" }
       - type: survey
         props:
-          questions:
+          items:
             - id: sleep_hours
               text: "Hours slept"
               answer: numeric
       - type: text
-        when: "$.user_state.sleep_hours < 5"
+        when: "user_state.sleep_hours < 5"
         props: { text: "We're sorry to hear that. Can you tell us what woke you up?" }
 ```
 
@@ -219,6 +223,6 @@ await bulkAssign({
 });
 ```
 
-Assignments outside `$.user_state.*` are rejected during validation. Surveys automatically write answers into the store using their question ids, so follow-up expressions can branch on the captured values.
+Assignments outside `user_state.*` are rejected during validation. Surveys automatically write answers into the store using their question ids, so follow-up expressions can branch on the captured values.
 
 

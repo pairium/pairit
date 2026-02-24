@@ -5,20 +5,30 @@ import {
 	Outlet,
 	RouterProvider,
 } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { StrictMode } from "react";
+import { lazy, type ReactNode, StrictMode } from "react";
 import ReactDOM from "react-dom/client";
 
 import "./styles.css";
 
 import App from "./App.tsx";
+import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
 import { Landing } from "./routes/Landing.tsx";
+
+let DevTools: () => ReactNode = () => null;
+if (import.meta.env.DEV) {
+	const LazyDevTools = lazy(() =>
+		import("@tanstack/react-router-devtools").then((m) => ({
+			default: m.TanStackRouterDevtools,
+		})),
+	);
+	DevTools = () => <LazyDevTools />;
+}
 
 const rootRoute = createRootRoute({
 	component: () => (
 		<>
 			<Outlet />
-			<TanStackRouterDevtools />
+			<DevTools />
 		</>
 	),
 });
@@ -57,7 +67,9 @@ if (rootElement && !rootElement.innerHTML) {
 	const root = ReactDOM.createRoot(rootElement);
 	root.render(
 		<StrictMode>
-			<RouterProvider router={router} />
+			<ErrorBoundary>
+				<RouterProvider router={router} />
+			</ErrorBoundary>
 		</StrictMode>,
 	);
 }

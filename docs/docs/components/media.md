@@ -24,7 +24,7 @@ pages:
     components:
       - type: media
         props:
-          kind: image
+          type: image
           src: https://example.com/image.png
           alt: "Instruction screenshot"
 
@@ -34,7 +34,7 @@ pages:
       - type: media
         id: onboarding_video
         props:
-          kind: video
+          type: video
           src: https://example.com/demo.mp4
           alt: "Product demo"
         events:

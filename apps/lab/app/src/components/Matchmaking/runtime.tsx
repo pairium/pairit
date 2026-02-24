@@ -47,6 +47,7 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 
 		const startTimeRef = useRef<number>(Date.now());
 		const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+		const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 		const hasJoinedRef = useRef(false);
 
 		// Apply defaults for optional props
@@ -87,7 +88,7 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 
 				// Navigate to target after brief delay
 				if (onMatchTarget) {
-					setTimeout(() => {
+					navTimerRef.current = setTimeout(() => {
 						onAction({ type: "go_to", target: onMatchTarget });
 					}, 1500);
 				}
@@ -112,7 +113,7 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 				// Navigate to timeout target after brief delay
 				const target = data.timeoutTarget || timeoutTarget;
 				if (target) {
-					setTimeout(() => {
+					navTimerRef.current = setTimeout(() => {
 						onAction({ type: "go_to", target });
 					}, 2000);
 				}
@@ -177,6 +178,10 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 				if (timerRef.current) {
 					clearInterval(timerRef.current);
 					timerRef.current = null;
+				}
+				if (navTimerRef.current) {
+					clearTimeout(navTimerRef.current);
+					navTimerRef.current = null;
 				}
 			};
 		}, [

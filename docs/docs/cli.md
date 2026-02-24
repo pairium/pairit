@@ -12,8 +12,8 @@ pairit config compile your_experiment.yaml # Parse and compile to canonical JSON
 Publish / manage configs (stored in MongoDB via the Manager Server API)
 
 ```zsh
-pairit config upload your_experiment.yaml --owner alice@example.com
-pairit config list --owner alice@example.com
+pairit config upload your_experiment.yaml
+pairit config list
 pairit config get <configId> --out compiled.json # TODO
 pairit config delete <configId>
 ```
@@ -38,7 +38,7 @@ Compiled JSON can be written with `--out <file>` to inspect what the runtime wil
 - Validate props against JSON Schemas declared in components.
 - Enforce unique ids across `pages`, `matchmaking`, and `agents`.
 - Require unique button ids per page and ensure every `go_to`/branch target exists.
-- Verify `assign` statements only touch `$.user_state.*` and that RHS types match the schema.
+- Verify `assign` statements only touch `user_state.*` and that RHS types match the schema.
 - Reject unknown `action.type` values and undeclared component events.
 
 ## Media
@@ -60,13 +60,16 @@ pairit data export <configId> --format jsonl     # Export as JSONL
 pairit data export <configId> --out ./exports    # Custom output directory
 ```
 
-Creates three files per export:
+Creates six files per export:
 
 | File | Contents |
 |------|----------|
 | `{configId}-sessions.csv` | Session records: sessionId, configId, status, user_state.*, prolific.*, timestamps |
 | `{configId}-events.csv` | Component events: sessionId, type, pageId, componentType, data.*, timestamp |
 | `{configId}-chat-messages.csv` | Chat history: messageId, groupId, senderId, senderType, content, createdAt |
+| `{configId}-groups.csv` | Group records: groupId, members, createdAt |
+| `{configId}-survey-responses.csv` | Survey response data: sessionId, itemId, answer, pageId, timestamp |
+| `{configId}-workspace-documents.csv` | Workspace documents: groupId, content, fields, updatedAt |
 
 **Formats**: CSV flattens nested objects with dot notation (`user_state.treatment`). JSON/JSONL preserve full nesting.
 

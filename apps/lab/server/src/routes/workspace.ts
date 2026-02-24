@@ -7,52 +7,10 @@
 import { Elysia, t } from "elysia";
 import {
 	getEventsCollection,
-	getSessionsCollection,
 	getWorkspaceDocumentsCollection,
 } from "../lib/db";
+import { getGroupMembers, verifyMembership } from "../lib/groups";
 import { broadcastToSession } from "../lib/sse";
-
-/**
- * Verify that a session is a member of a workspace group.
- * Same logic as chat membership:
- * - Session-scoped: groupId starts with "sessionId:"
- * - Matchmaking: session.user_state.chat_group_id === groupId
- */
-async function verifyMembership(
-	sessionId: string,
-	groupId: string,
-): Promise<boolean> {
-	if (groupId.startsWith(`${sessionId}:`)) {
-		return true;
-	}
-
-	const sessionsCollection = await getSessionsCollection();
-	const session = await sessionsCollection.findOne({ id: sessionId });
-	if (!session) {
-		return false;
-	}
-
-	return session.user_state?.chat_group_id === groupId;
-}
-
-/**
- * Get all session IDs that are members of a workspace group
- */
-async function getGroupMembers(groupId: string): Promise<string[]> {
-	const colonIndex = groupId.indexOf(":");
-	if (colonIndex > 0) {
-		const sessionId = groupId.substring(0, colonIndex);
-		return [sessionId];
-	}
-
-	const sessionsCollection = await getSessionsCollection();
-	const sessions = await sessionsCollection
-		.find({ "user_state.chat_group_id": groupId })
-		.project({ id: 1 })
-		.toArray();
-
-	return sessions.map((s) => s.id);
-}
 
 export const workspaceRoutes = new Elysia({ prefix: "/workspace" })
 	.get(

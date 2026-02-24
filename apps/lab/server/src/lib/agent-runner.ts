@@ -10,6 +10,7 @@ import {
 	getSessionsCollection,
 	getWorkspaceDocumentsCollection,
 } from "./db";
+import { getGroupMembers } from "./groups";
 import type { AgentConfig, ChatMessage } from "./llm";
 import { streamAgentResponse } from "./llm";
 import { broadcastToSession, getConnectionCount } from "./sse";
@@ -204,7 +205,13 @@ async function runAgent(
 		}
 
 		if (fullText.trim()) {
-			await persistAndBroadcastMessage(groupId, senderId, "agent", fullText);
+			await persistAndBroadcastMessage(
+				groupId,
+				sessionId,
+				senderId,
+				"agent",
+				fullText,
+			);
 		}
 
 		for (const toolCall of toolCalls) {
@@ -235,6 +242,7 @@ async function runAgent(
 			console.error(`[Agent] Error running agent ${agent.id}:`, error);
 			await persistAndBroadcastMessage(
 				groupId,
+				sessionId,
 				"system",
 				"system",
 				"Sorry, I encountered an error. Please try again.",
@@ -261,6 +269,7 @@ async function loadChatHistory(groupId: string): Promise<ChatMessage[]> {
 
 async function persistAndBroadcastMessage(
 	groupId: string,
+	sessionId: string,
 	senderId: string,
 	senderType: "participant" | "agent" | "system",
 	content: string,
@@ -270,7 +279,7 @@ async function persistAndBroadcastMessage(
 
 	const result = await collection.insertOne({
 		groupId,
-		sessionId: senderId,
+		sessionId,
 		senderId,
 		senderType,
 		content,
@@ -293,30 +302,6 @@ async function persistAndBroadcastMessage(
 	for (const memberId of memberIds) {
 		broadcastToSession(memberId, "chat_message", eventData);
 	}
-}
-
-async function getGroupMembers(groupId: string): Promise<string[]> {
-	// Session-scoped groupId (format: "sessionId:something")
-	// Extract sessionId from prefix and return just that session
-	const colonIndex = groupId.indexOf(":");
-	if (colonIndex > 0) {
-		const sessionId = groupId.substring(0, colonIndex);
-		return [sessionId];
-	}
-
-	const sessionsCollection = await getSessionsCollection();
-	const sessions = await sessionsCollection
-		.find({ "user_state.chat_group_id": groupId })
-		.project({ id: 1 })
-		.toArray();
-
-	const memberIds = sessions.map((s) => s.id);
-
-	if (!memberIds.includes(groupId)) {
-		memberIds.push(groupId);
-	}
-
-	return memberIds;
 }
 
 async function handleToolCall(

@@ -156,10 +156,9 @@ export default function App() {
 		try {
 			const r = await advance(sessionId, target);
 			if (r.user_state) setUserState(r.user_state);
-			target;
 			setPage(nextPage);
 			setEndRedirectUrl(nextPage.endRedirectUrl ?? null);
-			setEndedAt(nextPage.end ? new Date().toISOString() : null);
+			setEndedAt(r.endedAt ?? null);
 		} catch (error: unknown) {
 			setError(error instanceof Error ? error.message : "Failed to advance");
 		} finally {

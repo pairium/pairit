@@ -1,7 +1,21 @@
 /**
- * Shared types for lab server
- * (Duplicated from original Firebase Functions implementation)
+ * Types for lab server
+ * Re-exports shared document types and defines lab-specific types
  */
+
+import type {
+	ProlificParams as _ProlificParams,
+	SessionDocument as BaseSessionDocument,
+} from "@pairit/db/types";
+
+export type {
+	ChatMessageDocument,
+	ConfigDocument,
+	EventDocument,
+	GroupDocument,
+	ProlificParams,
+	WorkspaceDocument as WorkspaceDocumentDocument,
+} from "@pairit/db/types";
 
 type ButtonAction = { type: "go_to"; target: string };
 type Button = { id: string; text: string; action: ButtonAction };
@@ -21,22 +35,9 @@ export type Config = {
 	pages: Record<string, Page>;
 };
 
-export type ConfigDocument = {
-	configId: string;
-	owner?: string;
-	checksum?: string;
-	metadata?: Record<string, unknown> | null;
-	config: unknown;
-	requireAuth?: boolean; // Optional auth for lab sessions
-	allowRetake?: boolean; // Allow re-taking completed sessions (defaults to false)
-	createdAt?: Date | null;
-	updatedAt?: Date | null;
-};
-
-export type ProlificParams = {
-	prolificPid: string;
-	studyId: string;
-	sessionId: string;
+/** Lab-specific SessionDocument with typed config */
+export type SessionDocument = Omit<BaseSessionDocument, "config"> & {
+	config: Config;
 };
 
 export type Session = {
@@ -45,23 +46,10 @@ export type Session = {
 	config: Config;
 	currentPageId: string;
 	user_state: Record<string, unknown>;
-	prolific?: ProlificParams | null;
+	prolific?: _ProlificParams | null;
 	endedAt?: string;
 	createdAt?: Date;
 	updatedAt?: Date;
-};
-
-export type SessionDocument = {
-	id: string;
-	configId: string;
-	config: Config;
-	currentPageId: string;
-	user_state: Record<string, unknown>;
-	prolific?: ProlificParams | null;
-	endedAt: string | null;
-	userId?: string | null; // User ID from Better Auth (null for anonymous/public sessions)
-	createdAt: Date;
-	updatedAt: Date;
 };
 
 export type Event = {
@@ -75,45 +63,7 @@ export type Event = {
 	data: Record<string, unknown>;
 };
 
-export type EventDocument = Event & {
-	idempotencyKey: string;
-	createdAt: Date;
-};
-
 export type IdempotencyRecord = {
 	key: string;
-	createdAt: Date;
-};
-
-export type ChatMessageDocument = {
-	_id?: import("mongodb").ObjectId;
-	groupId: string;
-	sessionId: string;
-	senderId: string;
-	senderType: "participant" | "agent" | "system";
-	content: string;
-	createdAt: Date;
-	idempotencyKey?: string;
-};
-
-export type GroupDocument = {
-	groupId: string;
-	configId: string;
-	poolId: string;
-	memberSessionIds: string[];
-	treatment: string;
-	matchedAt: Date;
-	status: "active" | "completed";
-};
-
-export type WorkspaceDocumentDocument = {
-	_id?: import("mongodb").ObjectId;
-	groupId: string;
-	mode: "freeform" | "structured";
-	content?: string;
-	fields?: Record<string, unknown>;
-	updatedBy: string;
-	configId: string;
-	updatedAt: Date;
 	createdAt: Date;
 };

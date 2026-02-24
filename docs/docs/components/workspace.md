@@ -26,7 +26,7 @@ Embed a collaborative, real-time workspace alongside chat or survey pages. Suppo
 Workspace documents are identified by a `groupId`. The resolution depends on `scope`:
 
 - **`participant`** (default): Uses `{sessionId}:{pageId}` -- each participant has their own document
-- **`group`**: Uses `$.user_state.chat_group_id` from matchmaking -- all group members share one document
+- **`group`**: Uses `user_state.chat_group_id` from matchmaking -- all group members share one document
 
 ## Split Layout
 

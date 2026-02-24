@@ -208,8 +208,8 @@ function StreamingBubble({ message }: { message: StreamingMessage }) {
 					) : (
 						<span className="inline-flex items-center gap-1">
 							<span className="h-2 w-2 animate-pulse rounded-full bg-slate-400" />
-							<span className="h-2 w-2 animate-pulse rounded-full bg-slate-400 delay-75" />
-							<span className="h-2 w-2 animate-pulse rounded-full bg-slate-400 delay-150" />
+							<span className="h-2 w-2 animate-pulse rounded-full bg-slate-400 [animation-delay:150ms]" />
+							<span className="h-2 w-2 animate-pulse rounded-full bg-slate-400 [animation-delay:300ms]" />
 						</span>
 					)}
 				</div>

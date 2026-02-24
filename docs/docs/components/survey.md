@@ -1,6 +1,6 @@
 # Survey
 
-Survey groups manage a sequence of questions with validation and paging. On submit, answers are written to `$.user_state` keyed by question `id`.
+Survey groups manage a sequence of questions with validation and paging. On submit, answers are written to `user_state` keyed by question `id`.
 
 Events
 - `onSubmit`: emitted automatically when survey is submitted (default event type: "survey_submission")
@@ -17,7 +17,7 @@ Event Data
 
 ## Survey items
 
-- `id`: stable key for storing answers in `$.user_state`.
+- `id`: stable key for storing answers in `user_state`.
 - `text`: prompt shown to the participant.
 - `media` (optional): asset reference or component for rich prompts.
 - `answer`: configuration for how the participant responds.

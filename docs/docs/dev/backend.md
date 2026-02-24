@@ -42,11 +42,12 @@ Authentication is handled by [Better Auth](https://www.better-auth.com/).
 #### Sessions
 -   `POST /sessions/start`: Start a new session.
     -   Body: `{ configId }`
-    -   Return: `{ sessionId, configId, currentPageId, page }`
+    -   Return: `{ status, sessionId, configId, currentPageId, page, config, user_state, endedAt }`
 -   `GET /sessions/:id`: Get session state.
 -   `POST /sessions/:id/advance`: Trigger an action.
-    -   Body: `{ target }`
+    -   Body: `{ target, idempotencyKey }`
     -   Return: `{ sessionId, configId, currentPageId, page, endedAt }`
+-   `POST /sessions/:id/state`: Update user state fields.
 -   `POST /sessions/:id/events`: Log a user interaction event.
 
 #### Configs
@@ -68,7 +69,7 @@ Authentication is handled by [Better Auth](https://www.better-auth.com/).
 
 ## Live Updates (SSE)
 
--   `GET /sse/:sessionId`: Server-Sent Events stream for the session. Events include:
+-   `GET /sessions/:id/stream`: Server-Sent Events stream for the session. Events include:
     -   `match_found`: Matchmaking succeeded with group info
     -   `match_timeout`: Matchmaking timed out
     -   `chat_message`: New chat message in group
@@ -79,13 +80,18 @@ Authentication is handled by [Better Auth](https://www.better-auth.com/).
 ## Chat
 
 -   `GET /chat/:groupId/history`: Get chat message history
--   `POST /chat/:groupId/message`: Send a message to the group
--   `POST /chat/:groupId/agents/start`: Trigger agents with `sendFirstMessage: true`
+-   `POST /chat/:groupId/send`: Send a message to the group
+-   `POST /chat/:groupId/start-agents`: Trigger agents with `sendFirstMessage: true`
 
 ## Matchmaking
 
--   `POST /matchmaking/join`: Join a matchmaking pool
--   `POST /matchmaking/cancel`: Leave the matchmaking queue
+-   `POST /sessions/:id/matchmake`: Join a matchmaking pool
+-   `POST /sessions/:id/matchmake/cancel`: Leave the matchmaking queue
+
+## Workspace
+
+-   `GET /workspace/:groupId`: Fetch workspace document
+-   `POST /workspace/:groupId/update`: Update workspace content/fields
 
 ## Randomization
 

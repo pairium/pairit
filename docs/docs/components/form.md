@@ -1,5 +1,8 @@
 # Form
 
+!!! warning "Planned"
+    This component is planned but not yet implemented.
+
 Render general-purpose form fields when Survey is not a fit.
 
 Events
