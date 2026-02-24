@@ -54,6 +54,7 @@ Agents support both OpenAI and Anthropic models. The provider is inferred from t
 | `model` | string | required | Model name (e.g., `gpt-4o`, `claude-sonnet-4-5-20250929`) |
 | `system` | string | required | System prompt defining the agent's role and behavior |
 | `sendFirstMessage` | boolean | `false` | If true, agent sends an opening message when chat loads |
+| `guardrails` | boolean | `true` | Prepend default guardrail instructions to the system prompt. Set to `false` to opt out. See [Agent Guardrails](../guides/agent-guardrails.md). |
 | `reasoningEffort` | string | - | For reasoning models: `minimal`, `low`, `medium`, `high` |
 | `tools` | array | - | Tool definitions the agent can invoke |
 

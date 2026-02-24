@@ -123,8 +123,22 @@ async function runAgent(
 			return;
 		}
 
+		// Build system prompt: guardrail prefix + experimenter prompt + workspace
+		const agentWithContext = { ...agent };
+
+		// Prepend guardrail instructions unless explicitly opted out
+		if (agent.guardrails !== false) {
+			const guardrailPrefix = [
+				"IMPORTANT GUIDELINES:",
+				"- Do NOT answer questions about the experiment itself — its process, procedures, compensation, duration, or participant rights.",
+				'- If a participant asks about these topics, say: "That\'s a great question — please direct it to the researcher."',
+				"- Stay in your assigned role. Do not pretend to be a researcher or experiment administrator.",
+				"- Do not make promises or commitments on behalf of the research team.",
+			].join("\n");
+			agentWithContext.system = `${guardrailPrefix}\n\n${agent.system}`;
+		}
+
 		// Inject workspace content into agent system prompt if available
-		const agentWithWorkspace = { ...agent };
 		const workspaceCollection = await getWorkspaceDocumentsCollection();
 		const workspaceDoc = await workspaceCollection.findOne({ groupId });
 		if (workspaceDoc) {
@@ -132,7 +146,7 @@ async function runAgent(
 				workspaceDoc.mode === "freeform"
 					? `\n\n--- Current Workspace Content ---\n${workspaceDoc.content ?? "(empty)"}\n--- End Workspace Content ---`
 					: `\n\n--- Current Workspace Fields ---\n${JSON.stringify(workspaceDoc.fields ?? {}, null, 2)}\n--- End Workspace Fields ---`;
-			agentWithWorkspace.system = agent.system + workspaceSection;
+			agentWithContext.system = agentWithContext.system + workspaceSection;
 		}
 
 		// Get members early so we can stream deltas to them
@@ -157,7 +171,7 @@ async function runAgent(
 			[];
 
 		for await (const delta of streamAgentResponse(
-			agentWithWorkspace,
+			agentWithContext,
 			history,
 			abortController.signal,
 		)) {

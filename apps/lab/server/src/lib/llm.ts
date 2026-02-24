@@ -11,6 +11,7 @@ export type AgentConfig = {
 	model: string;
 	system: string;
 	sendFirstMessage?: boolean;
+	guardrails?: boolean;
 	reasoningEffort?: "minimal" | "low" | "medium" | "high";
 	tools?: Array<{
 		name: string;

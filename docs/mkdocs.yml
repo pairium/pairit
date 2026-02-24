@@ -22,6 +22,8 @@ nav:
       - Media: components/media.md
       - Form: components/form.md
       - Custom Components: components/custom.md
+  - Guides:
+      - Agent Guardrails: guides/agent-guardrails.md
   - Developer:
       - Getting Started: dev/getting-started.md
       - Architecture: dev/architecture.md
