@@ -6,8 +6,8 @@
 import { randomBytes } from "node:crypto";
 import { cors } from "@elysiajs/cors";
 import { auth } from "@pairit/auth";
-import { renderPage } from "@pairit/html";
 import { Elysia, t } from "elysia";
+import { renderPage } from "./lib/html";
 import { configsRoutes } from "./routes/configs";
 import { dataRoutes } from "./routes/data";
 import { mediaRoutes } from "./routes/media";

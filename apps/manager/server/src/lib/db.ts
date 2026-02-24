@@ -12,7 +12,7 @@ import type {
 	SessionDocument,
 } from "../types";
 
-export { closeDB, connectDB } from "@pairit/db";
+export { connectDB } from "@pairit/db";
 
 export async function getConfigsCollection(): Promise<
 	Collection<ConfigDocument>

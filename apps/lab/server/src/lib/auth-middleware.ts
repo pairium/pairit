@@ -9,7 +9,6 @@
 
 import type { User } from "@pairit/auth";
 import { auth } from "@pairit/auth";
-import { Elysia } from "elysia";
 import { getConfigsCollection, getSessionsCollection } from "../lib/db";
 
 /**
@@ -80,11 +79,3 @@ export async function deriveAuthContext({
 		user: sessionData?.user ?? null,
 	};
 }
-
-/**
- * Elysia plugin that adds optional auth middleware
- * Uses derive to add auth context to all routes
- */
-export const optionalAuthMiddleware = new Elysia({
-	name: "optional-auth-middleware",
-}).derive(({ request, params }) => deriveAuthContext({ request, params }));

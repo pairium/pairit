@@ -14,16 +14,6 @@ export type ConfigDocument = {
 	updatedAt: Date;
 };
 
-export type MediaUploadBody = {
-	bucket?: string;
-	object: string;
-	checksum?: string;
-	data: string;
-	contentType?: string | null;
-	metadata?: Record<string, unknown> | null;
-	public?: boolean;
-};
-
 export type MediaListItem = {
 	name: string;
 	bucket: string;

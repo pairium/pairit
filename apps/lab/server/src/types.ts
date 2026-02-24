@@ -3,8 +3,8 @@
  * (Duplicated from original Firebase Functions implementation)
  */
 
-export type ButtonAction = { type: "go_to"; target: string };
-export type Button = { id: string; text: string; action: ButtonAction };
+type ButtonAction = { type: "go_to"; target: string };
+type Button = { id: string; text: string; action: ButtonAction };
 export type ComponentInstance =
 	| { type: "text"; props: { text: string } }
 	| { type: "buttons"; props: { buttons: Button[] } };

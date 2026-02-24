@@ -10,10 +10,9 @@
 	},
 	"dependencies": {
 		"@elysiajs/cors": "^1.1.1",
+		"@google-cloud/storage": "^7.14.0",
 		"@pairit/auth": "workspace:*",
 		"@pairit/db": "workspace:*",
-		"@pairit/html": "workspace:*",
-		"@pairit/storage": "workspace:*",
 		"better-auth": "^1.0.7",
 		"elysia": "^1.1.25",
 		"mongodb": "^6.12.0"

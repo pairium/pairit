@@ -5,9 +5,9 @@
  * DELETE /media/:object - Delete media file
  */
 
-import { storage } from "@pairit/storage";
 import { Elysia, t } from "elysia";
 import { authMiddleware } from "../lib/auth-middleware";
+import { storage } from "../lib/storage";
 import type { MediaListItem } from "../types";
 
 const DEFAULT_MEDIA_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;

@@ -140,7 +140,7 @@ export default function App() {
 		try {
 			const r = await advance(sessionId, target);
 			if (r.user_state) setUserState(r.user_state);
-			(target);
+			target;
 			setPage(nextPage);
 			setEndRedirectUrl(nextPage.endRedirectUrl ?? null);
 			setEndedAt(nextPage.end ? new Date().toISOString() : null);

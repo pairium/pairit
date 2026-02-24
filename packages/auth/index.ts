@@ -106,4 +106,4 @@ export const auth = betterAuth({
 	},
 });
 
-export type { AuthContext, Session, User } from "./types";
+export type { Session, User } from "./types";

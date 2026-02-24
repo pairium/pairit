@@ -20,8 +20,3 @@ export type Session = {
 	ipAddress?: string | null;
 	userAgent?: string | null;
 };
-
-export type AuthContext = {
-	user: User | null;
-	session: Session | null;
-};

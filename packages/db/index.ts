@@ -125,13 +125,6 @@ export async function closeDB(): Promise<void> {
 	}
 }
 
-/**
- * Check if connected to MongoDB
- */
-export function isConnected(): boolean {
-	return db !== null;
-}
-
 // Register graceful shutdown handlers
 process.on("SIGTERM", async () => {
 	await closeDB();

@@ -27,9 +27,9 @@ export function renderPage({ title, content, scripts = "" }: PageOptions) {
             --red-600: #dc2626;
             --red-50: #fef2f2;
         }
-        
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
+
         body {
             font-family: 'Inter', -apple-system, system-ui, sans-serif;
             background-color: var(--slate-50);
@@ -217,7 +217,7 @@ export function renderPage({ title, content, scripts = "" }: PageOptions) {
             stroke-width: 2;
             fill: none;
         }
-        
+
         a { color: var(--blue-600); text-decoration: none; }
         a:hover { text-decoration: underline; }
     </style>
@@ -245,36 +245,4 @@ export function renderPage({ title, content, scripts = "" }: PageOptions) {
     ${scripts}
 </body>
 </html>`;
-}
-
-/**
- * Renders a specialized success page for the CLI loopback flow.
- * Centers the content and includes auto-close logic.
- */
-export function renderCliSuccessPage() {
-	const content = `
-    <div class="card">
-        <h1>
-            <svg class="icon" style="color: var(--emerald-600); width: 32px; height: 32px;" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Authenticated!
-        </h1>
-        <p>You have successfully logged in. You can now close this window and return to your CLI.</p>
-        <button onclick="window.close()" class="btn btn-blue">Close Window</button>
-    </div>`;
-
-	const scripts = `
-    <script>
-        // Auto-close after 3 seconds if supported
-        setTimeout(() => {
-            window.close();
-        }, 3000);
-    </script>`;
-
-	return renderPage({
-		title: "Login Successful",
-		content,
-		scripts,
-	});
 }

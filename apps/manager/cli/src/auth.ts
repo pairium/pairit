@@ -1,7 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { renderCliSuccessPage } from "@pairit/html";
 
 const CONFIG_DIR = join(homedir(), ".pairit");
 const CREDENTIALS_FILE = join(CONFIG_DIR, "credentials.json");
@@ -84,7 +83,9 @@ export async function login() {
 
 					if (code) {
 						res.writeHead(200, { "Content-Type": "text/html" });
-						res.end(renderCliSuccessPage());
+						res.end(
+							`<!DOCTYPE html><html><head><title>Login Successful</title></head><body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><h1>Authenticated!</h1><p>You can close this window and return to your CLI.</p></div><script>setTimeout(()=>window.close(),3000)</script></body></html>`,
+						);
 						clearTimeout(timeout);
 						server.close();
 						resolve(code);
