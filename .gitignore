@@ -430,3 +430,6 @@ vite.config.ts.timestamp-*
 
 # Test media files
 tests/test-media-*.txt
+
+# Claude Code local settings
+.claude/settings.local.json
