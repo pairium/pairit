@@ -70,7 +70,7 @@ export function ChatView({
 	};
 
 	return (
-		<div className="flex min-h-[400px] flex-1 flex-col">
+		<div className="flex h-[500px] flex-col rounded-2xl border border-slate-200 bg-white">
 			{/* Messages area */}
 			<div className="flex-1 space-y-3 overflow-y-auto p-4">
 				{messages.length === 0 && (
