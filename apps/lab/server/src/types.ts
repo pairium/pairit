@@ -19,7 +19,7 @@ export type {
 
 type ButtonAction = { type: "go_to"; target: string };
 type Button = { id: string; text: string; action: ButtonAction };
-export type ComponentInstance =
+type ComponentInstance =
 	| { type: "text"; props: { text: string } }
 	| { type: "buttons"; props: { buttons: Button[] } };
 

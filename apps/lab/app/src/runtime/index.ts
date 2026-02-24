@@ -4,8 +4,4 @@ export type {
 	RuntimeComponentContext,
 	RuntimeComponentRenderer,
 } from "./registry";
-export {
-	registerComponent,
-	setFallbackComponent,
-	unregisterComponent,
-} from "./registry";
+export { registerComponent } from "./registry";

@@ -84,7 +84,6 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 		{
 			body: t.Object({
 				configId: t.String({ minLength: 1 }),
-				owner: t.Optional(t.String()),
 				checksum: t.String({ minLength: 1 }),
 				metadata: t.Optional(
 					t.Union([t.Record(t.String(), t.Unknown()), t.Null()]),

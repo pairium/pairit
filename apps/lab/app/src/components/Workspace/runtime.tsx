@@ -238,7 +238,7 @@ export const WorkspaceRuntime = defineRuntimeComponent<
 
 		if (!resolvedGroupId || loading) {
 			return (
-				<div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white">
+				<div className="flex h-64 items-center justify-center rounded-3xl border border-slate-200 bg-white">
 					<div className="text-sm text-slate-400">Loading workspace...</div>
 				</div>
 			);

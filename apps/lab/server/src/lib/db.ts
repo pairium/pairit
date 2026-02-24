@@ -15,8 +15,6 @@ import type {
 	WorkspaceDocumentDocument,
 } from "../types";
 
-export { connectDB } from "@pairit/db";
-
 export async function getConfigsCollection(): Promise<
 	Collection<ConfigDocument>
 > {

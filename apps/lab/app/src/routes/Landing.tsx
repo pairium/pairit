@@ -1,15 +1,16 @@
+import { Button } from "@components/ui/Button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@components/ui/Card";
 import { Bird, Mail, Undo2 } from "lucide-react";
-import type { HTMLAttributes } from "react";
-
-const buttonBase =
-	"inline-flex items-center gap-2 rounded-lg border border-transparent bg-black px-4 py-2 text-sm font-medium text-white shadow transition-colors hover:bg-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900";
-
-const ghostButton =
-	"inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm transition hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900";
 
 export function Landing() {
 	return (
-		<div className="flex min-h-screen flex-col bg-slate-50 text-gray-900">
+		<div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
 			<header className="border-b border-slate-200 bg-white/80 backdrop-blur">
 				<div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4">
 					<div className="flex items-center gap-2">
@@ -47,15 +48,14 @@ export function Landing() {
 								Check your email, chat, or instruction sheet for the correct
 								link to your study.
 							</p>
-							<button
-								type="button"
-								className={ghostButton}
+							<Button
+								variant="ghost"
 								onClick={() => {
 									window.history.back();
 								}}
 							>
 								<Undo2 className="h-4 w-4" /> Go back
-							</button>
+							</Button>
 						</CardContent>
 					</Card>
 
@@ -74,9 +74,13 @@ export function Landing() {
 								If you can't find your experiment link, contact the researcher
 								who invited you.
 							</p>
-							<a className={buttonBase} href="mailto:pairit@pairium.ai">
+							<Button
+								onClick={() => {
+									window.location.href = "mailto:pairit@pairium.ai";
+								}}
+							>
 								<Mail className="h-4 w-4" /> Email support
-							</a>
+							</Button>
 						</CardContent>
 					</Card>
 				</div>
@@ -91,33 +95,3 @@ export function Landing() {
 		</div>
 	);
 }
-
-type CardProps = HTMLAttributes<HTMLDivElement>;
-
-function Card({ className, ...props }: CardProps) {
-	return (
-		<div
-			className={`rounded-3xl border border-slate-200 bg-white p-6 shadow-sm ${className ?? ""}`}
-			{...props}
-		/>
-	);
-}
-
-const CardHeader = ({ className, ...props }: CardProps) => (
-	<div className={`space-y-1.5 ${className ?? ""}`} {...props} />
-);
-
-const CardTitle = ({ className, ...props }: CardProps) => (
-	<h2
-		className={`text-xl font-semibold tracking-tight ${className ?? ""}`}
-		{...props}
-	/>
-);
-
-const CardDescription = ({ className, ...props }: CardProps) => (
-	<p className={`text-sm text-slate-600 ${className ?? ""}`} {...props} />
-);
-
-const CardContent = ({ className, ...props }: CardProps) => (
-	<div className={`pt-2 ${className ?? ""}`} {...props} />
-);

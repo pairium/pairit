@@ -14,13 +14,13 @@
 		"@elysiajs/static": "^1.4.7",
 		"@pairit/auth": "workspace:*",
 		"@pairit/db": "workspace:*",
-		"better-auth": "^1.0.7",
+		"better-auth": "^1.4.7",
 		"elysia": "^1.1.25",
 		"mongodb": "^6.12.0",
 		"openai": "^6.21.0"
 	},
 	"devDependencies": {
 		"@types/bun": "^1.1.13",
-		"typescript": "^5.7.2"
+		"typescript": "^5.9.3"
 	}
 }

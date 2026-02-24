@@ -461,17 +461,3 @@ async function logToolCallEvent(
 		console.error("[Agent] Failed to log tool call event:", error);
 	}
 }
-
-export function cancelAgentRun(groupId: string): boolean {
-	const controller = activeRuns.get(groupId);
-	if (controller) {
-		controller.abort();
-		activeRuns.delete(groupId);
-		return true;
-	}
-	return false;
-}
-
-export function isAgentRunning(groupId: string): boolean {
-	return activeRuns.has(groupId);
-}

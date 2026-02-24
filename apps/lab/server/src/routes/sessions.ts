@@ -16,6 +16,7 @@ import {
 } from "../lib/db";
 import type {
 	Config,
+	Page,
 	ProlificParams,
 	Session,
 	SessionDocument,
@@ -23,9 +24,7 @@ import type {
 
 const FORCE_AUTH = process.env.FORCE_AUTH === "true";
 
-function isPage(
-	value: unknown,
-): value is { id: string; end?: boolean; components?: unknown[] } {
+function isPage(value: unknown): value is Page {
 	if (!value || typeof value !== "object") return false;
 	const page = value as Record<string, unknown>;
 	if (typeof page.id !== "string") return false;
@@ -48,10 +47,7 @@ function coerceConfig(raw: unknown): Config | null {
 		(typeof pagesInput !== "object" && !Array.isArray(pagesInput))
 	)
 		return null;
-	const pages: Record<
-		string,
-		{ id: string; end?: boolean; components?: unknown[] }
-	> = {};
+	const pages: Record<string, Page> = {};
 	if (Array.isArray(pagesInput)) {
 		for (const entry of pagesInput) {
 			if (!isPage(entry)) return null;

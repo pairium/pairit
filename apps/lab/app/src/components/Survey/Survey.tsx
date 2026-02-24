@@ -74,7 +74,6 @@ export interface SurveyProps {
 	source?: string;
 	title?: string;
 	intro?: string;
-	layout?: Record<string, unknown>;
 	onSubmitValues?: (values: Record<string, unknown>) => void | Promise<void>;
 	registerNavigationGuard?: (
 		guard: (
@@ -138,38 +137,21 @@ export function Survey(props: SurveyProps): ReactElement | null {
 		},
 		onSubmit: async ({ value }) => {
 			const transformed = transformSubmissionValue(value, items);
-			console.log("Survey submitted", transformed);
 			if (onSubmitValues) await onSubmitValues(transformed);
 		},
 	});
 
 	const runNavigationValidation = useCallback(
 		async (_action: ButtonAction) => {
-			console.log("🛡️ Navigation guard triggered for action:", _action);
-
 			const previousAttempts = form.state.submissionAttempts;
-			console.log("📊 Previous submission attempts:", previousAttempts);
-
-			console.log("🔄 Calling form.handleSubmit()");
 			await form.handleSubmit();
 
 			const submitted = form.state.submissionAttempts > previousAttempts;
-			console.log(
-				"📊 New submission attempts:",
-				form.state.submissionAttempts,
-				"Submitted:",
-				submitted,
-			);
-
 			if (!submitted) {
-				console.log("❌ Form not submitted, blocking navigation");
 				return false;
 			}
 
-			const success = form.state.isSubmitSuccessful;
-			console.log("✅ Form submission success:", success);
-
-			return success;
+			return form.state.isSubmitSuccessful;
 		},
 		[form],
 	);

@@ -3,8 +3,6 @@
  * Manages server-sent event connections and broadcasts
  */
 
-import { getSessionsCollection } from "./db";
-
 export type SSEEvent = {
 	event: string;
 	data: unknown;
@@ -117,34 +115,6 @@ export function broadcastToSession(
 	}
 }
 
-export async function broadcastToGroup(
-	groupId: string,
-	event: string,
-	data: unknown,
-): Promise<void> {
-	// Look up sessions by group_id in MongoDB
-	const collection = await getSessionsCollection();
-	const sessions = await collection
-		.find({ "user_state.group_id": groupId })
-		.project({ id: 1 })
-		.toArray();
-
-	console.log(
-		`[SSE] Broadcasting '${event}' to group ${groupId} (${sessions.length} sessions)`,
-	);
-	for (const session of sessions) {
-		broadcastToSession(session.id, event, data);
-	}
-}
-
 export function getConnectionCount(sessionId: string): number {
 	return connections.get(sessionId)?.size ?? 0;
-}
-
-export function getTotalConnectionCount(): number {
-	let total = 0;
-	for (const sessionConnections of connections.values()) {
-		total += sessionConnections.size;
-	}
-	return total;
 }

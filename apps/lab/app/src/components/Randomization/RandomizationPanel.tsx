@@ -17,7 +17,7 @@ export function RandomizationPanel({
 	showAssignment = true,
 }: RandomizationPanelProps) {
 	return (
-		<div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-2xl border border-slate-200 bg-white p-8">
+		<div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-3xl border border-slate-200 bg-white p-8">
 			{status === "loading" && (
 				<>
 					<div className="flex h-16 w-16 items-center justify-center">

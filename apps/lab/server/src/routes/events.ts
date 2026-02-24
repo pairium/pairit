@@ -39,9 +39,7 @@ export const eventsRoutes = new Elysia().post(
 
 		const eventsCollection = await getEventsCollection();
 		try {
-			const result = await eventsCollection.insertOne(
-				event as unknown as import("mongodb").Document,
-			);
+			const result = await eventsCollection.insertOne(event);
 			return { eventId: result.insertedId.toString() };
 		} catch (err) {
 			if (err instanceof MongoServerError && err.code === 11000) {

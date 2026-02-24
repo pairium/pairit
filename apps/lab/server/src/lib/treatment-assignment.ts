@@ -97,21 +97,3 @@ export async function assignTreatment(
 
 	return opts[0];
 }
-
-/**
- * Get current condition counts for a balance key (for debugging)
- */
-export function getConditionCounts(
-	balanceKey: string,
-): Record<string, number> | null {
-	const counts = conditionCounts.get(balanceKey);
-	if (!counts) return null;
-	return Object.fromEntries(counts);
-}
-
-/**
- * Get current block position for a balance key (for debugging)
- */
-export function getBlockPosition(balanceKey: string): number | null {
-	return blockPositions.get(balanceKey) ?? null;
-}

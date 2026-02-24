@@ -71,10 +71,6 @@ class SSEClient {
 			this.dispatchEvent("chat_message", JSON.parse(event.data));
 		});
 
-		this.eventSource.addEventListener("page_change", (event) => {
-			this.dispatchEvent("page_change", JSON.parse(event.data));
-		});
-
 		this.eventSource.addEventListener("chat_ended", (event) => {
 			this.dispatchEvent("chat_ended", JSON.parse(event.data));
 		});
