@@ -1,7 +1,6 @@
 # Validation
 
 Compilation
-- Normalize page shapes and helpers into canonical components
 - Validate props against schemas where applicable
 - Record resolved custom component versions for audit
 - Ensure survey questions define answer kinds and required choices

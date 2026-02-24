@@ -8,7 +8,7 @@ Every config file supports these top-level fields:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `schema_version` | string | Yes | Config schema version (currently `"v2"`) |
+| `schema_version` | string | Yes | Config schema version (currently `"0.1.0"`) |
 | `initialPageId` | string | Yes | The page to start on |
 | `pages` | array | Yes | Page definitions |
 | `agents` | array | No | AI agent definitions (see [Agents](components/agents.md)) |
@@ -18,10 +18,10 @@ Every config file supports these top-level fields:
 
 ### schema_version
 
-Required field for config validation. Currently use `"v2"`:
+Required field for config validation. Currently use `"0.1.0"`:
 
 ```yaml
-schema_version: v2
+schema_version: 0.1.0
 initialPageId: intro
 pages:
   # ...
@@ -34,7 +34,7 @@ The CLI's `pairit config lint` command validates that `schema_version` is presen
 Controls whether participants who have completed the experiment can start a new session:
 
 ```yaml
-schema_version: v2
+schema_version: 0.1.0
 allowRetake: true  # Allow participants to retake
 initialPageId: intro
 pages:
@@ -61,13 +61,7 @@ Common page fields:
 - `components?`: array of component instances shown on the page (canonical)
 - `layout?`: optional presentation hints for the client
 
-Top-level helpers (normalized at compile time):
-
-- `text`: string → normalized to a text component instance
-- `buttons`: array of `{ text, action }` → normalized to a buttons component instance
-- Single-component shorthand: define `componentType`/`props`/`buttons` at the page root; the compiler normalizes to one component instance plus trailing buttons
-
-Canonical component instance shapes:
+Component instance shapes:
 
 - Built-in text: `{ type: "text", props: { text: string, markdown?: bool } }`
 - Built-in buttons: `{ type: "buttons", props: { buttons: [ { text: string, action: Action } ] } }`
@@ -76,17 +70,21 @@ Canonical component instance shapes:
 - Built-in chat: `{ type: "chat", props: { agents?: string[] } }`
 - Custom component host: `{ type: "component", props: { component: string, props: object, unknownEvents?: "error" | "warn" | "ignore" } }`
 
-Example page using helpers:
+Example page:
 
 ```yaml
 pages:
   - id: intro
-    text: |
-      Welcome to the study!
-    buttons:
-      - id: next
-        text: "Next"
-        action: { type: go_to, target: outro }
+    components:
+      - type: text
+        props:
+          text: "Welcome to the study!"
+      - type: buttons
+        props:
+          buttons:
+            - id: next
+              text: "Next"
+              action: { type: go_to, target: outro }
 
   - id: outro
     end: true
@@ -114,26 +112,33 @@ pages:
           text: "How many hours did you sleep last night?"
       - type: survey
         props:
-          questions:
+          items:
             - id: sleep_hours
               text: "Hours slept"
               answer: numeric
-    buttons:
-      - id: submit_sleep
-        text: "Submit"
-        action:
-          type: go_to
-          branches:
-            - when: "$.user_state.sleep_hours < 5"
-              target: short_sleep_followup
-            - target: outro
+      - type: buttons
+        props:
+          buttons:
+            - id: submit_sleep
+              text: "Submit"
+              action:
+                type: go_to
+                branches:
+                  - when: "$.user_state.sleep_hours < 5"
+                    target: short_sleep_followup
+                  - target: outro
 
   - id: short_sleep_followup
-    text: "We're sorry to hear that. Can you tell us what woke you up?"
-    buttons:
-      - id: continue
-        text: "Continue"
-        action: { type: go_to, target: outro }
+    components:
+      - type: text
+        props:
+          text: "We're sorry to hear that. Can you tell us what woke you up?"
+      - type: buttons
+        props:
+          buttons:
+            - id: continue
+              text: "Continue"
+              action: { type: go_to, target: outro }
 
   - id: outro
     end: true

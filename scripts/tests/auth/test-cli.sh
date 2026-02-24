@@ -27,7 +27,7 @@ echo "✓ Help command works"
 echo "2. Testing Lint..."
 # Create a dummy config in a temp location or locally
 TEST_CONFIG="$SCRIPT_DIR/test-config.yaml"
-echo "schema_version: v2
+echo "schema_version: 0.1.0
 initialPageId: intro
 pages:
   - id: intro

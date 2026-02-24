@@ -423,7 +423,7 @@ async function compileConfig(configPath: string): Promise<string> {
 	});
 
 	const output: Record<string, unknown> = {
-		schema_version: config.schema_version ?? "v2",
+		schema_version: config.schema_version ?? "0.1.0",
 		initialPageId: config.initialPageId ?? nodes[0]?.id ?? "intro",
 		nodes,
 	};

@@ -23,30 +23,43 @@ This opens a browser window for Google OAuth. Once authenticated, you can manage
 **1. Create `my-experiment.yaml`:**
 
 ```yaml
-schema_version: v2
+schema_version: 0.1.0
 initialPageId: intro
 
 pages:
   - id: intro
-    text: "Welcome to the study!"
-    buttons:
-      - id: start
-        text: "Start"
-        action: { type: go_to, target: survey }
+    components:
+      - type: text
+        props:
+          text: "Welcome to the study!"
+      - type: buttons
+        props:
+          buttons:
+            - id: start
+              text: "Start"
+              action: { type: go_to, target: survey }
 
   - id: survey
-    survey:
-      - id: age
-        text: "What is your age?"
-        answer: numeric
-    buttons:
-      - id: submit
-        text: "Submit"
-        action: { type: go_to, target: thanks }
+    components:
+      - type: survey
+        props:
+          items:
+            - id: age
+              text: "What is your age?"
+              answer: numeric
+      - type: buttons
+        props:
+          buttons:
+            - id: submit
+              text: "Submit"
+              action: { type: go_to, target: thanks }
 
   - id: thanks
-    text: "Thank you for participating!"
     end: true
+    components:
+      - type: text
+        props:
+          text: "Thank you for participating!"
 ```
 
 **2. Validate your config:**

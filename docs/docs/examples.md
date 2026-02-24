@@ -12,23 +12,33 @@ The simplest experiment: one question, one button.
 <summary>View config</summary>
 
 ```yaml
-schema_version: v2
+schema_version: 0.1.0
 initialPageId: survey
 
 pages:
   - id: survey
-    survey:
-      - id: mood
-        text: "How are you feeling today?"
-        answer: likert5
-    buttons:
-      - id: done
-        text: "Submit"
-        action: { type: go_to, target: thanks }
+    components:
+      - type: survey
+        props:
+          items:
+            - id: mood
+              text: "How are you feeling today?"
+              answer: likert5
+      - type: buttons
+        props:
+          buttons:
+            - id: done
+              text: "Submit"
+              action:
+                type: go_to
+                target: thanks
 
   - id: thanks
-    text: "Thanks for your response!"
     end: true
+    components:
+      - type: text
+        props:
+          text: "Thanks for your response!"
 ```
 
 </details>
@@ -39,43 +49,114 @@ pages:
 
 Multi-page survey with different question types.
 
-[Try it →](https://lab-432501290611.us-central1.run.app/survey-showcase)
+[Try it →](https://lab-432501290611.us-central1.run.app/survey-only)
 
 <details>
 <summary>View config</summary>
 
 ```yaml
-schema_version: v2
-initialPageId: intro
+schema_version: 0.1.0
+initialPageId: consent
 
 pages:
-  - id: intro
-    text: "Welcome. Please complete this short survey."
-    buttons:
-      - id: begin
-        text: "Begin"
-        action: { type: go_to, target: survey_1 }
+  - id: consent
+    components:
+      - type: text
+        props:
+          text: |
+            # Informed Consent
 
-  - id: survey_1
-    survey:
-      - id: age
-        text: "What is your age?"
-        answer: numeric
-      - id: gender
-        text: "What is your gender?"
-        answer: multiple_choice
-        choices: [Male, Female, Other, Prefer not to say]
-      - id: satisfaction
-        text: "How satisfied are you with our service?"
-        answer: likert5
-    buttons:
-      - id: finish
-        text: "Finish"
-        action: { type: go_to, target: outro }
+            You are being invited to participate in a research study.
+            Your participation is voluntary.
+      - type: buttons
+        props:
+          buttons:
+            - id: accept
+              text: "I consent"
+              action:
+                type: go_to
+                target: demographics
+            - id: decline
+              text: "I do not consent"
+              action:
+                type: go_to
+                target: declined
 
-  - id: outro
-    text: "Thank you for participating!"
+  - id: declined
     end: true
+    components:
+      - type: text
+        props:
+          text: "Thank you for your time."
+
+  - id: demographics
+    components:
+      - type: survey
+        props:
+          items:
+            - id: age
+              text: "What is your age?"
+              answer: numeric
+            - id: gender
+              text: "What is your gender?"
+              answer:
+                multiple_choice:
+                  choices:
+                    - Male
+                    - Female
+                    - Non-binary
+                    - Prefer not to say
+      - type: buttons
+        props:
+          buttons:
+            - id: demo_next
+              text: "Next"
+              action:
+                type: go_to
+                branches:
+                  - when: "user_state.age < 18"
+                    target: ineligible
+                  - target: main_survey
+
+  - id: ineligible
+    end: true
+    components:
+      - type: text
+        props:
+          text: "Sorry, you must be 18 or older to participate."
+
+  - id: main_survey
+    components:
+      - type: survey
+        props:
+          items:
+            - id: satisfaction
+              text: "How satisfied are you with your current work-life balance?"
+              answer: likert7
+            - id: sleep_hours
+              text: "How many hours did you sleep last night?"
+              answer: numeric
+            - id: comments
+              text: "Any additional comments?"
+              answer: text
+      - type: buttons
+        props:
+          buttons:
+            - id: submit
+              text: "Submit"
+              action:
+                type: go_to
+                target: debrief
+
+  - id: debrief
+    end: true
+    components:
+      - type: text
+        props:
+          text: |
+            # Thank you!
+
+            Your responses have been recorded.
 ```
 
 </details>
@@ -92,38 +173,67 @@ Randomly assign participants to conditions.
 <summary>View config</summary>
 
 ```yaml
-schema_version: v2
-initialPageId: randomize
+schema_version: 0.1.0
+initialPageId: intro
 
 pages:
+  - id: intro
+    components:
+      - type: text
+        props:
+          text: |
+            # Randomization Demo
+
+            This demo shows how the `randomization` component assigns participants
+            to experimental conditions.
+      - type: buttons
+        props:
+          buttons:
+            - id: start
+              text: "Start"
+              action:
+                type: go_to
+                target: randomize
+
   - id: randomize
-    randomize:
-      stateKey: condition
-      conditions: [control, treatment_a, treatment_b]
-      assignmentType: balanced_random
-    buttons:
-      - id: continue
-        text: "Continue"
-        action:
-          type: go_to
-          branches:
-            - when: "$.user_state.condition == 'control'"
-              target: control_page
-            - when: "$.user_state.condition == 'treatment_a'"
-              target: treatment_a_page
-            - target: treatment_b_page
+    components:
+      - type: text
+        props:
+          text: "## Random Assignment"
+      - type: randomization
+        props:
+          assignmentType: random
+          conditions:
+            - A
+            - B
+          stateKey: condition
+          showAssignment: true
+      - type: buttons
+        props:
+          buttons:
+            - id: next
+              text: "See Result"
+              action:
+                type: go_to
+                target: result
 
-  - id: control_page
-    text: "You are in the **control** group."
-    end: true
+  - id: result
+    components:
+      - type: text
+        props:
+          text: "You were assigned to condition: **{{user_state.condition}}**"
+      - type: buttons
+        props:
+          buttons:
+            - id: finish
+              text: "Finish"
+              action:
+                type: go_to
+                target: end
 
-  - id: treatment_a_page
-    text: "You are in **treatment A**."
+  - id: end
     end: true
-
-  - id: treatment_b_page
-    text: "You are in **treatment B**."
-    end: true
+    components: []
 ```
 
 </details>
@@ -140,34 +250,186 @@ One-on-one conversation with an AI agent.
 <summary>View config</summary>
 
 ```yaml
-schema_version: v2
+schema_version: 0.1.0
 initialPageId: intro
 
 pages:
   - id: intro
-    text: "Chat with our AI assistant about any topic."
-    buttons:
-      - id: start
-        text: "Start Chat"
-        action: { type: go_to, target: chat }
+    components:
+      - type: text
+        props:
+          text: |
+            # Negotiation Study
+
+            You will negotiate the price of a used car with an AI assistant.
+            Try to get the best deal you can.
+      - type: buttons
+        props:
+          buttons:
+            - id: start
+              text: "Start negotiation"
+              action:
+                type: go_to
+                target: chat
 
   - id: chat
-    chat:
-      agents: [assistant]
-      placeholder: "Type your message..."
-    buttons:
-      - id: finish
-        text: "End Chat"
-        action: { type: go_to, target: thanks }
+    components:
+      - type: chat
+        props:
+          agents:
+            - dealer
+      - type: buttons
+        props:
+          buttons:
+            - id: end_chat
+              text: "End negotiation"
+              action:
+                type: go_to
+                target: thanks
 
   - id: thanks
-    text: "Thanks for chatting!"
     end: true
+    components:
+      - type: text
+        props:
+          text: "Thank you for participating!"
 
 agents:
-  - id: assistant
-    model: gpt-4o
-    systemPrompt: "You are a helpful assistant. Be concise and friendly."
+  - id: dealer
+    model: "gpt-5-mini"
+    system: |
+      You are a used car dealer selling a 2019 Honda Civic with 45,000 miles.
+      Reserve price: $12,000 (won't sell below). Starting ask: $18,000.
+      Be friendly but firm. Keep responses SHORT - 1-2 sentences max.
+```
+
+</details>
+
+---
+
+## Multi-Chat
+
+Share or isolate chat history across pages using `groupId`.
+
+[Try it →](https://lab-432501290611.us-central1.run.app/multi-chat)
+
+<details>
+<summary>View config</summary>
+
+```yaml
+schema_version: 0.1.0
+initialPageId: intro
+
+pages:
+  - id: intro
+    components:
+      - type: text
+        props:
+          text: |
+            # Multi-Chat Demo
+
+            This experiment demonstrates chat groupId scoping:
+            - **Shared chats**: Multiple pages share the same conversation
+            - **Isolated chats**: Each page has separate message history (default)
+      - type: buttons
+        props:
+          buttons:
+            - id: start
+              text: "Start Demo"
+              action:
+                type: go_to
+                target: chat_1
+
+  # Shared chat pages: same groupId means messages persist across them
+  - id: chat_1
+    components:
+      - type: text
+        props:
+          text: |
+            ## Round 1: Financial Advisor
+
+            This chat uses `groupId: "consultation"`. Messages will carry over to Round 2.
+      - type: chat
+        props:
+          groupId: "consultation"
+          agents:
+            - advisor
+          placeholder: "Ask about investment strategies..."
+      - type: buttons
+        props:
+          buttons:
+            - id: next
+              text: "Continue to Round 2"
+              action:
+                type: go_to
+                target: chat_2
+
+  - id: chat_2
+    components:
+      - type: text
+        props:
+          text: |
+            ## Round 2: Same Advisor (Shared Memory)
+
+            Same `groupId: "consultation"` - the advisor remembers Round 1 conversation.
+      - type: chat
+        props:
+          groupId: "consultation"
+          agents:
+            - advisor
+          placeholder: "Continue the conversation..."
+      - type: buttons
+        props:
+          buttons:
+            - id: next
+              text: "Try Isolated Chat"
+              action:
+                type: go_to
+                target: chat_isolated
+
+  # No groupId = isolated by default (uses session:pageId)
+  - id: chat_isolated
+    components:
+      - type: text
+        props:
+          text: |
+            ## Isolated Chat
+
+            No `groupId` prop - this chat is isolated to this page only.
+            Messages here won't appear on other pages.
+      - type: chat
+        props:
+          agents:
+            - advisor
+          placeholder: "Start a fresh conversation..."
+      - type: buttons
+        props:
+          buttons:
+            - id: finish
+              text: "Finish Demo"
+              action:
+                type: go_to
+                target: outro
+
+  - id: outro
+    end: true
+    components:
+      - type: text
+        props:
+          text: |
+            # Demo Complete
+
+            You've seen how `groupId` controls chat memory:
+            - **Explicit groupId**: Share messages across pages
+            - **No groupId**: Isolated per-page history (default)
+
+agents:
+  - id: advisor
+    model: "gpt-5-mini"
+    system: |
+      You are a friendly financial advisor. Give brief, helpful responses.
+      If the user has spoken to you before in this session, acknowledge the prior conversation.
+      Keep responses SHORT - 2-3 sentences max.
 ```
 
 </details>
@@ -184,43 +446,75 @@ Match 2 participants and let them chat together.
 <summary>View config</summary>
 
 ```yaml
-schema_version: v2
-initialPageId: intro
+schema_version: 0.1.0
+initialPageId: consent
 
 pages:
-  - id: intro
-    text: "You'll be matched with another participant to discuss a decision."
-    buttons:
-      - id: start
-        text: "Find Partner"
-        action: { type: go_to, target: waiting }
+  - id: consent
+    components:
+      - type: text
+        props:
+          text: |
+            # Team Decision Study
 
-  - id: waiting
-    matchmaking: team_pool
-    onMatchTarget: discussion
-    timeoutTarget: solo
+            You will be paired with another participant to make a decision together.
+      - type: buttons
+        props:
+          buttons:
+            - id: agree
+              text: "I agree to participate"
+              action:
+                type: go_to
+                target: matching
 
-  - id: discussion
-    text: "Discuss with your partner: **Should we invest in renewable energy?**"
-    chat:
-      groupId: "$.groupId"
-    buttons:
-      - id: done
-        text: "Submit Decision"
-        action: { type: go_to, target: thanks }
+  - id: matching
+    components:
+      - type: matchmaking
+        props:
+          poolId: main_pool
+      - type: buttons
+        props:
+          buttons:
+            - id: matched
+              text: "Continue to chat"
+              action:
+                type: go_to
+                target: chat
 
-  - id: solo
-    text: "No partner found. Thanks for trying!"
+  - id: matching_timeout
     end: true
+    components:
+      - type: text
+        props:
+          text: "We couldn't find enough group members at this time. Thank you for trying!"
+
+  - id: chat
+    components:
+      - type: text
+        props:
+          text: "**Your task:** Decide together which candidate to hire from the three profiles below."
+      - type: chat
+      - type: buttons
+        props:
+          buttons:
+            - id: done
+              text: "We've decided"
+              action:
+                type: go_to
+                target: thanks
 
   - id: thanks
-    text: "Thanks for participating!"
     end: true
+    components:
+      - type: text
+        props:
+          text: "Thank you for participating!"
 
 matchmaking:
-  - id: team_pool
+  - id: main_pool
     num_users: 2
-    timeoutSeconds: 60
+    timeoutSeconds: 180
+    timeoutTarget: matching_timeout
 ```
 
 </details>
@@ -237,55 +531,88 @@ Two participants chat with an AI facilitator observing and guiding.
 <summary>View config</summary>
 
 ```yaml
-schema_version: v2
-initialPageId: intro
+schema_version: 0.1.0
+initialPageId: consent
 
 pages:
-  - id: intro
-    text: "You'll discuss a topic with another participant. An AI mediator will help guide the conversation."
-    buttons:
-      - id: start
-        text: "Join Discussion"
-        action: { type: go_to, target: waiting }
+  - id: consent
+    components:
+      - type: text
+        props:
+          text: |
+            # AI-Mediated Discussion Study
 
-  - id: waiting
-    matchmaking: mediation_pool
-    onMatchTarget: mediated_chat
-    timeoutTarget: timeout
+            You will be paired with another participant for a discussion.
+            An AI facilitator will help guide your conversation.
+      - type: buttons
+        props:
+          buttons:
+            - id: agree
+              text: "I agree to participate"
+              action:
+                type: go_to
+                target: matching
 
-  - id: mediated_chat
-    text: "**Topic:** Should social media be regulated?"
-    chat:
-      groupId: "$.groupId"
-      agents: [mediator]
-    buttons:
-      - id: finish
-        text: "End Discussion"
-        action: { type: go_to, target: thanks }
+  - id: matching
+    components:
+      - type: matchmaking
+        props:
+          poolId: mediation_pool
+      - type: buttons
+        props:
+          buttons:
+            - id: matched
+              text: "Start discussion"
+              action:
+                type: go_to
+                target: chat
 
-  - id: timeout
-    text: "No partner found."
+  - id: matching_timeout
     end: true
+    components:
+      - type: text
+        props:
+          text: "We couldn't find a partner at this time. Thank you for trying!"
+
+  - id: chat
+    components:
+      - type: text
+        props:
+          text: "**Your task:** Discuss with your partner which candidate to recommend for hire."
+      - type: chat
+        props:
+          agents:
+            - facilitator
+      - type: buttons
+        props:
+          buttons:
+            - id: done
+              text: "We've reached a conclusion"
+              action:
+                type: go_to
+                target: thanks
 
   - id: thanks
-    text: "Thanks for participating!"
     end: true
+    components:
+      - type: text
+        props:
+          text: "Thank you for participating!"
 
 matchmaking:
   - id: mediation_pool
     num_users: 2
-    timeoutSeconds: 90
+    timeoutSeconds: 120
+    timeoutTarget: matching_timeout
 
 agents:
-  - id: mediator
-    model: gpt-4o
-    systemPrompt: |
-      You are a neutral discussion facilitator. Your role:
-      - Encourage both participants to share their views
-      - Ask clarifying questions
-      - Summarize points of agreement and disagreement
-      - Keep the conversation respectful and productive
-      Only speak when helpful. Don't dominate the conversation.
+  - id: facilitator
+    model: "gpt-5-nano"
+    system: |
+      You are a neutral facilitator helping two people make a hiring decision.
+      Keep responses to ONE short sentence. Be extremely brief.
+      Ask a question OR make an observation, never both.
+      Stay neutral - never express preferences.
 ```
 
 </details>
@@ -300,36 +627,53 @@ Track custom analytics events on user interactions.
 <summary>View config</summary>
 
 ```yaml
-schema_version: v2
+schema_version: 0.1.0
 initialPageId: intro
 
 pages:
   - id: intro
-    text: "Welcome to the component events showcase."
-    buttons:
-      - id: start
-        text: "Begin"
-        action: { type: go_to, target: survey }
-        events:
-          onClick:
-            type: "button_click"
-            data:
-              button_id: "start"
-              section: "navigation"
+    components:
+      - type: text
+        props:
+          text: "Welcome to the component events showcase."
+      - type: buttons
+        props:
+          buttons:
+            - id: start
+              text: "Begin"
+              action:
+                type: go_to
+                target: survey
+              events:
+                onClick:
+                  type: "button_click"
+                  data:
+                    button_id: "start"
+                    section: "navigation"
 
   - id: survey
-    survey:
-      - id: satisfaction
-        text: "How satisfied are you?"
-        answer: likert5
-    buttons:
-      - id: submit
-        text: "Submit"
-        action: { type: go_to, target: thanks }
+    components:
+      - type: survey
+        props:
+          items:
+            - id: satisfaction
+              text: "How satisfied are you?"
+              answer: likert5
+      - type: buttons
+        props:
+          buttons:
+            - id: submit
+              text: "Submit"
+              action:
+                type: go_to
+                target: thanks
 
   - id: thanks
-    text: "Thank you!"
     end: true
+    components:
+      - type: text
+        props:
+          text: "Thank you!"
 ```
 
 </details>
