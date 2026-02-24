@@ -14,7 +14,7 @@ export type RandomizationPanelProps = {
 export function RandomizationPanel({
 	status,
 	condition,
-	showAssignment = true,
+	showAssignment = false,
 }: RandomizationPanelProps) {
 	return (
 		<div className="mx-auto flex max-w-md flex-col items-center gap-6 rounded-3xl border border-slate-200 bg-white p-8">

@@ -35,7 +35,7 @@ export const RandomizationRuntime = defineRuntimeComponent<
 		const conditions = component.props.conditions ?? [];
 		const stateKey = component.props.stateKey ?? "treatment";
 		const target = component.props.target;
-		const showAssignment = component.props.showAssignment ?? true;
+		const showAssignment = component.props.showAssignment ?? false;
 
 		useEffect(() => {
 			if (!sessionId || hasCalledRef.current) return;
@@ -101,6 +101,10 @@ export const RandomizationRuntime = defineRuntimeComponent<
 					Randomization requires an active session.
 				</div>
 			);
+		}
+
+		if (!showAssignment) {
+			return null;
 		}
 
 		return (
