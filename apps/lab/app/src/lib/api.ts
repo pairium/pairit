@@ -23,6 +23,13 @@ export class SessionBlockedError extends Error {
 	}
 }
 
+export class NotAMemberError extends Error {
+	constructor() {
+		super("Not a member of this chat group");
+		this.name = "NotAMemberError";
+	}
+}
+
 type StartResponse = {
 	status?: "created" | "resumed" | "blocked";
 	sessionId: string;
@@ -154,6 +161,7 @@ export async function sendChatMessage(
 			idempotencyKey: crypto.randomUUID(),
 		}),
 	});
+	if (r.status === 403) throw new NotAMemberError();
 	if (!r.ok) throw new Error("Failed to send message");
 	return r.json();
 }
@@ -168,6 +176,7 @@ export async function getChatHistory(
 			credentials: "include",
 		},
 	);
+	if (r.status === 403) throw new NotAMemberError();
 	if (!r.ok) throw new Error("Failed to get chat history");
 	return r.json();
 }
@@ -182,6 +191,7 @@ export async function startChatAgents(
 		credentials: "include",
 		body: JSON.stringify({ sessionId }),
 	});
+	if (r.status === 403) throw new NotAMemberError();
 	if (!r.ok) throw new Error("Failed to start chat agents");
 }
 

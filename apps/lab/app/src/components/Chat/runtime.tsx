@@ -6,6 +6,8 @@
 import {
 	type ChatMessage as ApiChatMessage,
 	getChatHistory,
+	getSession,
+	NotAMemberError,
 	sendChatMessage,
 	startChatAgents,
 	submitEvent,
@@ -53,7 +55,7 @@ type StreamingMessage = {
 export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 	type: "chat",
 	renderer: ({ component, context }) => {
-		const { sessionId, userState, pageId } = context;
+		const { sessionId, userState, onUserStateChange, pageId } = context;
 		const [messages, setMessages] = useState<ChatMessage[]>([]);
 		const [loading, setLoading] = useState(true);
 		const [chatDisabled, setChatDisabled] = useState(false);
@@ -62,14 +64,54 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 		const seenMessageIds = useRef<Set<string>>(new Set());
 		const hasTriggeredAgents = useRef(false);
 
-		// Resolve groupId: userState (matchmaking) > explicit prop > session:page (isolated by default)
-		// Explicit prop and default are prefixed with sessionId for security
-		const groupId =
-			(userState?.chat_group_id as string) ||
-			(component.props.groupId
-				? `${sessionId}:${component.props.groupId}`
-				: `${sessionId}:${pageId}`) ||
-			"";
+		// Resolve groupId asynchronously: userState (matchmaking) > server fetch > explicit prop > session:page fallback
+		const [resolvedGroupId, setResolvedGroupId] = useState<string | null>(
+			() => {
+				if (userState?.chat_group_id) return userState.chat_group_id as string;
+				if (component.props.groupId)
+					return `${sessionId}:${component.props.groupId}`;
+				return null; // Need to check server
+			},
+		);
+
+		useEffect(() => {
+			// Already resolved synchronously, or no session
+			if (resolvedGroupId || !sessionId) return;
+
+			let canceled = false;
+			const currentSessionId = sessionId;
+
+			async function resolve() {
+				try {
+					const session = await getSession(currentSessionId);
+					if (canceled) return;
+
+					const serverGroupId = session.user_state?.chat_group_id as
+						| string
+						| undefined;
+					if (serverGroupId) {
+						setResolvedGroupId(serverGroupId);
+						onUserStateChange?.({ chat_group_id: serverGroupId });
+					} else {
+						// No matchmaking group — fall back to session:page
+						setResolvedGroupId(`${sessionId}:${pageId}`);
+					}
+				} catch (error) {
+					if (canceled) return;
+					console.error("[Chat] Failed to fetch session for groupId:", error);
+					// Fall back so chat still renders
+					setResolvedGroupId(`${sessionId}:${pageId}`);
+				}
+			}
+
+			resolve();
+			return () => {
+				canceled = true;
+			};
+		}, [resolvedGroupId, sessionId, pageId, onUserStateChange]);
+
+		// Alias for downstream usage
+		const groupId = resolvedGroupId ?? "";
 
 		// Convert API message to ChatMessage with isOwn flag
 		const toViewMessage = useCallback(
@@ -107,6 +149,32 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 
 					setMessages(history.map(toViewMessage));
 				} catch (error) {
+					if (canceled) return;
+
+					if (error instanceof NotAMemberError) {
+						// Re-fetch server state — groupId may be stale
+						try {
+							const session = await getSession(currentSessionId);
+							if (canceled) return;
+
+							const serverGroupId = session.user_state?.chat_group_id as
+								| string
+								| undefined;
+							if (serverGroupId && serverGroupId !== currentGroupId) {
+								setResolvedGroupId(serverGroupId);
+								onUserStateChange?.({
+									chat_group_id: serverGroupId,
+								});
+								return; // Effect will re-run with new groupId
+							}
+						} catch (fetchError) {
+							console.error(
+								"[Chat] Failed to re-fetch session after 403:",
+								fetchError,
+							);
+						}
+					}
+
 					console.error("[Chat] Failed to load history:", error);
 				} finally {
 					if (!canceled) setLoading(false);
@@ -118,7 +186,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			return () => {
 				canceled = true;
 			};
-		}, [sessionId, groupId, toViewMessage]);
+		}, [sessionId, groupId, toViewMessage, onUserStateChange]);
 
 		// Trigger agents with sendFirstMessage on mount (after history loads)
 		useEffect(() => {
@@ -251,7 +319,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			);
 		}
 
-		if (loading) {
+		if (!resolvedGroupId || loading) {
 			return (
 				<div className="flex h-[500px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
 					<div className="text-sm text-slate-400">Loading chat...</div>
