@@ -304,6 +304,7 @@ export type RandomizeParams = {
 	assignmentType?: "random" | "balanced_random" | "block";
 	conditions?: string[];
 	stateKey?: string;
+	scope?: "session" | "group";
 };
 
 export type RandomizeResponse = {

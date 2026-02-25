@@ -1,0 +1,78 @@
+{
+  "schema_version": "0.1.0",
+  "initialPageId": "intro",
+  "pages": {
+    "intro": {
+      "id": "intro",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "# Randomization Demo\n\nThis demo assigns you to an experimental condition\ninvisibly when you continue.\n"
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "start",
+                "text": "Start",
+                "action": {
+                  "type": "go_to",
+                  "target": "result"
+                }
+              }
+            ]
+          },
+          "id": "buttons-1"
+        }
+      ]
+    },
+    "result": {
+      "id": "result",
+      "onEnter": [
+        {
+          "type": "randomize",
+          "assignmentType": "random",
+          "conditions": [
+            "A",
+            "B"
+          ],
+          "stateKey": "condition"
+        }
+      ],
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "You were assigned to condition: **{{user_state.condition}}**"
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "finish",
+                "text": "Finish",
+                "action": {
+                  "type": "go_to",
+                  "target": "end"
+                }
+              }
+            ]
+          },
+          "id": "buttons-1"
+        }
+      ]
+    },
+    "end": {
+      "id": "end",
+      "end": true,
+      "components": []
+    }
+  }
+}

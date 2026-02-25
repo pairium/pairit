@@ -71,11 +71,20 @@ export type AnyComponentInstance = ComponentInstance<
 	Record<string, unknown>
 >;
 
+export type OnEnterAction = {
+	type: "randomize";
+	scope?: "session" | "group";
+	assignmentType?: "random" | "balanced_random" | "block";
+	conditions?: string[];
+	stateKey?: string;
+};
+
 export type Page = {
 	id: string;
 	end?: boolean;
 	endRedirectUrl?: string;
 	layout?: "split";
+	onEnter?: OnEnterAction[];
 	components?: ComponentInstance[];
 };
 

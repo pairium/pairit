@@ -1,0 +1,47 @@
+schema_version: 0.1.0
+allowRetake: true
+initialPageId: intro
+
+pages:
+  - id: intro
+    components:
+      - type: text
+        props:
+          text: |
+            # Randomization Demo
+
+            This demo assigns you to an experimental condition
+            invisibly when you continue.
+      - type: buttons
+        props:
+          buttons:
+            - id: start
+              text: "Start"
+              action:
+                type: go_to
+                target: result
+
+  - id: result
+    onEnter:
+      - type: randomize
+        assignmentType: random
+        conditions:
+          - A
+          - B
+        stateKey: condition
+    components:
+      - type: text
+        props:
+          text: "You were assigned to condition: **{{user_state.condition}}**"
+      - type: buttons
+        props:
+          buttons:
+            - id: finish
+              text: "Finish"
+              action:
+                type: go_to
+                target: end
+
+  - id: end
+    end: true
+    components: []

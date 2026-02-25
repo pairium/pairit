@@ -111,17 +111,34 @@ Use `user_state.{fieldName}` in `when` conditions and branch expressions:
 
 ## Randomization
 
-Assign participants to experimental conditions using the `randomization` component:
+Assign participants to experimental conditions using `onEnter` page hooks. Randomization runs invisibly during navigation — no extra page or UI flash:
 
 ```yaml
-- type: randomization
-  props:
-    assignmentType: balanced_random  # or: random, block
-    conditions: [control, treatment_A, treatment_B]
-    stateKey: treatment
+pages:
+  - id: chat
+    onEnter:
+      - type: randomize
+        conditions: [control, treatment_A, treatment_B]
+        stateKey: treatment
+    components:
+      - type: chat
+        props: { ... }
 ```
 
 The assigned condition is stored at `user_state.{stateKey}` and persists across page refreshes.
+
+### Group-level randomization
+
+Use `scope: group` to assign the same condition to all members of a matchmaking group:
+
+```yaml
+onEnter:
+  - type: randomize
+    conditions: [control, treatment]
+    scope: group
+```
+
+This requires that matchmaking has already set `user_state.group_id`.
 
 See [Randomization](components/randomization.md) for full documentation.
 

@@ -1,8 +1,104 @@
 # Randomization
 
-Assign participants to experimental conditions. This is a side-effect component that executes randomization logic without displaying UI (unless `showAssignment` is enabled).
+Assign participants to experimental conditions.
 
-## Props
+## Recommended: `onEnter` hooks
+
+The recommended approach is to add randomization as an `onEnter` action on the target page. This runs invisibly during navigation — no extra page, no flash.
+
+### Basic usage
+
+```yaml
+pages:
+  - id: intro
+    components:
+      - type: buttons
+        props:
+          buttons:
+            - text: Continue
+              action: { type: go_to, target: chat }
+  - id: chat
+    onEnter:
+      - type: randomize
+        conditions: [control, treatment]
+    components:
+      - type: chat
+        props: { ... }
+```
+
+When the participant navigates to `chat`, the randomization runs in the background before the page renders.
+
+### `onEnter` action properties
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `type` | string | - | Must be `"randomize"` |
+| `conditions` | string[] | `[]` | Condition names to assign from |
+| `assignmentType` | string | `"random"` | Algorithm: `random`, `balanced_random`, or `block` |
+| `stateKey` | string | `"treatment"` | User state key where the assignment is stored |
+| `scope` | string | `"session"` | `"session"` for per-participant, `"group"` for group-level |
+
+### Group-level randomization
+
+When `scope: group`, all members of a matchmaking group receive the same treatment. Requires that matchmaking has already set `user_state.group_id`.
+
+```yaml
+pages:
+  - id: matching
+    components:
+      - type: matchmaking
+        props:
+          poolId: main_pool
+      - type: buttons
+        props:
+          buttons:
+            - text: Continue
+              action: { type: go_to, target: task }
+  - id: task
+    onEnter:
+      - type: randomize
+        conditions: [control, treatment]
+        scope: group
+    components:
+      - type: chat
+        props: { ... }
+```
+
+The first group member to enter the page triggers randomization. Subsequent members receive the same condition (idempotent).
+
+### Multiple randomizations
+
+You can run multiple randomizations on the same page by using different `stateKey` values:
+
+```yaml
+onEnter:
+  - type: randomize
+    conditions: [control, treatment]
+    stateKey: treatment
+  - type: randomize
+    conditions: [prompt_A, prompt_B]
+    stateKey: prompt_variant
+```
+
+## Assignment types
+
+### `random`
+
+Pure random selection from the conditions array. Each condition has equal probability regardless of previous assignments.
+
+### `balanced_random`
+
+Attempts to balance group sizes over time. Favors underrepresented conditions while maintaining randomness.
+
+### `block`
+
+Block randomization for strict balance within defined block sizes. Ensures equal distribution within each block.
+
+## Component mode
+
+You can also use randomization as a rendered component. This is useful when you want to show the assignment result or need a dedicated randomization page.
+
+### Props
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
@@ -12,47 +108,7 @@ Assign participants to experimental conditions. This is a side-effect component 
 | `target` | string | - | Page to auto-navigate to after assignment |
 | `showAssignment` | boolean | `true` | Whether to display the assignment result briefly |
 
-## Assignment Types
-
-### `random`
-
-Pure random selection from the conditions array. Each condition has equal probability regardless of previous assignments.
-
-```yaml
-components:
-  - type: randomization
-    props:
-      assignmentType: random
-      conditions: [control, treatment]
-```
-
-### `balanced_random`
-
-Attempts to balance group sizes over time. Favors underrepresented conditions while maintaining randomness.
-
-```yaml
-components:
-  - type: randomization
-    props:
-      assignmentType: balanced_random
-      conditions: [A, B, C]
-```
-
-### `block`
-
-Block randomization for strict balance within defined block sizes. Ensures equal distribution within each block.
-
-```yaml
-components:
-  - type: randomization
-    props:
-      assignmentType: block
-      conditions: [control, treatment]
-```
-
-## Usage
-
-### Basic Randomization
+### Example
 
 ```yaml
 pages:
@@ -63,43 +119,6 @@ pages:
           conditions: [control, treatment_A, treatment_B]
           stateKey: treatment
           target: intro
-```
-
-### Silent Randomization
-
-Hide the assignment display and auto-advance immediately:
-
-```yaml
-components:
-  - type: randomization
-    props:
-      conditions: [A, B]
-      stateKey: group
-      showAssignment: false
-      target: next_page
-```
-
-### With Conditional Routing
-
-Randomize first, then route based on assignment:
-
-```yaml
-pages:
-  - id: randomize
-    components:
-      - type: randomization
-        props:
-          conditions: [control, treatment]
-          stateKey: treatment
-    buttons:
-      - id: continue
-        text: "Continue"
-        action:
-          type: go_to
-          branches:
-            - when: "user_state.treatment == 'treatment'"
-              target: treatment_flow
-            - target: control_flow
 ```
 
 ## State
@@ -118,13 +137,20 @@ Access this value in expressions:
   target: treatment_a_page
 ```
 
-## Server-Side
+## Server-side
 
 Randomization calls the `/sessions/:id/randomize` endpoint which:
 
 1. Checks if a previous assignment exists for this session + stateKey
 2. If existing, returns the same condition (idempotent)
 3. If new, applies the assignment algorithm and persists the result
+
+For `scope: group`, the endpoint:
+
+1. Reads `user_state.group_id` from the session
+2. Checks if any group member already has `user_state.{stateKey}` set
+3. If found, returns the existing condition and ensures the requesting session also has it
+4. If not, assigns a new condition and sets it on all group members
 
 This ensures participants always see the same condition even if they refresh or return later.
 

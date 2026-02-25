@@ -165,7 +165,7 @@ pages:
 
 ## Randomization
 
-Randomly assign participants to conditions.
+Randomly assign participants to conditions using `onEnter` hooks — no extra page needed.
 
 [Try it →](https://lab-432501290611.us-central1.run.app/randomization-demo)
 
@@ -184,8 +184,8 @@ pages:
           text: |
             # Randomization Demo
 
-            This demo shows how the `randomization` component assigns participants
-            to experimental conditions.
+            This demo assigns you to an experimental condition
+            invisibly when you continue.
       - type: buttons
         props:
           buttons:
@@ -193,31 +193,16 @@ pages:
               text: "Start"
               action:
                 type: go_to
-                target: randomize
-
-  - id: randomize
-    components:
-      - type: text
-        props:
-          text: "## Random Assignment"
-      - type: randomization
-        props:
-          assignmentType: random
-          conditions:
-            - A
-            - B
-          stateKey: condition
-          showAssignment: true
-      - type: buttons
-        props:
-          buttons:
-            - id: next
-              text: "See Result"
-              action:
-                type: go_to
                 target: result
 
   - id: result
+    onEnter:
+      - type: randomize
+        assignmentType: random
+        conditions:
+          - A
+          - B
+        stateKey: condition
     components:
       - type: text
         props:

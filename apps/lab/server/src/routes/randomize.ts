@@ -22,6 +22,7 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 			assignmentType = "random",
 			conditions = [],
 			stateKey = "treatment",
+			scope = "session",
 		} = body;
 
 		// Validate stateKey to prevent MongoDB operator injection
@@ -43,7 +44,71 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 			};
 		}
 
-		// Use configId + stateKey as balance key (allows separate balance per key)
+		if (scope === "group") {
+			// Group-level randomization: all members get the same treatment
+			const groupId = session.user_state?.group_id as string | undefined;
+			if (!groupId) {
+				set.status = 400;
+				return {
+					error: "no_group",
+					message:
+						"Session has no group_id in user_state. Group-scoped randomization requires matchmaking first.",
+				};
+			}
+
+			const sessionsCollection = await getSessionsCollection();
+
+			// Check if any group member already has an assignment
+			const existingMember = await sessionsCollection.findOne({
+				"user_state.group_id": groupId,
+				[`user_state.${stateKey}`]: { $exists: true, $ne: null },
+			});
+
+			if (existingMember) {
+				const existingCondition = existingMember.user_state?.[
+					stateKey
+				] as string;
+
+				// Ensure this session also has the assignment
+				await sessionsCollection.updateOne(
+					{ id },
+					{
+						$set: {
+							[`user_state.${stateKey}`]: existingCondition,
+							updatedAt: new Date(),
+						},
+					},
+				);
+
+				return { condition: existingCondition, existing: true };
+			}
+
+			// No member has an assignment yet — assign and propagate to all members
+			const balanceKey = `${session.configId}:${stateKey}:group`;
+			const treatment = await assignTreatment(
+				balanceKey,
+				conditions,
+				assignmentType,
+			);
+
+			await sessionsCollection.updateMany(
+				{ "user_state.group_id": groupId },
+				{
+					$set: {
+						[`user_state.${stateKey}`]: treatment,
+						updatedAt: new Date(),
+					},
+				},
+			);
+
+			console.log(
+				`[Randomize] Group ${groupId} assigned ${stateKey}: ${treatment} (strategy: ${assignmentType})`,
+			);
+
+			return { condition: treatment, existing: false };
+		}
+
+		// Session-level randomization (default)
 		const balanceKey = `${session.configId}:${stateKey}`;
 		const treatment = await assignTreatment(
 			balanceKey,
@@ -84,6 +149,7 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 			),
 			conditions: t.Optional(t.Array(t.String())),
 			stateKey: t.Optional(t.String()),
+			scope: t.Optional(t.Union([t.Literal("session"), t.Literal("group")])),
 		}),
 	},
 );

@@ -12,6 +12,7 @@ import { getAuthHeaders, login } from "./auth.js";
 
 type ExperimentPage = {
 	id: string;
+	onEnter?: unknown[];
 	components?: unknown[];
 };
 

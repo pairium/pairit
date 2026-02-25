@@ -1,0 +1,84 @@
+{
+  "schema_version": "0.1.0",
+  "initialPageId": "intro",
+  "pages": {
+    "intro": {
+      "id": "intro",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "# Negotiation Study\n\nYou will negotiate the price of a used car with an AI assistant.\nTry to get the best deal you can.\n"
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "start",
+                "text": "Start negotiation",
+                "action": {
+                  "type": "go_to",
+                  "target": "chat"
+                }
+              }
+            ]
+          },
+          "id": "buttons-1"
+        }
+      ]
+    },
+    "chat": {
+      "id": "chat",
+      "components": [
+        {
+          "type": "chat",
+          "props": {
+            "agents": [
+              "dealer"
+            ]
+          },
+          "id": "chat-0"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "end_chat",
+                "text": "End negotiation",
+                "action": {
+                  "type": "go_to",
+                  "target": "thanks"
+                }
+              }
+            ]
+          },
+          "id": "buttons-1"
+        }
+      ]
+    },
+    "thanks": {
+      "id": "thanks",
+      "end": true,
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "Thank you for participating!"
+          },
+          "id": "text-0"
+        }
+      ]
+    }
+  },
+  "agents": [
+    {
+      "id": "dealer",
+      "model": "gpt-5-mini",
+      "system": "You are a used car dealer selling a 2019 Honda Civic with 45,000 miles.\nReserve price: $12,000 (won't sell below). Starting ask: $18,000.\nBe friendly but firm. Keep responses SHORT - 1-2 sentences max.\n"
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "schema_version": "0.1.0",
+  "initialPageId": "intro",
+  "pages": {
+    "intro": {
+      "id": "intro",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "Welcome to the component events showcase."
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "start",
+                "text": "Begin",
+                "action": {
+                  "type": "go_to",
+                  "target": "survey"
+                },
+                "events": {
+                  "onClick": {
+                    "type": "button_click",
+                    "data": {
+                      "button_id": "start",
+                      "section": "navigation"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "id": "buttons-1"
+        }
+      ]
+    },
+    "survey": {
+      "id": "survey",
+      "components": [
+        {
+          "type": "survey",
+          "props": {
+            "items": [
+              {
+                "id": "satisfaction",
+                "text": "How satisfied are you?",
+                "answer": "likert5"
+              }
+            ]
+          },
+          "id": "survey-0"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "submit",
+                "text": "Submit",
+                "action": {
+                  "type": "go_to",
+                  "target": "thanks"
+                }
+              }
+            ]
+          },
+          "id": "buttons-1"
+        }
+      ]
+    },
+    "thanks": {
+      "id": "thanks",
+      "end": true,
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "Thank you!"
+          },
+          "id": "text-0"
+        }
+      ]
+    }
+  }
+}

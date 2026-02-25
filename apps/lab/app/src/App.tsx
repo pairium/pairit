@@ -7,6 +7,7 @@ import {
 	AuthRequiredError,
 	advance,
 	type ProlificParams,
+	randomize,
 	SessionBlockedError,
 	startSession,
 } from "./lib/api";
@@ -15,7 +16,27 @@ import { sseClient } from "./lib/sse";
 import "./runtime"; // Register component renderers
 import type { CompiledConfig } from "./runtime/config";
 import { PageRenderer } from "./runtime/renderer";
-import type { ButtonAction, Page } from "./runtime/types";
+import type { ButtonAction, OnEnterAction, Page } from "./runtime/types";
+
+async function executeOnEnter(
+	sessionId: string,
+	actions: OnEnterAction[],
+): Promise<Record<string, unknown>> {
+	const stateUpdates: Record<string, unknown> = {};
+	for (const action of actions) {
+		if (action.type === "randomize") {
+			const result = await randomize(sessionId, {
+				assignmentType: action.assignmentType,
+				conditions: action.conditions,
+				stateKey: action.stateKey,
+				scope: action.scope,
+			});
+			const key = action.stateKey ?? "treatment";
+			stateUpdates[key] = result.condition;
+		}
+	}
+	return stateUpdates;
+}
 
 export default function App() {
 	const { experimentId } = useParams({ from: "/$experimentId" });
@@ -78,6 +99,14 @@ export default function App() {
 				setEndRedirectUrl(r.page?.endRedirectUrl ?? null);
 				setEndedAt(r.endedAt ?? null);
 				if (r.user_state) setUserState(r.user_state);
+
+				// Execute onEnter for the initial/resumed page
+				if (r.page?.onEnter?.length && r.sessionId) {
+					const updates = await executeOnEnter(r.sessionId, r.page.onEnter);
+					if (!canceled) {
+						setUserState((prev) => ({ ...prev, ...updates }));
+					}
+				}
 			} catch (e: unknown) {
 				if (canceled) return;
 
@@ -156,6 +185,13 @@ export default function App() {
 		try {
 			const r = await advance(sessionId, target);
 			if (r.user_state) setUserState(r.user_state);
+
+			// Execute onEnter actions before showing the page
+			if (nextPage.onEnter?.length) {
+				const updates = await executeOnEnter(sessionId, nextPage.onEnter);
+				setUserState((prev) => ({ ...prev, ...updates }));
+			}
+
 			setPage(nextPage);
 			setEndRedirectUrl(nextPage.endRedirectUrl ?? null);
 			setEndedAt(r.endedAt ?? null);
@@ -232,10 +268,10 @@ export default function App() {
 									<Button
 										variant="ghost"
 										onClick={() => {
-											window.location.href = "/";
+											window.location.href = "https://pairium.github.io/pairit/examples/";
 										}}
 									>
-										Back to samples
+										Back to examples
 									</Button>
 									<Button
 										onClick={() => {
@@ -259,10 +295,10 @@ export default function App() {
 									<Button
 										variant="ghost"
 										onClick={() => {
-											window.location.href = "/";
+											window.location.href = "https://pairium.github.io/pairit/examples/";
 										}}
 									>
-										Back to samples
+										Back to examples
 									</Button>
 								</div>
 							</>

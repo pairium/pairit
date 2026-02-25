@@ -1,0 +1,143 @@
+{
+  "schema_version": "0.1.0",
+  "initialPageId": "consent",
+  "pages": {
+    "consent": {
+      "id": "consent",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "# AI-Mediated Discussion Study\n\nYou will be paired with another participant for a discussion.\nAn AI facilitator will help guide your conversation.\n"
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "agree",
+                "text": "I agree to participate",
+                "action": {
+                  "type": "go_to",
+                  "target": "matching"
+                }
+              }
+            ]
+          },
+          "id": "buttons-1"
+        }
+      ]
+    },
+    "matching": {
+      "id": "matching",
+      "components": [
+        {
+          "type": "matchmaking",
+          "props": {
+            "poolId": "mediation_pool",
+            "num_users": 2,
+            "timeoutSeconds": 120,
+            "timeoutTarget": "matching_timeout"
+          },
+          "id": "matchmaking-0"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "matched",
+                "text": "Start discussion",
+                "action": {
+                  "type": "go_to",
+                  "target": "chat"
+                }
+              }
+            ]
+          },
+          "id": "buttons-1"
+        }
+      ]
+    },
+    "matching_timeout": {
+      "id": "matching_timeout",
+      "end": true,
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "We couldn't find a partner at this time. Thank you for trying!"
+          },
+          "id": "text-0"
+        }
+      ]
+    },
+    "chat": {
+      "id": "chat",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "**Your task:** Discuss with your partner which candidate to recommend for hire."
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "chat",
+          "props": {
+            "agents": [
+              "facilitator"
+            ]
+          },
+          "id": "chat-1"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "done",
+                "text": "We've reached a conclusion",
+                "action": {
+                  "type": "go_to",
+                  "target": "thanks"
+                }
+              }
+            ]
+          },
+          "id": "buttons-2"
+        }
+      ]
+    },
+    "thanks": {
+      "id": "thanks",
+      "end": true,
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "Thank you for participating!"
+          },
+          "id": "text-0"
+        }
+      ]
+    }
+  },
+  "agents": [
+    {
+      "id": "facilitator",
+      "model": "gpt-5-nano",
+      "system": "You are a neutral facilitator helping two people make a hiring decision.\nKeep responses to ONE short sentence. Be extremely brief.\nAsk a question OR make an observation, never both.\nStay neutral - never express preferences.\n"
+    }
+  ],
+  "matchmaking": [
+    {
+      "id": "mediation_pool",
+      "num_users": 2,
+      "timeoutSeconds": 120,
+      "timeoutTarget": "matching_timeout"
+    }
+  ]
+}

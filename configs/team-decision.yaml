@@ -1,0 +1,70 @@
+schema_version: 0.1.0
+allowRetake: true
+initialPageId: consent
+
+pages:
+  - id: consent
+    components:
+      - type: text
+        props:
+          text: |
+            # Team Decision Study
+
+            You will be paired with another participant to make a decision together.
+      - type: buttons
+        props:
+          buttons:
+            - id: agree
+              text: "I agree to participate"
+              action:
+                type: go_to
+                target: matching
+
+  - id: matching
+    components:
+      - type: matchmaking
+        props:
+          poolId: main_pool
+      - type: buttons
+        props:
+          buttons:
+            - id: matched
+              text: "Continue to chat"
+              action:
+                type: go_to
+                target: chat
+
+  - id: matching_timeout
+    end: true
+    components:
+      - type: text
+        props:
+          text: "We couldn't find enough group members at this time. Thank you for trying!"
+
+  - id: chat
+    components:
+      - type: text
+        props:
+          text: "**Your task:** Decide together which candidate to hire from the three profiles below."
+      - type: chat
+      - type: buttons
+        props:
+          buttons:
+            - id: done
+              text: "We've decided"
+              action:
+                type: go_to
+                target: thanks
+
+  - id: thanks
+    end: true
+    components:
+      - type: text
+        props:
+          text: "Thank you for participating!"
+
+matchmaking:
+  - id: main_pool
+    num_users: 2
+    timeoutSeconds: 180
+    timeoutTarget: matching_timeout

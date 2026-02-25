@@ -1,0 +1,52 @@
+schema_version: 0.1.0
+allowRetake: true
+initialPageId: intro
+
+pages:
+  - id: intro
+    components:
+      - type: text
+        props:
+          text: |
+            # Negotiation Study
+
+            You will negotiate the price of a used car with an AI assistant.
+            Try to get the best deal you can.
+      - type: buttons
+        props:
+          buttons:
+            - id: start
+              text: "Start negotiation"
+              action:
+                type: go_to
+                target: chat
+
+  - id: chat
+    components:
+      - type: chat
+        props:
+          agents:
+            - dealer
+      - type: buttons
+        props:
+          buttons:
+            - id: end_chat
+              text: "End negotiation"
+              action:
+                type: go_to
+                target: thanks
+
+  - id: thanks
+    end: true
+    components:
+      - type: text
+        props:
+          text: "Thank you for participating!"
+
+agents:
+  - id: dealer
+    model: "gpt-5-mini"
+    system: |
+      You are a used car dealer selling a 2019 Honda Civic with 45,000 miles.
+      Reserve price: $12,000 (won't sell below). Starting ask: $18,000.
+      Be friendly but firm. Keep responses SHORT - 1-2 sentences max.
