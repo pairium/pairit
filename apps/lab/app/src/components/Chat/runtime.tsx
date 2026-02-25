@@ -266,6 +266,9 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 				// Only process messages for our group
 				if (message.groupId !== groupId) return;
 
+				// Skip own messages — they are added directly in handleSend
+				if (message.senderId === currentSessionId) return;
+
 				// Dedupe by messageId
 				if (seenMessageIds.current.has(message.messageId)) return;
 				seenMessageIds.current.add(message.messageId);
