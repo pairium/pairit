@@ -45,6 +45,7 @@ Components without `when` always render. See [Expressions](configuration.md#expr
 | [Randomization](components/randomization.md) | Assign treatment conditions |
 | [Agents](components/agents.md) | Server-hosted AI agents |
 | [Media](components/media.md) | Images, videos, and audio |
+| [Timer](components/timer.md) | Countdown timer with auto-navigation |
 | [Workspace](components/workspace.md) | Collaborative workspaces |
 | [Custom](components/custom.md) | Mount custom React components |
 

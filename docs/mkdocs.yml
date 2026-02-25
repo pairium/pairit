@@ -18,6 +18,7 @@ nav:
       - Chat: components/chat.md
       - Randomization: components/randomization.md
       - Agents: components/agents.md
+      - Timer: components/timer.md
       - Workspace: components/workspace.md
       - Media: components/media.md
       - Form: components/form.md

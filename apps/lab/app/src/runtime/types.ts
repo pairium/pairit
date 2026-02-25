@@ -22,6 +22,7 @@ type ComponentEventMap = {
 	chat: "onMessageSend" | "onMessageReceive" | "onTypingStart" | "onTypingStop";
 	"live-workspace": "onEdit";
 	form: "onSubmit" | "onFieldChange";
+	timer: "onStart" | "onWarning" | "onExpiry";
 };
 
 type ComponentEventName<TType extends keyof ComponentEventMap> =
