@@ -1,3 +1,5 @@
+allowRetake: true
+
 pages:
   - id: intro
     components:
@@ -40,8 +42,8 @@ pages:
       - type: timer
         id: reading_timer
         props:
-          duration: 25
-          warning: 15
+          duration: 30
+          warning: 20
           action:
             type: go_to
             target: times_up
