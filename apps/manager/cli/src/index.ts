@@ -22,6 +22,7 @@ type ExperimentConfig = {
 	agents?: unknown[];
 	matchmaking?: unknown;
 	allowRetake?: boolean;
+	requireAuth?: boolean;
 };
 
 const program = new Command();
@@ -454,15 +455,17 @@ type UploadPayload = {
 	metadata?: Record<string, unknown> | null;
 	config: unknown;
 	allowRetake?: boolean;
+	requireAuth?: boolean;
 };
 
 async function buildUploadPayload(
 	configPath: string,
 	options: UploadOptions,
 ): Promise<{ payload: UploadPayload; checksum: string }> {
-	// Load source YAML to read allowRetake (not preserved in compiled output)
+	// Load source YAML to read top-level flags (not preserved in compiled output)
 	const sourceConfig = await loadConfig(configPath);
 	const allowRetake = sourceConfig.allowRetake === true;
+	const requireAuth = sourceConfig.requireAuth;
 
 	const compiledPath = await compileConfig(configPath);
 	const compiledContent = await readFile(compiledPath, "utf8");
@@ -488,6 +491,7 @@ async function buildUploadPayload(
 			metadata: metadata ?? null,
 			config: parsed,
 			allowRetake,
+			...(requireAuth !== undefined && { requireAuth }),
 		},
 		checksum,
 	};
