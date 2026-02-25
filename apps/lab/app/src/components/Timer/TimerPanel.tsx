@@ -1,6 +1,6 @@
 /**
  * TimerPanel - Presentational component for countdown timer
- * Shows countdown, progress bar, and status with color transitions
+ * Compact horizontal bar with clock icon, countdown, status label, and progress bar
  */
 
 export type TimerStatus = "running" | "warning" | "expired";
@@ -47,13 +47,13 @@ export function TimerPanel({
 	const colors = colorMap[status];
 
 	return (
-		<div className="mx-auto max-w-md rounded-3xl border border-slate-200 bg-white p-6">
-			<div className="flex flex-col items-center gap-4">
+		<div className="mx-auto max-w-lg rounded-2xl border border-slate-200 bg-white px-4 py-3">
+			<div className="flex items-center gap-3">
 				<div
-					className={`flex h-16 w-16 items-center justify-center rounded-full ${colors.iconBg}`}
+					className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${colors.iconBg}`}
 				>
 					<svg
-						className={`h-8 w-8 ${colors.icon}`}
+						className={`h-4 w-4 ${colors.icon}`}
 						fill="none"
 						viewBox="0 0 24 24"
 						stroke="currentColor"
@@ -68,23 +68,24 @@ export function TimerPanel({
 					</svg>
 				</div>
 
-				<div className="text-center">
-					<p className="text-3xl font-semibold tabular-nums text-slate-900">
-						{formatTime(remaining)}
-					</p>
-					<p className={`mt-1 text-sm font-medium ${colors.label}`}>
-						{status === "expired"
-							? "Time's up"
-							: status === "warning"
-								? "Almost out of time"
-								: "Time remaining"}
-					</p>
-				</div>
+				<span className="text-lg font-semibold tabular-nums text-slate-900">
+					{formatTime(remaining)}
+				</span>
 
-				<div className="w-full">
-					<div className="h-2 overflow-hidden rounded-full bg-slate-100">
+				<span
+					className={`w-36 shrink-0 text-sm font-medium ${colors.label}`}
+				>
+					{status === "expired"
+						? "Time's up"
+						: status === "warning"
+							? "Almost out of time"
+							: "remaining"}
+				</span>
+
+				<div className="min-w-0 flex-1">
+					<div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
 						<div
-							className={`h-full rounded-full ${colors.bar} transition-all duration-1000`}
+							className={`h-full rounded-full ${colors.bar} transition-[width] duration-1000 ease-linear`}
 							style={{ width: `${progress}%` }}
 						/>
 					</div>

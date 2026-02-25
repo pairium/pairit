@@ -8,8 +8,8 @@ pages:
           text: |
             # Timed Reading Demo
 
-            On the next page you will have **45 seconds** to read a passage.
-            A warning will appear when 30 seconds remain.
+            On the next page you will have **30 seconds** to read a passage.
+            A warning will appear when 20 seconds remain.
           markdown: true
       - type: buttons
         props:

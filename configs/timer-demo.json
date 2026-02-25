@@ -1,0 +1,123 @@
+{
+  "schema_version": "0.1.0",
+  "initialPageId": "intro",
+  "pages": {
+    "intro": {
+      "id": "intro",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "# Timed Reading Demo\n\nOn the next page you will have **30 seconds** to read a passage.\nA warning will appear when 20 seconds remain.\n",
+            "markdown": true
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "start",
+                "text": "Start Reading",
+                "action": {
+                  "type": "go_to",
+                  "target": "timed_reading"
+                }
+              }
+            ]
+          },
+          "id": "buttons-1"
+        }
+      ]
+    },
+    "timed_reading": {
+      "id": "timed_reading",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "## The Marshmallow Experiment\n\nIn the late 1960s, psychologist Walter Mischel conducted a series of experiments\nat Stanford University's Bing Nursery School. Children were offered a choice\nbetween one small reward (a marshmallow, pretzel, or cookie) provided immediately,\nor two small rewards if they waited for approximately 15 minutes.\n\nThe researchers found that children who were able to wait longer for the preferred\nrewards tended to have better life outcomes, as measured by SAT scores, educational\nattainment, body mass index, and other measures. However, subsequent research has\nquestioned the strength and generalizability of these findings, suggesting that\nsocioeconomic factors and the child's home environment play significant roles in\nboth the ability to delay gratification and later life outcomes.\n",
+            "markdown": true
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "timer",
+          "id": "reading_timer",
+          "props": {
+            "duration": 30,
+            "warning": 20,
+            "action": {
+              "type": "go_to",
+              "target": "times_up"
+            }
+          },
+          "events": {
+            "onStart": {
+              "type": "timer_started",
+              "data": {
+                "phase": "reading"
+              }
+            },
+            "onWarning": {
+              "type": "timer_warning",
+              "data": {
+                "phase": "reading"
+              }
+            },
+            "onExpiry": {
+              "type": "timer_expired",
+              "data": {
+                "phase": "reading"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "times_up": {
+      "id": "times_up",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "# Time's Up!\n\nYour reading time has ended. Thank you for participating.\n",
+            "markdown": true
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "finish",
+                "text": "Finish",
+                "action": {
+                  "type": "go_to",
+                  "target": "end"
+                }
+              }
+            ]
+          },
+          "id": "buttons-1"
+        }
+      ]
+    },
+    "end": {
+      "id": "end",
+      "end": true,
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "# Thank You\n\nThe demo is complete.\n",
+            "markdown": true
+          },
+          "id": "text-0"
+        }
+      ]
+    }
+  }
+}

@@ -99,6 +99,9 @@ export const TimerRuntime = defineRuntimeComponent<"timer", TimerProps>({
 			}, 1000);
 
 			return () => {
+				hasStartedRef.current = false;
+				hasWarnedRef.current = false;
+				hasExpiredRef.current = false;
 				if (intervalRef.current) {
 					clearInterval(intervalRef.current);
 					intervalRef.current = null;

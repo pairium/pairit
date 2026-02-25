@@ -18,3 +18,61 @@ code {
   overflow-x: auto;
   max-width: 100%;
 }
+
+/* Card grid for examples page */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  border: 1px solid var(--border, #e4e4e7);
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.card h3 {
+  margin: 0 0 0.25rem 0 !important;
+  font-size: 1.1rem !important;
+}
+
+.card p {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+  color: var(--foreground-muted, #71717a);
+  flex: 1;
+}
+
+.card .card-links {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.card details {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.card details summary {
+  cursor: pointer;
+  color: var(--foreground-muted, #71717a);
+}
+
+.card details pre {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
