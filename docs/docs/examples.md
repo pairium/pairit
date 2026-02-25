@@ -699,6 +699,111 @@ agents:
 
 ---
 
+## Timer
+
+Countdown timer with warning state and auto-navigation on expiry.
+
+[Try it →](https://lab-432501290611.us-central1.run.app/timer-demo)
+
+<details>
+<summary>View config</summary>
+
+```yaml
+pages:
+  - id: intro
+    components:
+      - type: text
+        props:
+          text: |
+            # Timed Reading Demo
+
+            On the next page you will have **25 seconds** to read a passage.
+            A warning will appear when 15 seconds remain.
+          markdown: true
+      - type: buttons
+        props:
+          buttons:
+            - id: start
+              text: Start Reading
+              action:
+                type: go_to
+                target: timed_reading
+
+  - id: timed_reading
+    components:
+      - type: text
+        props:
+          text: |
+            ## The Marshmallow Experiment
+
+            In the late 1960s, psychologist Walter Mischel conducted a series of experiments
+            at Stanford University's Bing Nursery School. Children were offered a choice
+            between one small reward (a marshmallow, pretzel, or cookie) provided immediately,
+            or two small rewards if they waited for approximately 15 minutes.
+
+            The researchers found that children who were able to wait longer for the preferred
+            rewards tended to have better life outcomes, as measured by SAT scores, educational
+            attainment, body mass index, and other measures. However, subsequent research has
+            questioned the strength and generalizability of these findings, suggesting that
+            socioeconomic factors and the child's home environment play significant roles in
+            both the ability to delay gratification and later life outcomes.
+          markdown: true
+      - type: timer
+        id: reading_timer
+        props:
+          duration: 25
+          warning: 15
+          action:
+            type: go_to
+            target: times_up
+        events:
+          onStart:
+            type: timer_started
+            data:
+              phase: reading
+          onWarning:
+            type: timer_warning
+            data:
+              phase: reading
+          onExpiry:
+            type: timer_expired
+            data:
+              phase: reading
+
+  - id: times_up
+    components:
+      - type: text
+        props:
+          text: |
+            # Time's Up!
+
+            Your reading time has ended. Thank you for participating.
+          markdown: true
+      - type: buttons
+        props:
+          buttons:
+            - id: finish
+              text: Finish
+              action:
+                type: go_to
+                target: end
+
+  - id: end
+    end: true
+    components:
+      - type: text
+        props:
+          text: |
+            # Thank You
+
+            The demo is complete.
+          markdown: true
+```
+
+</details>
+
+---
+
 ## Component Events
 
 Track custom analytics events on user interactions.
@@ -767,4 +872,5 @@ pages:
 | media | `onPlay`, `onPause`, `onSeek`, `onComplete`, `onError` |
 | matchmaking | `onRequestStart`, `onMatchFound`, `onTimeout`, `onCancel` |
 | chat | `onMessageSend`, `onMessageReceive` |
+| timer | `onStart`, `onWarning`, `onExpiry` |
 | live-workspace | `onEdit` |
