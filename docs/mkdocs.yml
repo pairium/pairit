@@ -45,6 +45,7 @@ theme:
   icon: heroicons:rocket-launch
   topbar_sections: false
 markdown_extensions:
+  - md_in_html
   - pymdownx.highlight:
       anchor_linenums: true
       use_pygments: true
@@ -55,3 +56,6 @@ markdown_extensions:
 extra_css:
   - stylesheets/extra.css
   - stylesheets/pygments.css
+extra_javascript:
+  - https://unpkg.com/lucide@latest/dist/umd/lucide.min.js
+  - javascripts/icons.js

@@ -17,6 +17,7 @@ Component-first architecture
 - Events: all interactive components automatically emit structured events for research data collection. Configure custom event metadata to capture experiment-specific details.
   - Button clicks, survey submissions, media interactions, matchmaking lifecycle, chat messages, and form changes all generate trackable events.
   - Events include standard metadata (sessionId, pageId, componentId) plus configurable custom data.
+  - See [Event Hooks](#event-hooks) below for the full list.
 
 Result: a consistent, declarative system where pages stay lightweight and features drop in as components.
 
@@ -48,6 +49,20 @@ Components without `when` always render. See [Expressions](configuration.md#expr
 | [Timer](components/timer.md) | Countdown timer with auto-navigation |
 | [Workspace](components/workspace.md) | Collaborative workspaces |
 | [Custom](components/custom.md) | Mount custom React components |
+
+## Event Hooks
+
+Every interactive component can emit structured events. Use the `events` key in your config to attach custom metadata.
+
+| Component | Events |
+|-----------|--------|
+| buttons | `onClick` |
+| survey | `onSubmit` (automatic) |
+| media | `onPlay`, `onPause`, `onSeek`, `onComplete`, `onError` |
+| matchmaking | `onRequestStart`, `onMatchFound`, `onTimeout`, `onCancel` |
+| chat | `onMessageSend`, `onMessageReceive` |
+| timer | `onStart`, `onWarning`, `onExpiry` |
+| live-workspace | `onEdit` |
 
 ## Runtime adapters
 
