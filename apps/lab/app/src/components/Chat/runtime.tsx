@@ -306,6 +306,21 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 				try {
 					const result = await sendChatMessage(groupId, sessionId, content);
 
+					// Add to local state immediately using the server-assigned messageId.
+					// The SSE bounce-back will be deduped by seenMessageIds.
+					seenMessageIds.current.add(result.messageId);
+					setMessages((prev) => [
+						...prev,
+						{
+							messageId: result.messageId,
+							senderId: sessionId,
+							senderType: "participant" as const,
+							content,
+							createdAt: result.createdAt,
+							isOwn: true,
+						},
+					]);
+
 					// Emit onMessageSend event if configured
 					if (component.events?.onMessageSend) {
 						void emitChatEvent(

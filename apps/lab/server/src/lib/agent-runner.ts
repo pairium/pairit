@@ -66,6 +66,16 @@ export async function triggerFirstMessageAgents(
 		return;
 	}
 
+	// Check if the group already has messages (another participant may have triggered the agent)
+	const chatCollection = await getChatMessagesCollection();
+	const existing = await chatCollection.countDocuments(
+		{ groupId },
+		{ limit: 1 },
+	);
+	if (existing > 0) {
+		return;
+	}
+
 	const sessionConfig = await getSessionConfig(sessionId);
 	if (!sessionConfig) {
 		return;
