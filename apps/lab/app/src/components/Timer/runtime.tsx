@@ -38,6 +38,14 @@ export const TimerRuntime = defineRuntimeComponent<"timer", TimerProps>({
 		const hasWarnedRef = useRef(false);
 		const hasExpiredRef = useRef(false);
 
+		// Keep stable refs for values used inside the effect but that shouldn't restart it
+		const componentRef = useRef(component);
+		componentRef.current = component;
+		const contextRef = useRef(context);
+		contextRef.current = context;
+		const onActionRef = useRef(onAction);
+		onActionRef.current = onAction;
+
 		const remaining = Math.max(0, duration - elapsedSeconds);
 
 		useEffect(() => {
@@ -47,15 +55,15 @@ export const TimerRuntime = defineRuntimeComponent<"timer", TimerProps>({
 			mountTimeRef.current = Date.now();
 
 			// Emit onStart event
-			emitEvent("onStart", component, context);
+			emitEvent("onStart", componentRef.current, contextRef.current);
 
 			// Handle zero-duration: expire immediately
 			if (duration === 0) {
 				hasExpiredRef.current = true;
-				emitEvent("onExpiry", component, context);
+				emitEvent("onExpiry", componentRef.current, contextRef.current);
 				if (action) {
 					timeoutRef.current = setTimeout(() => {
-						onAction(action);
+						onActionRef.current(action);
 					}, 500);
 				}
 				return;
@@ -75,7 +83,7 @@ export const TimerRuntime = defineRuntimeComponent<"timer", TimerProps>({
 				) {
 					hasWarnedRef.current = true;
 					setStatus("warning");
-					emitEvent("onWarning", component, context);
+					emitEvent("onWarning", componentRef.current, contextRef.current);
 				}
 
 				// Expiry check
@@ -88,11 +96,11 @@ export const TimerRuntime = defineRuntimeComponent<"timer", TimerProps>({
 					}
 
 					setStatus("expired");
-					emitEvent("onExpiry", component, context);
+					emitEvent("onExpiry", componentRef.current, contextRef.current);
 
 					if (action) {
 						timeoutRef.current = setTimeout(() => {
-							onAction(action);
+							onActionRef.current(action);
 						}, 500);
 					}
 				}
@@ -111,7 +119,7 @@ export const TimerRuntime = defineRuntimeComponent<"timer", TimerProps>({
 					timeoutRef.current = null;
 				}
 			};
-		}, [duration, warningThreshold, action, onAction, component, context]);
+		}, [duration, warningThreshold, action]);
 
 		return (
 			<TimerPanel
