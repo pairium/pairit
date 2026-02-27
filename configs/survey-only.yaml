@@ -76,7 +76,9 @@ pages:
           items:
             - id: satisfaction
               text: "How satisfied are you with your current work-life balance?"
-              answer: likert7
+              answer:
+                type: likert7
+                layout: horizontal
             - id: sleep_hours
               text: "How many hours did you sleep last night?"
               answer: numeric

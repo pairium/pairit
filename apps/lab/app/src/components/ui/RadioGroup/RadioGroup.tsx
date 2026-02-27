@@ -100,3 +100,52 @@ export const RadioGroupItem = forwardRef<
 });
 
 RadioGroupItem.displayName = "RadioGroupItem";
+
+export interface RadioGroupScaleItemProps
+	extends ComponentPropsWithoutRef<"input"> {
+	value: string;
+	label: ReactNode;
+}
+
+export const RadioGroupScaleItem = forwardRef<
+	ElementRef<"input">,
+	RadioGroupScaleItemProps
+>(({ value, label, className, disabled, ...props }, ref) => {
+	const context = useContext(RadioGroupContext);
+	if (!context) {
+		throw new Error("RadioGroupScaleItem must be used within a RadioGroup");
+	}
+
+	const checked = context.value === value;
+	const isDisabled = disabled ?? context.disabled;
+
+	return (
+		<label
+			className={cn(
+				"flex flex-1 cursor-pointer flex-col items-center rounded-md px-1 py-2 transition-colors",
+				{
+					"bg-slate-900/5": checked,
+					"cursor-not-allowed opacity-60": isDisabled,
+				},
+				className,
+			)}
+		>
+			<span className="flex h-6 items-center justify-center">
+				<input
+					ref={ref}
+					type="radio"
+					className="h-4 w-4 rounded-full border border-slate-400 text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+					name={context.name}
+					value={value}
+					checked={checked}
+					disabled={isDisabled}
+					onChange={() => context.onValueChange(value)}
+					{...props}
+				/>
+			</span>
+			<span className="mt-2 text-center text-xs text-slate-600">{label}</span>
+		</label>
+	);
+});
+
+RadioGroupScaleItem.displayName = "RadioGroupScaleItem";

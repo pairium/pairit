@@ -13,7 +13,11 @@ import {
 } from "@components/ui/Field";
 import { Input } from "@components/ui/Input";
 import { Media } from "@components/ui/Media";
-import { RadioGroup, RadioGroupItem } from "@components/ui/RadioGroup";
+import {
+	RadioGroup,
+	RadioGroupItem,
+	RadioGroupScaleItem,
+} from "@components/ui/RadioGroup";
 import { Textarea } from "@components/ui/Textarea";
 import { type AnyFieldApi, useForm } from "@tanstack/react-form";
 import type { ReactElement } from "react";
@@ -55,6 +59,7 @@ export interface SurveyItemAnswer {
 	max?: number;
 	step?: number;
 	choices?: SurveyItemChoice[];
+	layout?: "vertical" | "horizontal";
 	component?: string;
 	props?: Record<string, unknown>;
 }
@@ -274,6 +279,26 @@ function renderAnswerInput({
 		case "likert7": {
 			const value =
 				typeof field.state.value === "string" ? field.state.value : "";
+			if (answer.layout === "horizontal") {
+				return (
+					<RadioGroup
+						value={value.length ? value : null}
+						onValueChange={(nextValue) => field.handleChange(nextValue)}
+						className="flex-row items-start justify-between gap-1"
+					>
+						<FieldSet className="flex-row items-start justify-between gap-1">
+							<FieldLegend className="sr-only">{item.text}</FieldLegend>
+							{answer.choices?.map((choice) => (
+								<RadioGroupScaleItem
+									key={choice.value}
+									value={choice.value}
+									label={choice.label}
+								/>
+							))}
+						</FieldSet>
+					</RadioGroup>
+				);
+			}
 			return (
 				<RadioGroup
 					value={value.length ? value : null}
@@ -504,6 +529,11 @@ function normalizeSurveyAnswer(
 
 	const numericBoundsSource = isRecord(answerConfig) ? answerConfig : {};
 	const placeholderCandidate = answerConfig.placeholder ?? record.placeholder;
+	const layoutCandidate = answerConfig.layout ?? record.layout;
+	const layout =
+		layoutCandidate === "horizontal" || layoutCandidate === "vertical"
+			? layoutCandidate
+			: undefined;
 
 	if (normalizedType === "custom" || normalizedType === "component") {
 		const componentId =
@@ -586,6 +616,7 @@ function normalizeSurveyAnswer(
 				type: "multiple_choice",
 				required,
 				choices,
+				layout,
 			};
 		}
 
@@ -618,6 +649,7 @@ function normalizeSurveyAnswer(
 				type: "likert5",
 				required,
 				choices,
+				layout,
 			};
 		}
 
@@ -634,6 +666,7 @@ function normalizeSurveyAnswer(
 				type: "likert7",
 				required,
 				choices,
+				layout,
 			};
 		}
 
