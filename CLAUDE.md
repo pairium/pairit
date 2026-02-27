@@ -22,6 +22,7 @@ bun run build                   # Build all packages
 bun run test                    # Run tests (bun test for packages, vitest for lab-app)
 biome check                     # Lint and format
 tsc --noEmit                    # Type check
+bash scripts/deploy.sh          # Deploy to Google Cloud Run (requires gcloud auth)
 ```
 
 Filter by package: `bun run --filter lab-app dev`
