@@ -10,6 +10,9 @@ export type TimerPanelProps = {
 	remaining: number;
 	status: TimerStatus;
 	visible: boolean;
+	runningLabel?: string;
+	warningLabel?: string;
+	expiredLabel?: string;
 };
 
 export function TimerPanel({
@@ -17,6 +20,9 @@ export function TimerPanel({
 	remaining,
 	status,
 	visible,
+	runningLabel,
+	warningLabel,
+	expiredLabel,
 }: TimerPanelProps) {
 	if (!visible) return null;
 
@@ -46,6 +52,13 @@ export function TimerPanel({
 
 	const colors = colorMap[status];
 
+	const statusLabel =
+		status === "expired"
+			? expiredLabel
+			: status === "warning"
+				? warningLabel
+				: runningLabel;
+
 	return (
 		<div className="mx-auto max-w-lg rounded-2xl border border-slate-200 bg-white px-4 py-3">
 			<div className="flex items-center gap-3">
@@ -72,15 +85,13 @@ export function TimerPanel({
 					{formatTime(remaining)}
 				</span>
 
-				<span
-					className={`w-36 shrink-0 text-sm font-medium ${colors.label}`}
-				>
-					{status === "expired"
-						? "Time's up"
-						: status === "warning"
-							? "Almost out of time"
-							: "remaining"}
-				</span>
+				{statusLabel && (
+					<span
+						className={`shrink-0 text-sm font-medium ${colors.label}`}
+					>
+						{statusLabel}
+					</span>
+				)}
 
 				<div className="min-w-0 flex-1">
 					<div className="h-1.5 overflow-hidden rounded-full bg-slate-100">

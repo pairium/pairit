@@ -10,6 +10,9 @@ Countdown timer that auto-navigates when time expires. Use it for timed reading 
 | `warning` | number | — | Remaining-seconds threshold to enter warning state |
 | `visible` | boolean | `true` | Show the countdown UI; set `false` for invisible deadlines |
 | `action` | ButtonAction | — | Navigation action to execute on expiry |
+| `runningLabel` | string | — | Text shown while the timer is running |
+| `warningLabel` | string | — | Text shown during the warning phase |
+| `expiredLabel` | string | — | Text shown when the timer expires |
 
 ## Events
 
@@ -52,6 +55,24 @@ components:
       action:
         type: go_to
         target: timeout_page
+```
+
+### Custom status labels
+
+By default no text label is shown. Add labels to give participants context:
+
+```yaml
+components:
+  - type: timer
+    props:
+      duration: 300
+      warning: 60
+      runningLabel: "remaining"
+      warningLabel: "Hurry up!"
+      expiredLabel: "Time's up"
+      action:
+        type: go_to
+        target: next_page
 ```
 
 ### Branching on expiry

@@ -14,6 +14,9 @@ type TimerProps = {
 	warning?: number;
 	visible?: boolean;
 	action?: ButtonAction;
+	runningLabel?: string;
+	warningLabel?: string;
+	expiredLabel?: string;
 };
 
 export const TimerRuntime = defineRuntimeComponent<"timer", TimerProps>({
@@ -127,6 +130,9 @@ export const TimerRuntime = defineRuntimeComponent<"timer", TimerProps>({
 				remaining={remaining}
 				status={status}
 				visible={visible}
+				runningLabel={component.props.runningLabel}
+				warningLabel={component.props.warningLabel}
+				expiredLabel={component.props.expiredLabel}
 			/>
 		);
 	},

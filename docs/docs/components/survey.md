@@ -32,6 +32,23 @@ Event Data
 - `likert5` and `likert7`: predefined radio scales with consistent labeling.
 - You can extend answer types with custom components. Provide `component` and any `props` the renderer requires.
 
+### Layout
+
+Radio-based answer types (`multiple_choice`, `likert5`, `likert7`) support an optional `layout` field:
+
+| Value | Description |
+|-------|-------------|
+| `vertical` | Stacked cards (default) |
+| `horizontal` | Compact row with radio on top, label below — ideal for Likert scales |
+
+```yaml
+- id: satisfaction
+  text: "How satisfied are you with your experience?"
+  answer:
+    type: likert7
+    layout: horizontal
+```
+
 ## Examples
 
 Shorthand survey definition:
