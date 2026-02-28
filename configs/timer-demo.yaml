@@ -47,6 +47,8 @@ pages:
           action:
             type: go_to
             target: times_up
+            setState:
+              reading_timed_out: true
         events:
           onStart:
             type: timer_started
@@ -69,6 +71,8 @@ pages:
             # Time's Up!
 
             Your reading time has ended. Thank you for participating.
+
+            Reading timed out: **{{user_state.reading_timed_out}}**
           markdown: true
       - type: buttons
         props:

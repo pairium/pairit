@@ -9,7 +9,7 @@ Countdown timer that auto-navigates when time expires. Use it for timed reading 
 | `duration` | number | — | Total seconds for the countdown (required) |
 | `warning` | number | — | Remaining-seconds threshold to enter warning state |
 | `visible` | boolean | `true` | Show the countdown UI; set `false` for invisible deadlines |
-| `action` | ButtonAction | — | Navigation action to execute on expiry |
+| `action` | ButtonAction | — | Navigation action to execute on expiry. Supports `setState` to write key-value pairs to `user_state` before navigating. |
 | `runningLabel` | string | — | Text shown while the timer is running |
 | `warningLabel` | string | — | Text shown during the warning phase |
 | `expiredLabel` | string | — | Text shown when the timer expires |
@@ -99,6 +99,25 @@ components:
       onExpiry:
         type: timer_expired
 ```
+
+### Setting state on expiry
+
+Use `action.setState` to write values to `user_state` when the timer fires. Downstream pages and agents can branch on whether the participant timed out:
+
+```yaml
+components:
+  - type: timer
+    props:
+      duration: 120
+      visible: false
+      action:
+        type: go_to
+        target: discussion_page
+        setState:
+          reading_timed_out: true
+```
+
+On the target page, reference the value with `{{user_state.reading_timed_out}}`.
 
 ## Visual states
 

@@ -6,6 +6,7 @@ export type ButtonAction = {
 		target: string;
 	}>;
 	skipValidation?: boolean;
+	setState?: Record<string, unknown>;
 };
 
 export type ComponentEventDefinition = {

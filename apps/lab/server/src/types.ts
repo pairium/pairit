@@ -17,7 +17,11 @@ export type {
 	WorkspaceDocument as WorkspaceDocumentDocument,
 } from "@pairit/db/types";
 
-type ButtonAction = { type: "go_to"; target: string };
+type ButtonAction = {
+	type: "go_to";
+	target: string;
+	setState?: Record<string, unknown>;
+};
 type Button = { id: string; text: string; action: ButtonAction };
 type ComponentInstance =
 	| { type: "text"; props: { text: string } }

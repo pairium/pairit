@@ -3,7 +3,7 @@
  * Handles wall-clock timing, warning threshold, event emission, and action dispatch
  */
 
-import { submitEvent } from "@app/lib/api";
+import { submitEvent, updateState } from "@app/lib/api";
 import { defineRuntimeComponent } from "@app/runtime/define-runtime-component";
 import type { ButtonAction } from "@app/runtime/types";
 import { useEffect, useRef, useState } from "react";
@@ -65,6 +65,7 @@ export const TimerRuntime = defineRuntimeComponent<"timer", TimerProps>({
 				hasExpiredRef.current = true;
 				emitEvent("onExpiry", componentRef.current, contextRef.current);
 				if (action) {
+					applySetState(action, contextRef.current);
 					timeoutRef.current = setTimeout(() => {
 						onActionRef.current(action);
 					}, 500);
@@ -102,6 +103,7 @@ export const TimerRuntime = defineRuntimeComponent<"timer", TimerProps>({
 					emitEvent("onExpiry", componentRef.current, contextRef.current);
 
 					if (action) {
+						applySetState(action, contextRef.current);
 						timeoutRef.current = setTimeout(() => {
 							onActionRef.current(action);
 						}, 500);
@@ -137,6 +139,20 @@ export const TimerRuntime = defineRuntimeComponent<"timer", TimerProps>({
 		);
 	},
 });
+
+function applySetState(
+	action: ButtonAction,
+	context: {
+		sessionId?: string | null;
+		onUserStateChange?: (updates: Record<string, unknown>) => void;
+	},
+) {
+	if (!action.setState || !context.sessionId) return;
+	updateState(context.sessionId, action.setState).catch((error) => {
+		console.error("[Timer] Failed to apply setState", error);
+	});
+	context.onUserStateChange?.(action.setState);
+}
 
 function emitEvent(
 	eventName: "onStart" | "onWarning" | "onExpiry",
