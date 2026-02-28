@@ -123,6 +123,19 @@ Countdown timer with warning state and auto-navigation on expiry.
 
 <div class="card" markdown>
 
+### Agent Triggers
+
+Control when and whether agents reply using `trigger` and `replyCondition`.
+
+<div class="card-links">
+<a href="https://lab-432501290611.us-central1.run.app/agent-triggers" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
+<a href="https://github.com/pairium/pairit/blob/main/configs/agent-triggers.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
+</div>
+
+</div>
+
+<div class="card" markdown>
+
 ### Component Events
 
 Track custom analytics events on user interactions.

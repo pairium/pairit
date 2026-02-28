@@ -53,10 +53,72 @@ Agents support both OpenAI and Anthropic models. The provider is inferred from t
 | `id` | string | required | Unique identifier for the agent |
 | `model` | string | required | Model name (e.g., `gpt-4o`, `claude-sonnet-4-5-20250929`) |
 | `system` | string | required | System prompt defining the agent's role and behavior |
-| `sendFirstMessage` | boolean | `false` | If true, agent sends an opening message when chat loads |
+| `trigger` | string \| object \| array | `every_message` | When to potentially run the agent. See [Triggers](#triggers). |
+| `replyCondition` | string \| object \| array | `always` | Whether the agent actually responds once triggered. See [Reply Conditions](#reply-conditions). |
+| `sendFirstMessage` | boolean | `false` | **Legacy.** Sends an opening message when chat loads and room is empty. Ignored if `trigger` is set. |
 | `guardrails` | boolean | `true` | Prepend default guardrail instructions to the system prompt. Set to `false` to opt out. See [Agent Guardrails](../guides/agent-guardrails.md). |
 | `reasoningEffort` | string | - | For reasoning models: `minimal`, `low`, `medium`, `high` |
 | `tools` | array | - | Tool definitions the agent can invoke |
+
+## Triggers
+
+The `trigger` field controls **when** the agent potentially runs. Triggers can be a single value or an array of values.
+
+| Trigger | Description |
+|---------|-------------|
+| `every_message` | Run on every participant message (default) |
+| `on_join` | Run when the chat page loads, even if there's existing history |
+| `{ every: N }` | Run every N participant messages since the agent's last reply |
+
+```yaml
+agents:
+  # Greets on every page join
+  - id: greeter
+    trigger: on_join
+    # ...
+
+  # Checks in every 3 participant messages
+  - id: coach
+    trigger:
+      every: 3
+    # ...
+
+  # Greets on join AND replies to messages
+  - id: assistant
+    trigger: [on_join, every_message]
+    # ...
+```
+
+**Backwards compatibility:** `sendFirstMessage: true` still works exactly as before — it only fires when the room has zero messages. If an agent has an explicit `trigger` field, `sendFirstMessage` is ignored.
+
+## Reply Conditions
+
+The `replyCondition` field controls **whether** the agent actually responds once triggered. Conditions can be a single value or an array (all must pass).
+
+| Condition | Description |
+|-----------|-------------|
+| `always` | Always reply (default) |
+| `"prompt string"` | LLM evaluates whether to reply based on the prompt |
+| `{ type: "llm", prompt: "..." }` | Explicit form of the above |
+
+When a string or LLM condition is used, the agent makes a quick yes/no LLM call before responding. If the answer is "no", the agent stays silent.
+
+```yaml
+agents:
+  # Only replies when the participant seems stuck or asks a question
+  - id: facilitator
+    trigger: every_message
+    replyCondition: "Reply only if the participant asked a direct question or seems stuck."
+    # ...
+
+  # Explicit object form
+  - id: reviewer
+    trigger: every_message
+    replyCondition:
+      type: llm
+      prompt: "Reply only if the participant submitted new work to review."
+    # ...
+```
 
 ## Context
 
@@ -119,11 +181,12 @@ pages:
 
 ## Lifecycle
 
-1. **Chat loads**: If any agent has `sendFirstMessage: true`, it generates and sends an opening message
-2. **Participant sends message**: All attached agents receive the updated history and can respond
-3. **Streaming**: Agent responses stream in real-time via SSE deltas
-4. **Tool calls**: Agents can invoke tools which execute server-side and broadcast state changes
-5. **Timeout**: Agent runs timeout after 60 seconds to prevent runaway responses
+1. **Chat loads**: Agents with `trigger: on_join` (or legacy `sendFirstMessage: true`) run
+2. **Participant sends message**: Agents are checked against their `trigger` (e.g., `every_message`, `{ every: 3 }`)
+3. **Condition check**: If the agent has a `replyCondition`, it's evaluated before generating a response
+4. **Streaming**: Agent responses stream in real-time via SSE deltas
+5. **Tool calls**: Agents can invoke tools which execute server-side and broadcast state changes
+6. **Timeout**: Agent runs timeout after 60 seconds to prevent runaway responses
 
 ## Events
 

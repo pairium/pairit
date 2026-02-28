@@ -6,11 +6,20 @@
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 
+export type Trigger = "every_message" | "on_join" | { every: number };
+
+export type ReplyCondition =
+	| "always"
+	| string
+	| { type: "llm"; prompt: string };
+
 export type AgentConfig = {
 	id: string;
 	model: string;
 	system: string;
 	sendFirstMessage?: boolean;
+	trigger?: Trigger | Trigger[];
+	replyCondition?: ReplyCondition | ReplyCondition[];
 	guardrails?: boolean;
 	reasoningEffort?: "minimal" | "low" | "medium" | "high";
 	tools?: Array<{

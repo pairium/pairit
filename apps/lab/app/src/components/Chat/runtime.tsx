@@ -188,10 +188,10 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			};
 		}, [sessionId, groupId, toViewMessage, onUserStateChange]);
 
-		// Trigger agents with sendFirstMessage on mount (after history loads)
+		// Trigger join agents on mount (after history loads)
 		useEffect(() => {
 			if (!sessionId || !groupId || loading) return;
-			if (hasTriggeredAgents.current || messages.length > 0) return;
+			if (hasTriggeredAgents.current) return;
 
 			hasTriggeredAgents.current = true;
 
@@ -203,7 +203,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			}, 300);
 
 			return () => clearTimeout(timer);
-		}, [loading, sessionId, groupId, messages.length]);
+		}, [loading, sessionId, groupId]);
 
 		// Subscribe to SSE chat_ended events
 		useEffect(() => {

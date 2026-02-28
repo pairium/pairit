@@ -1,0 +1,197 @@
+{
+  "schema_version": "0.1.0",
+  "initialPageId": "intro",
+  "pages": {
+    "intro": {
+      "id": "intro",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "# Agent Trigger Demo\n\nAgents can use `trigger` and `replyCondition` to control when and whether they respond.\n\nThis demo has **3 pages**, each with one agent using a different reply policy:\n\n1. **Greeter** — `trigger: on_join` — sends a message every time the chat page loads, even if there's already chat history. Try navigating away and back.\n2. **Coach** — `trigger: { every: 3 }` — stays silent until every 3rd participant message, then gives feedback. Count your messages!\n3. **Facilitator** — `replyCondition: \"Reply only if the participant asked a direct question or seems stuck.\"` — receives every message but uses an LLM check to decide whether to actually respond. Try sending statements vs. questions.\n"
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "start",
+                "text": "Start demo",
+                "action": {
+                  "type": "go_to",
+                  "target": "greeter-page"
+                }
+              }
+            ]
+          },
+          "id": "buttons-1"
+        }
+      ]
+    },
+    "greeter-page": {
+      "id": "greeter-page",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "### 1. Greeter — `trigger: on_join`\n\nThis agent greets you every time the page loads, even if there's existing chat history.\nTry navigating away and coming back — it will greet you again.\n"
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "chat",
+          "props": {
+            "agents": [
+              "greeter"
+            ]
+          },
+          "id": "chat-1"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "next1",
+                "text": "Next: Every-3 Coach →",
+                "action": {
+                  "type": "go_to",
+                  "target": "coach-page"
+                }
+              }
+            ]
+          },
+          "id": "buttons-2"
+        }
+      ]
+    },
+    "coach-page": {
+      "id": "coach-page",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "### 2. Coach — `trigger: { every: 3 }`\n\nThis agent only responds every 3rd message you send.\nSend a few messages and count — it will stay silent until message #3.\n"
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "chat",
+          "props": {
+            "agents": [
+              "coach"
+            ]
+          },
+          "id": "chat-1"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "back1",
+                "text": "← Back: Greeter",
+                "action": {
+                  "type": "go_to",
+                  "target": "greeter-page"
+                }
+              },
+              {
+                "id": "next2",
+                "text": "Next: Facilitator →",
+                "action": {
+                  "type": "go_to",
+                  "target": "facilitator-page"
+                }
+              }
+            ]
+          },
+          "id": "buttons-2"
+        }
+      ]
+    },
+    "facilitator-page": {
+      "id": "facilitator-page",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "### 3. Facilitator — `replyCondition`\n\nThis agent receives every message but only replies when it thinks you asked a question or seem stuck.\nTry sending casual statements vs. direct questions and see the difference.\n"
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "chat",
+          "props": {
+            "agents": [
+              "facilitator"
+            ]
+          },
+          "id": "chat-1"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "back2",
+                "text": "← Back: Coach",
+                "action": {
+                  "type": "go_to",
+                  "target": "coach-page"
+                }
+              },
+              {
+                "id": "done",
+                "text": "Done",
+                "action": {
+                  "type": "go_to",
+                  "target": "thanks"
+                }
+              }
+            ]
+          },
+          "id": "buttons-2"
+        }
+      ]
+    },
+    "thanks": {
+      "id": "thanks",
+      "end": true,
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "Thank you for trying the agent trigger demo!"
+          },
+          "id": "text-0"
+        }
+      ]
+    }
+  },
+  "agents": [
+    {
+      "id": "greeter",
+      "model": "gpt-5-mini",
+      "trigger": "on_join",
+      "system": "You are a friendly greeter. Say a brief welcome message (one sentence).\n"
+    },
+    {
+      "id": "coach",
+      "model": "gpt-5-mini",
+      "trigger": {
+        "every": 3
+      },
+      "system": "You are a writing coach. Give brief feedback on the participant's\nlast few messages. One sentence max.\n"
+    },
+    {
+      "id": "facilitator",
+      "model": "gpt-5-mini",
+      "trigger": "every_message",
+      "replyCondition": "Reply only if the participant asked a direct question or seems stuck.",
+      "system": "You are a helpful facilitator. Answer questions and offer guidance.\nKeep responses to 1-2 sentences.\n"
+    }
+  ]
+}

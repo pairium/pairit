@@ -6,13 +6,15 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { getConfigsCollection, getSessionsCollection } from "./db";
-import type { AgentConfig } from "./llm";
+import type { AgentConfig, ReplyCondition, Trigger } from "./llm";
 
 type RawAgent = {
 	id?: string;
 	model?: string;
 	system?: string;
 	sendFirstMessage?: boolean;
+	trigger?: Trigger | Trigger[];
+	replyCondition?: ReplyCondition | ReplyCondition[];
 	guardrails?: boolean;
 	reasoningEffort?: "minimal" | "low" | "medium" | "high";
 	tools?: Array<{
@@ -38,6 +40,8 @@ function toAgentConfig(raw: RawAgent): AgentConfig {
 		model: raw.model ?? "",
 		system: raw.system ?? "",
 		sendFirstMessage: raw.sendFirstMessage,
+		trigger: raw.trigger,
+		replyCondition: raw.replyCondition,
 		guardrails: raw.guardrails,
 		reasoningEffort: raw.reasoningEffort,
 		tools: raw.tools,

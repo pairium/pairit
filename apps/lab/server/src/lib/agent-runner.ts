@@ -11,13 +11,77 @@ import {
 	getWorkspaceDocumentsCollection,
 } from "./db";
 import { getGroupMembers } from "./groups";
-import type { AgentConfig, ChatMessage } from "./llm";
+import type { AgentConfig, ChatMessage, ReplyCondition, Trigger } from "./llm";
 import { streamAgentResponse } from "./llm";
 import { broadcastToSession, getConnectionCount } from "./sse";
 
 const AGENT_TIMEOUT_MS = 60_000;
 
 const activeRuns = new Map<string, AbortController>();
+
+function resolveTriggers(agent: AgentConfig): Trigger[] {
+	if (!agent.trigger) return ["every_message"];
+	return Array.isArray(agent.trigger) ? agent.trigger : [agent.trigger];
+}
+
+function resolveConditions(agent: AgentConfig): ReplyCondition[] {
+	if (!agent.replyCondition) return ["always"];
+	return Array.isArray(agent.replyCondition)
+		? agent.replyCondition
+		: [agent.replyCondition];
+}
+
+async function evaluateConditions(
+	agent: AgentConfig,
+	history: ChatMessage[],
+): Promise<boolean> {
+	const conditions = resolveConditions(agent);
+
+	for (const condition of conditions) {
+		if (condition === "always") continue;
+
+		const prompt = typeof condition === "string" ? condition : condition.prompt;
+
+		const conditionAgent: AgentConfig = {
+			id: agent.id,
+			model: agent.model,
+			system: `You are a reply-condition evaluator. Based on the conversation history, decide whether the agent should reply.\n\nCondition: ${prompt}\n\nRespond with exactly "yes" or "no", nothing else.`,
+		};
+
+		let response = "";
+		for await (const delta of streamAgentResponse(conditionAgent, history)) {
+			if (delta.type === "text_delta") response += delta.text;
+		}
+
+		if (!response.trim().toLowerCase().startsWith("yes")) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+async function countParticipantMessagesSinceAgent(
+	groupId: string,
+	agentId: string,
+): Promise<number> {
+	const collection = await getChatMessagesCollection();
+
+	const lastAgentMsg = await collection.findOne(
+		{ groupId, senderId: `agent:${agentId}` },
+		{ sort: { createdAt: -1 } },
+	);
+
+	const filter: Record<string, unknown> = {
+		groupId,
+		senderType: "participant",
+	};
+	if (lastAgentMsg) {
+		filter.createdAt = { $gt: lastAgentMsg.createdAt };
+	}
+
+	return collection.countDocuments(filter);
+}
 
 export async function triggerAgents(
 	groupId: string,
@@ -46,6 +110,29 @@ export async function triggerAgents(
 			continue;
 		}
 
+		const triggers = resolveTriggers(agent);
+		let shouldRun = false;
+
+		for (const trigger of triggers) {
+			if (trigger === "every_message") {
+				shouldRun = true;
+				break;
+			}
+			if (typeof trigger === "object" && "every" in trigger) {
+				const count = await countParticipantMessagesSinceAgent(
+					groupId,
+					agent.id,
+				);
+				if (count >= trigger.every) {
+					shouldRun = true;
+					break;
+				}
+			}
+			// "on_join" is irrelevant in the message-triggered path
+		}
+
+		if (!shouldRun) continue;
+
 		await runAgent(agent, groupId, sessionId, {
 			requireHistory: true,
 			configId,
@@ -55,10 +142,10 @@ export async function triggerAgents(
 }
 
 /**
- * Trigger agents that have sendFirstMessage: true
- * Called when chat page loads to send initial greeting
+ * Trigger agents on chat page join
+ * Handles both legacy sendFirstMessage and new on_join trigger
  */
-export async function triggerFirstMessageAgents(
+export async function triggerJoinAgents(
 	groupId: string,
 	sessionId: string,
 ): Promise<void> {
@@ -66,15 +153,11 @@ export async function triggerFirstMessageAgents(
 		return;
 	}
 
-	// Check if the group already has messages (another participant may have triggered the agent)
 	const chatCollection = await getChatMessagesCollection();
-	const existing = await chatCollection.countDocuments(
+	const existingCount = await chatCollection.countDocuments(
 		{ groupId },
 		{ limit: 1 },
 	);
-	if (existing > 0) {
-		return;
-	}
 
 	const sessionConfig = await getSessionConfig(sessionId);
 	if (!sessionConfig) {
@@ -95,16 +178,24 @@ export async function triggerFirstMessageAgents(
 			continue;
 		}
 
-		// Only trigger agents with sendFirstMessage: true
-		if (!agent.sendFirstMessage) {
-			continue;
-		}
+		const triggers = resolveTriggers(agent);
+		const hasOnJoin = triggers.includes("on_join");
+		const hasExplicitTrigger = agent.trigger !== undefined;
+		const isLegacy = !hasExplicitTrigger && agent.sendFirstMessage === true;
 
-		await runAgent(agent, groupId, sessionId, {
-			requireHistory: false,
-			configId,
-			pageId: currentPageId,
-		});
+		if (hasOnJoin) {
+			await runAgent(agent, groupId, sessionId, {
+				requireHistory: false,
+				configId,
+				pageId: currentPageId,
+			});
+		} else if (isLegacy && existingCount === 0) {
+			await runAgent(agent, groupId, sessionId, {
+				requireHistory: false,
+				configId,
+				pageId: currentPageId,
+			});
+		}
 	}
 }
 
@@ -134,6 +225,12 @@ async function runAgent(
 
 		// Skip if history is required but empty (normal message response flow)
 		if (requireHistory && history.length === 0) {
+			return;
+		}
+
+		// Evaluate reply conditions before proceeding
+		const shouldReply = await evaluateConditions(agent, history);
+		if (!shouldReply) {
 			return;
 		}
 

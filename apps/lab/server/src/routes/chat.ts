@@ -6,7 +6,7 @@
 
 import { Elysia, t } from "elysia";
 import { MongoServerError, type ObjectId } from "mongodb";
-import { triggerAgents, triggerFirstMessageAgents } from "../lib/agent-runner";
+import { triggerAgents, triggerJoinAgents } from "../lib/agent-runner";
 import { getChatMessagesCollection } from "../lib/db";
 import { getGroupMembers, verifyMembership } from "../lib/groups";
 import { broadcastToSession } from "../lib/sse";
@@ -166,9 +166,9 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 				return { error: "not_a_member" };
 			}
 
-			// Trigger agents with sendFirstMessage: true
-			triggerFirstMessageAgents(groupId, sessionId).catch((err) => {
-				console.error("[Chat] Failed to trigger first message agents:", err);
+			// Trigger join agents (on_join trigger + legacy sendFirstMessage)
+			triggerJoinAgents(groupId, sessionId).catch((err) => {
+				console.error("[Chat] Failed to trigger join agents:", err);
 			});
 
 			return { ok: true };
