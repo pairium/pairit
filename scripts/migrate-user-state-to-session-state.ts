@@ -5,7 +5,7 @@
  *   bun --env-file=.env scripts/migrate-user-state-to-session-state.ts
  */
 
-import { closeDB, connectDB } from "@pairit/db";
+import { closeDB, connectDB } from "../packages/db";
 
 async function main() {
 	const db = await connectDB();
