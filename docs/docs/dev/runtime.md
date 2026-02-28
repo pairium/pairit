@@ -55,11 +55,11 @@ function resolveBranch(action, context) {
 }
 ```
 
-The evaluation context exposes `user_state`, matching the expression subset described in the configuration guide.
+The evaluation context exposes `session_state`, matching the expression subset described in the configuration guide.
 
 ## User store context
 
-The runtime keeps session state in a user store. Components can request assignments through events, and compiled survey components write answers automatically to `user_state` using question ids.
+The runtime keeps session state in a user store. Components can request assignments through events, and compiled survey components write answers automatically to `session_state` using question ids.
 
 ```ts
 type UserStore = Record<string, any>;

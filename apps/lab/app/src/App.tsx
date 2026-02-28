@@ -49,7 +49,7 @@ export default function App() {
 	const [page, setPage] = useState<Page | null>(null);
 	const [endedAt, setEndedAt] = useState<string | null>(null);
 	const [endRedirectUrl, setEndRedirectUrl] = useState<string | null>(null);
-	const [userState, setUserState] = useState<Record<string, unknown>>({});
+	const [sessionState, setSessionState] = useState<Record<string, unknown>>({});
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [authRequired, setAuthRequired] = useState(false);
@@ -84,7 +84,7 @@ export default function App() {
 			setPage(null);
 			setEndedAt(null);
 			setEndRedirectUrl(null);
-			setUserState({});
+			setSessionState({});
 			setAuthRequired(false);
 			setSessionBlocked(false);
 			setLoading(true);
@@ -98,13 +98,13 @@ export default function App() {
 				setPage(r.page);
 				setEndRedirectUrl(r.page?.endRedirectUrl ?? null);
 				setEndedAt(r.endedAt ?? null);
-				if (r.user_state) setUserState(r.user_state);
+				if (r.session_state) setSessionState(r.session_state);
 
 				// Execute onEnter for the initial/resumed page
 				if (r.page?.onEnter?.length && r.sessionId) {
 					const updates = await executeOnEnter(r.sessionId, r.page.onEnter);
 					if (!canceled) {
-						setUserState((prev) => ({ ...prev, ...updates }));
+						setSessionState((prev) => ({ ...prev, ...updates }));
 					}
 				}
 			} catch (e: unknown) {
@@ -140,14 +140,14 @@ export default function App() {
 		return () => sseClient.disconnect();
 	}, [sessionId]);
 
-	// Handle state_updated SSE events to sync userState
+	// Handle state_updated SSE events to sync sessionState
 	useEffect(() => {
 		if (!sessionId) return;
 
 		const unsubscribe = sseClient.on("state_updated", (data: unknown) => {
 			const { path, value } = data as { path: string; value: unknown };
 			if (path) {
-				setUserState((prev) => {
+				setSessionState((prev) => {
 					const keys = path.split(".");
 					if (keys.length === 1) {
 						return { ...prev, [path]: value };
@@ -184,12 +184,12 @@ export default function App() {
 		setError(null);
 		try {
 			const r = await advance(sessionId, target);
-			if (r.user_state) setUserState(r.user_state);
+			if (r.session_state) setSessionState(r.session_state);
 
 			// Execute onEnter actions before showing the page
 			if (nextPage.onEnter?.length) {
 				const updates = await executeOnEnter(sessionId, nextPage.onEnter);
-				setUserState((prev) => ({ ...prev, ...updates }));
+				setSessionState((prev) => ({ ...prev, ...updates }));
 			}
 
 			setPage(nextPage);
@@ -247,9 +247,9 @@ export default function App() {
 						page={page}
 						onAction={onAction}
 						sessionId={sessionId}
-						userState={userState}
-						onUserStateChange={(updates) =>
-							setUserState((prev) => ({ ...prev, ...updates }))
+						sessionState={sessionState}
+						onSessionStateChange={(updates) =>
+							setSessionState((prev) => ({ ...prev, ...updates }))
 						}
 					/>
 				)}
@@ -268,7 +268,8 @@ export default function App() {
 									<Button
 										variant="ghost"
 										onClick={() => {
-											window.location.href = "https://pairium.github.io/pairit/examples/";
+											window.location.href =
+												"https://pairium.github.io/pairit/examples/";
 										}}
 									>
 										Back to examples
@@ -295,7 +296,8 @@ export default function App() {
 									<Button
 										variant="ghost"
 										onClick={() => {
-											window.location.href = "https://pairium.github.io/pairit/examples/";
+											window.location.href =
+												"https://pairium.github.io/pairit/examples/";
 										}}
 									>
 										Back to examples

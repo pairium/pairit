@@ -40,7 +40,7 @@ When the participant navigates to `chat`, the randomization runs in the backgrou
 
 ### Group-level randomization
 
-When `scope: group`, all members of a matchmaking group receive the same treatment. Requires that matchmaking has already set `user_state.group_id`.
+When `scope: group`, all members of a matchmaking group receive the same treatment. Requires that matchmaking has already set `session_state.group_id`.
 
 ```yaml
 pages:
@@ -123,17 +123,17 @@ pages:
 
 ## State
 
-After randomization, the assigned condition is stored at `user_state.{stateKey}`:
+After randomization, the assigned condition is stored at `session_state.{stateKey}`:
 
 ```yaml
 # If stateKey is "treatment" and assigned "A":
-# user_state.treatment = "A"
+# session_state.treatment = "A"
 ```
 
 Access this value in expressions:
 
 ```yaml
-- when: "user_state.treatment == 'A'"
+- when: "session_state.treatment == 'A'"
   target: treatment_a_page
 ```
 
@@ -147,8 +147,8 @@ Randomization calls the `/sessions/:id/randomize` endpoint which:
 
 For `scope: group`, the endpoint:
 
-1. Reads `user_state.group_id` from the session
-2. Checks if any group member already has `user_state.{stateKey}` set
+1. Reads `session_state.group_id` from the session
+2. Checks if any group member already has `session_state.{stateKey}` set
 3. If found, returns the existing condition and ensures the requesting session also has it
 4. If not, assigns a new condition and sets it on all group members
 

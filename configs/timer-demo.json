@@ -85,7 +85,7 @@
         {
           "type": "text",
           "props": {
-            "text": "# Time's Up!\n\nYour reading time has ended. Thank you for participating.\n\nReading timed out: **{{user_state.reading_timed_out}}**\n",
+            "text": "# Time's Up!\n\nYour reading time has ended. Thank you for participating.\n\nReading timed out: **{{session_state.reading_timed_out}}**\n",
             "markdown": true
           },
           "id": "text-0"

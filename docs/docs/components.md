@@ -23,11 +23,11 @@ Result: a consistent, declarative system where pages stay lightweight and featur
 
 ## Conditional Rendering
 
-Any component supports a `when` property to conditionally show or hide it based on `user_state`:
+Any component supports a `when` property to conditionally show or hide it based on `session_state`:
 
 ```yaml
 - type: text
-  when: "user_state.treatment == 'A'"
+  when: "session_state.treatment == 'A'"
   props: { text: "Instructions for group A." }
 ```
 

@@ -97,7 +97,7 @@ export async function triggerAgents(
 		return;
 	}
 
-	const { configId, currentPageId, userState } = sessionConfig;
+	const { configId, currentPageId, sessionState } = sessionConfig;
 
 	const agentIds = await getPageAgentIds(configId, currentPageId);
 	if (agentIds.length === 0) {
@@ -138,7 +138,7 @@ export async function triggerAgents(
 			requireHistory: true,
 			configId,
 			pageId: currentPageId,
-			userState,
+			sessionState,
 		});
 	}
 }
@@ -166,7 +166,7 @@ export async function triggerJoinAgents(
 		return;
 	}
 
-	const { configId, currentPageId, userState } = sessionConfig;
+	const { configId, currentPageId, sessionState } = sessionConfig;
 
 	const agentIds = await getPageAgentIds(configId, currentPageId);
 	if (agentIds.length === 0) {
@@ -190,14 +190,14 @@ export async function triggerJoinAgents(
 				requireHistory: false,
 				configId,
 				pageId: currentPageId,
-				userState,
+				sessionState,
 			});
 		} else if (isLegacy && existingCount === 0) {
 			await runAgent(agent, groupId, sessionId, {
 				requireHistory: false,
 				configId,
 				pageId: currentPageId,
-				userState,
+				sessionState,
 			});
 		}
 	}
@@ -207,7 +207,7 @@ type RunAgentOptions = {
 	requireHistory?: boolean;
 	configId?: string;
 	pageId?: string;
-	userState?: Record<string, unknown>;
+	sessionState?: Record<string, unknown>;
 };
 
 async function runAgent(
@@ -246,11 +246,11 @@ async function runAgent(
 			return;
 		}
 
-		// Resolve conditional prompts and interpolate user_state
+		// Resolve conditional prompts and interpolate session_state
 		const resolvedSystem = resolveSystemPrompt(
 			agent.system,
 			agent.prompts,
-			options.userState,
+			options.sessionState,
 		);
 
 		// Build system prompt: guardrail prefix + experimenter prompt + workspace
@@ -442,19 +442,19 @@ async function handleToolCall(
 			`[Agent] Tool: end_chat for group ${groupId} (deal_reached=${deal_reached}, agreed_price=${agreed_price})`,
 		);
 
-		// Set chat_ended and deal info in user_state for all members
+		// Set chat_ended and deal info in session_state for all members
 		const sessionsCollection = await getSessionsCollection();
 		for (const memberId of memberIds) {
 			if (memberId.startsWith("agent:")) continue;
 
 			const stateUpdates: Record<string, unknown> = {
-				"user_state.chat_ended": true,
+				"session_state.chat_ended": true,
 			};
 			if (deal_reached !== undefined) {
-				stateUpdates["user_state.deal_reached"] = deal_reached;
+				stateUpdates["session_state.deal_reached"] = deal_reached;
 			}
 			if (agreed_price !== undefined) {
-				stateUpdates["user_state.agreed_price"] = agreed_price;
+				stateUpdates["session_state.agreed_price"] = agreed_price;
 			}
 
 			await sessionsCollection.updateOne(
@@ -548,7 +548,7 @@ async function handleToolCall(
 
 			await sessionsCollection.updateOne(
 				{ id: memberId },
-				{ $set: { [`user_state.${path}`]: value, updatedAt: new Date() } },
+				{ $set: { [`session_state.${path}`]: value, updatedAt: new Date() } },
 			);
 
 			broadcastToSession(memberId, "state_updated", { path, value });

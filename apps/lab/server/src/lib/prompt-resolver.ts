@@ -50,13 +50,13 @@ function compare(left: unknown, op: ComparisonOp, right: unknown): boolean {
 
 export function evaluateExpression(
 	expr: string,
-	context: { user_state: Record<string, unknown> },
+	context: { session_state: Record<string, unknown> },
 ): boolean {
-	const match = expr.match(/^user_state\.(\w+)\s*(==|!=|<=|>=|<|>)\s*(.+)$/);
+	const match = expr.match(/^session_state\.(\w+)\s*(==|!=|<=|>=|<|>)\s*(.+)$/);
 	if (!match) return false;
 
 	const [, path, op, rawValue] = match;
-	const left = context.user_state[path];
+	const left = context.session_state[path];
 	const right = parseValue(rawValue.trim());
 
 	return compare(left, op as ComparisonOp, right);
@@ -64,11 +64,11 @@ export function evaluateExpression(
 
 export function interpolate(
 	text: string,
-	userState: Record<string, unknown> | undefined,
+	sessionState: Record<string, unknown> | undefined,
 ): string {
-	return text.replace(/\{\{user_state\.(\w+)\}\}/g, (_, key) => {
-		const value = userState?.[key];
-		return value !== undefined ? String(value) : `{{user_state.${key}}}`;
+	return text.replace(/\{\{session_state\.(\w+)\}\}/g, (_, key) => {
+		const value = sessionState?.[key];
+		return value !== undefined ? String(value) : `{{session_state.${key}}}`;
 	});
 }
 
@@ -77,12 +77,12 @@ export type ConditionalPrompt = { when?: string; system: string };
 export function resolveSystemPrompt(
 	system: string,
 	prompts: ConditionalPrompt[] | undefined,
-	userState: Record<string, unknown> | undefined,
+	sessionState: Record<string, unknown> | undefined,
 ): string {
 	let resolved = system;
 
 	if (prompts && prompts.length > 0) {
-		const context = { user_state: userState ?? {} };
+		const context = { session_state: sessionState ?? {} };
 		let matched = false;
 
 		for (const entry of prompts) {
@@ -103,5 +103,5 @@ export function resolveSystemPrompt(
 		}
 	}
 
-	return interpolate(resolved, userState);
+	return interpolate(resolved, sessionState);
 }

@@ -228,7 +228,7 @@ async function formGroup(
 			status: "active",
 		});
 
-		// Update each session's user_state
+		// Update each session's session_state
 		const sessionsCollection = await getSessionsCollection();
 		await Promise.all(
 			memberSessionIds.map((sid) =>
@@ -236,9 +236,9 @@ async function formGroup(
 					{ id: sid },
 					{
 						$set: {
-							"user_state.group_id": groupId,
-							"user_state.chat_group_id": groupId,
-							"user_state.treatment": treatment,
+							"session_state.group_id": groupId,
+							"session_state.chat_group_id": groupId,
+							"session_state.treatment": treatment,
 							updatedAt: new Date(),
 						},
 					},

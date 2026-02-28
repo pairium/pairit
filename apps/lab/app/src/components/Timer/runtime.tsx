@@ -144,14 +144,14 @@ function applySetState(
 	action: ButtonAction,
 	context: {
 		sessionId?: string | null;
-		onUserStateChange?: (updates: Record<string, unknown>) => void;
+		onSessionStateChange?: (updates: Record<string, unknown>) => void;
 	},
 ) {
 	if (!action.setState || !context.sessionId) return;
 	updateState(context.sessionId, action.setState).catch((error) => {
 		console.error("[Timer] Failed to apply setState", error);
 	});
-	context.onUserStateChange?.(action.setState);
+	context.onSessionStateChange?.(action.setState);
 }
 
 function emitEvent(

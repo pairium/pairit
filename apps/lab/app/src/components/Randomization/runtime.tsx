@@ -25,7 +25,7 @@ export const RandomizationRuntime = defineRuntimeComponent<
 >({
 	type: "randomization",
 	renderer: ({ component, context }) => {
-		const { sessionId, onAction, onUserStateChange } = context;
+		const { sessionId, onAction, onSessionStateChange } = context;
 		const [status, setStatus] = useState<RandomizationStatus>("loading");
 		const [condition, setCondition] = useState<string>();
 		const hasCalledRef = useRef(false);
@@ -58,9 +58,9 @@ export const RandomizationRuntime = defineRuntimeComponent<
 					setCondition(result.condition);
 					setStatus("assigned");
 
-					// Update local user state
-					if (onUserStateChange) {
-						onUserStateChange({ [stateKey]: result.condition });
+					// Update local session state
+					if (onSessionStateChange) {
+						onSessionStateChange({ [stateKey]: result.condition });
 					}
 
 					// Auto-advance to target page if specified
@@ -92,7 +92,7 @@ export const RandomizationRuntime = defineRuntimeComponent<
 			target,
 			showAssignment,
 			onAction,
-			onUserStateChange,
+			onSessionStateChange,
 		]);
 
 		if (!sessionId) {

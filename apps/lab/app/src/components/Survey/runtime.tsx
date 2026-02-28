@@ -25,9 +25,9 @@ export const SurveyRuntime = defineRuntimeComponent<
 						componentId: component.id ?? "unknown",
 						data: values,
 					});
-					// Update user_state with survey values
+					// Update session_state with survey values
 					await updateState(context.sessionId, values);
-					context.onUserStateChange?.(values);
+					context.onSessionStateChange?.(values);
 				} catch (error) {
 					console.error("Failed to submit survey event", error);
 				}

@@ -58,7 +58,7 @@ Agents support both OpenAI and Anthropic models. The provider is inferred from t
 | `sendFirstMessage` | boolean | `false` | **Legacy.** Sends an opening message when chat loads and room is empty. Ignored if `trigger` is set. |
 | `guardrails` | boolean | `true` | Prepend default guardrail instructions to the system prompt. Set to `false` to opt out. See [Agent Guardrails](../guides/agent-guardrails.md). |
 | `reasoningEffort` | string | - | For reasoning models: `minimal`, `low`, `medium`, `high` |
-| `prompts` | array | - | Conditional prompt blocks based on `user_state`. See [Conditional Prompts](#conditional-prompts). |
+| `prompts` | array | - | Conditional prompt blocks based on `session_state`. See [Conditional Prompts](#conditional-prompts). |
 | `tools` | array | - | Tool definitions the agent can invoke |
 
 ## Triggers
@@ -123,27 +123,27 @@ agents:
 
 ## Conditional Prompts
 
-Agent system prompts can adapt based on `user_state` using two mechanisms: **template interpolation** and **conditional prompt blocks**.
+Agent system prompts can adapt based on `session_state` using two mechanisms: **template interpolation** and **conditional prompt blocks**.
 
 ### Template Interpolation
 
-Use `{{user_state.key}}` anywhere in a system prompt to inject the participant's state value:
+Use `{{session_state.key}}` anywhere in a system prompt to inject the participant's state value:
 
 ```yaml
 agents:
   - id: tutor
     model: gpt-4o
     system: |
-      You are a tutor helping a student who scored {{user_state.pretest_score}} on the pretest.
-      Their learning style is {{user_state.learning_style}}.
+      You are a tutor helping a student who scored {{session_state.pretest_score}} on the pretest.
+      Their learning style is {{session_state.learning_style}}.
       Adapt your explanations accordingly.
 ```
 
-If a referenced key is missing from `user_state`, the placeholder is left as-is (e.g., `{{user_state.missing_key}}`).
+If a referenced key is missing from `session_state`, the placeholder is left as-is (e.g., `{{session_state.missing_key}}`).
 
 ### Conditional Blocks
 
-Use the `prompts` array to select entirely different system prompts based on `user_state`. Each entry has an optional `when` condition and a `system` prompt. The first matching `when` wins; an entry without `when` serves as the default fallback.
+Use the `prompts` array to select entirely different system prompts based on `session_state`. Each entry has an optional `when` condition and a `system` prompt. The first matching `when` wins; an entry without `when` serves as the default fallback.
 
 ```yaml
 agents:
@@ -151,11 +151,11 @@ agents:
     model: gpt-4o
     system: You are a negotiation partner.  # base fallback
     prompts:
-      - when: "user_state.condition == 'cooperative'"
+      - when: "session_state.condition == 'cooperative'"
         system: |
           You are a friendly negotiation partner. Be warm, make concessions,
           and aim for a win-win outcome.
-      - when: "user_state.condition == 'competitive'"
+      - when: "session_state.condition == 'competitive'"
         system: |
           You are a tough negotiation partner. Hold firm on price,
           use anchoring tactics, and push for the best deal.
@@ -163,18 +163,18 @@ agents:
           You are a neutral negotiation partner.
 ```
 
-Conditions support comparison operators: `==`, `!=`, `<`, `>`, `<=`, `>=`. The left side must be `user_state.<key>` and the right side can be a string, number, or boolean.
+Conditions support comparison operators: `==`, `!=`, `<`, `>`, `<=`, `>=`. The left side must be `session_state.<key>` and the right side can be a string, number, or boolean.
 
-Both mechanisms can be combined — `{{user_state.x}}` interpolation is applied after the conditional block is selected:
+Both mechanisms can be combined — `{{session_state.x}}` interpolation is applied after the conditional block is selected:
 
 ```yaml
 prompts:
-  - when: "user_state.arm == 'treatment'"
+  - when: "session_state.arm == 'treatment'"
     system: |
-      You are helping participant {{user_state.participant_id}}.
+      You are helping participant {{session_state.participant_id}}.
       Use the advanced teaching strategy.
   - system: |
-      You are helping participant {{user_state.participant_id}}.
+      You are helping participant {{session_state.participant_id}}.
       Use the standard approach.
 ```
 
@@ -212,7 +212,7 @@ tools:
       properties:
         path:
           type: string
-          description: The user_state path to update
+          description: The session_state path to update
         value:
           description: The value to assign
       required: [path, value]
@@ -220,9 +220,9 @@ tools:
 
 ### Built-in Tool Behaviors
 
-**`end_chat`**: Ends the chat for all participants in the group. Sets `user_state.chat_ended = true` and broadcasts a `chat_ended` event. Optional `deal_reached` and `agreed_price` parameters are written to user state.
+**`end_chat`**: Ends the chat for all participants in the group. Sets `session_state.chat_ended = true` and broadcasts a `chat_ended` event. Optional `deal_reached` and `agreed_price` parameters are written to user state.
 
-**`assign_state`**: Writes a value to `user_state.{path}` for all participants and broadcasts a `state_updated` event.
+**`assign_state`**: Writes a value to `session_state.{path}` for all participants and broadcasts a `state_updated` event.
 
 ## Usage with Chat
 

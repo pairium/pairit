@@ -11,22 +11,22 @@ import type { ButtonAction, ComponentInstance, Page } from "./types";
 
 function isComponentVisible(
 	component: ComponentInstance,
-	userState: Record<string, unknown>,
+	sessionState: Record<string, unknown>,
 ): boolean {
 	if (!component.when) return true;
-	return evaluateExpression(component.when, { user_state: userState });
+	return evaluateExpression(component.when, { session_state: sessionState });
 }
 
 function resolveTarget(
 	action: ButtonAction,
-	userState: Record<string, unknown>,
+	sessionState: Record<string, unknown>,
 ): string {
 	if (action.target) return action.target;
 	if (!action.branches) throw new Error("No target or branches");
 
 	for (const branch of action.branches) {
 		if (!branch.when) return branch.target; // default branch
-		if (evaluateExpression(branch.when, { user_state: userState })) {
+		if (evaluateExpression(branch.when, { session_state: sessionState })) {
 			return branch.target;
 		}
 	}
@@ -37,22 +37,22 @@ interface PageRendererProps {
 	page: Page;
 	onAction: (action: ButtonAction) => Promise<void> | void;
 	sessionId?: string | null;
-	userState?: Record<string, unknown>;
-	onUserStateChange?: (updates: Record<string, unknown>) => void;
+	sessionState?: Record<string, unknown>;
+	onSessionStateChange?: (updates: Record<string, unknown>) => void;
 }
 
 export function PageRenderer({
 	page,
 	onAction,
 	sessionId,
-	userState,
-	onUserStateChange,
+	sessionState,
+	onSessionStateChange,
 }: PageRendererProps) {
 	const guardsRef = useRef<Set<NavigationGuard>>(new Set());
-	const userStateRef = useRef<Record<string, unknown>>(userState ?? {});
+	const sessionStateRef = useRef<Record<string, unknown>>(sessionState ?? {});
 
 	// Keep ref in sync with prop
-	userStateRef.current = userState ?? {};
+	sessionStateRef.current = sessionState ?? {};
 
 	const registerNavigationGuard = useCallback((guard: NavigationGuard) => {
 		guardsRef.current.add(guard);
@@ -61,20 +61,20 @@ export function PageRenderer({
 		};
 	}, []);
 
-	// Wrap onUserStateChange to also update ref immediately (before React re-renders)
-	const wrappedOnUserStateChange = useCallback(
+	// Wrap onSessionStateChange to also update ref immediately (before React re-renders)
+	const wrappedOnSessionStateChange = useCallback(
 		(updates: Record<string, unknown>) => {
-			userStateRef.current = { ...userStateRef.current, ...updates };
-			onUserStateChange?.(updates);
+			sessionStateRef.current = { ...sessionStateRef.current, ...updates };
+			onSessionStateChange?.(updates);
 		},
-		[onUserStateChange],
+		[onSessionStateChange],
 	);
 
 	const guardedAction = useCallback(
 		async (action: ButtonAction) => {
 			if (action.skipValidation) {
-				// Resolve target using current userState
-				const target = resolveTarget(action, userStateRef.current);
+				// Resolve target using current sessionState
+				const target = resolveTarget(action, sessionStateRef.current);
 				await onAction({ ...action, target });
 				return;
 			}
@@ -92,8 +92,8 @@ export function PageRenderer({
 					}
 				}
 			}
-			// Resolve target AFTER guards have run (they may have updated userState)
-			const target = resolveTarget(action, userStateRef.current);
+			// Resolve target AFTER guards have run (they may have updated sessionState)
+			const target = resolveTarget(action, sessionStateRef.current);
 			await onAction({ ...action, target });
 		},
 		[onAction],
@@ -104,24 +104,25 @@ export function PageRenderer({
 			onAction: guardedAction,
 			registerNavigationGuard,
 			sessionId,
-			userState,
-			onUserStateChange: wrappedOnUserStateChange,
+			sessionState,
+			onSessionStateChange: wrappedOnSessionStateChange,
 			pageId: page.id,
 		}),
 		[
 			guardedAction,
 			registerNavigationGuard,
 			sessionId,
-			userState,
-			wrappedOnUserStateChange,
+			sessionState,
+			wrappedOnSessionStateChange,
 			page.id,
 		],
 	);
 
 	if (page.layout === "split") {
 		const visibleComponents =
-			page.components?.filter((c) => isComponentVisible(c, userState ?? {})) ??
-			[];
+			page.components?.filter((c) =>
+				isComponentVisible(c, sessionState ?? {}),
+			) ?? [];
 		const leftComponents = visibleComponents.filter(
 			(c) => c.type !== "live-workspace" && c.type !== "buttons",
 		);
@@ -178,7 +179,7 @@ export function PageRenderer({
 	}
 
 	const visibleComponents =
-		page.components?.filter((c) => isComponentVisible(c, userState ?? {})) ??
+		page.components?.filter((c) => isComponentVisible(c, sessionState ?? {})) ??
 		[];
 
 	return (

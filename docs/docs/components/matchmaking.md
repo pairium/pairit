@@ -1,6 +1,6 @@
 # Matchmaking
 
-Enqueue the current session into a server-managed pool until enough participants arrive to form a group. On match, the server initializes `user_state` (including `chat_group_id`). On timeout, it can auto-navigate to a fallback page.
+Enqueue the current session into a server-managed pool until enough participants arrive to form a group. On match, the server initializes `session_state` (including `chat_group_id`). On timeout, it can auto-navigate to a fallback page.
 
 ## Props
 
@@ -75,7 +75,7 @@ pages:
         action:
           type: go_to
           branches:
-            - when: "user_state.treated == true"
+            - when: "session_state.treated == true"
               target: chat_treated
             - target: chat_control
 ```
@@ -91,7 +91,7 @@ matchmaking:
 
 Notes
 - Matching policy: FIFO by arrival; groups of `num_users`.
-- On match: write `user_state.chat_group_id` and emit `match`.
+- On match: write `session_state.chat_group_id` and emit `match`.
 - On timeout: emit `timeout`.
 
 

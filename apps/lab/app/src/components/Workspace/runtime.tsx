@@ -39,7 +39,7 @@ export const WorkspaceRuntime = defineRuntimeComponent<
 >({
 	type: "live-workspace",
 	renderer: ({ component, context }) => {
-		const { sessionId, userState, onUserStateChange, pageId } = context;
+		const { sessionId, sessionState, onSessionStateChange, pageId } = context;
 		const mode = component.props.mode ?? "freeform";
 		const editableBy = component.props.editableBy ?? "both";
 		const scope = component.props.scope ?? "participant";
@@ -53,8 +53,8 @@ export const WorkspaceRuntime = defineRuntimeComponent<
 		// Resolve groupId
 		const [resolvedGroupId, setResolvedGroupId] = useState<string | null>(
 			() => {
-				if (scope === "group" && userState?.chat_group_id) {
-					return userState.chat_group_id as string;
+				if (scope === "group" && sessionState?.chat_group_id) {
+					return sessionState.chat_group_id as string;
 				}
 				if (scope === "participant" && sessionId) {
 					return `${sessionId}:${pageId}`;
@@ -71,7 +71,7 @@ export const WorkspaceRuntime = defineRuntimeComponent<
 			}
 		}, [resolvedGroupId, sessionId, pageId, scope]);
 
-		// Async resolution for group scope when userState not yet available
+		// Async resolution for group scope when sessionState not yet available
 		useEffect(() => {
 			if (resolvedGroupId || !sessionId || scope !== "group") return;
 
@@ -82,12 +82,12 @@ export const WorkspaceRuntime = defineRuntimeComponent<
 					const session = await getSession(sessionId as string);
 					if (canceled) return;
 
-					const serverGroupId = session.user_state?.chat_group_id as
+					const serverGroupId = session.session_state?.chat_group_id as
 						| string
 						| undefined;
 					if (serverGroupId) {
 						setResolvedGroupId(serverGroupId);
-						onUserStateChange?.({ chat_group_id: serverGroupId });
+						onSessionStateChange?.({ chat_group_id: serverGroupId });
 					} else {
 						// Fallback to participant scope
 						setResolvedGroupId(`${sessionId}:${pageId}`);
@@ -106,7 +106,7 @@ export const WorkspaceRuntime = defineRuntimeComponent<
 			return () => {
 				canceled = true;
 			};
-		}, [resolvedGroupId, sessionId, pageId, scope, onUserStateChange]);
+		}, [resolvedGroupId, sessionId, pageId, scope, onSessionStateChange]);
 
 		const groupId = resolvedGroupId ?? "";
 
@@ -136,12 +136,12 @@ export const WorkspaceRuntime = defineRuntimeComponent<
 						try {
 							const session = await getSession(sessionId as string);
 							if (canceled) return;
-							const serverGroupId = session.user_state?.chat_group_id as
+							const serverGroupId = session.session_state?.chat_group_id as
 								| string
 								| undefined;
 							if (serverGroupId && serverGroupId !== groupId) {
 								setResolvedGroupId(serverGroupId);
-								onUserStateChange?.({ chat_group_id: serverGroupId });
+								onSessionStateChange?.({ chat_group_id: serverGroupId });
 								return;
 							}
 						} catch (fetchError) {
@@ -161,7 +161,7 @@ export const WorkspaceRuntime = defineRuntimeComponent<
 			return () => {
 				canceled = true;
 			};
-		}, [sessionId, groupId, onUserStateChange]);
+		}, [sessionId, groupId, onSessionStateChange]);
 
 		// Subscribe to SSE workspace_updated events
 		const lastUpdateRef = useRef<string>("");

@@ -47,7 +47,7 @@
         {
           "type": "text",
           "props": {
-            "text": "You were assigned to condition: **{{user_state.condition}}**"
+            "text": "You were assigned to condition: **{{session_state.condition}}**"
           },
           "id": "text-0"
         },

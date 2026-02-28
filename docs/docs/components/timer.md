@@ -9,7 +9,7 @@ Countdown timer that auto-navigates when time expires. Use it for timed reading 
 | `duration` | number | — | Total seconds for the countdown (required) |
 | `warning` | number | — | Remaining-seconds threshold to enter warning state |
 | `visible` | boolean | `true` | Show the countdown UI; set `false` for invisible deadlines |
-| `action` | ButtonAction | — | Navigation action to execute on expiry. Supports `setState` to write key-value pairs to `user_state` before navigating. |
+| `action` | ButtonAction | — | Navigation action to execute on expiry. Supports `setState` to write key-value pairs to `session_state` before navigating. |
 | `runningLabel` | string | — | Text shown while the timer is running |
 | `warningLabel` | string | — | Text shown during the warning phase |
 | `expiredLabel` | string | — | Text shown when the timer expires |
@@ -88,7 +88,7 @@ components:
       action:
         type: go_to
         branches:
-          - when: "user_state.treatment == 'A'"
+          - when: "session_state.treatment == 'A'"
             target: debrief_a
           - target: debrief_b
     events:
@@ -102,7 +102,7 @@ components:
 
 ### Setting state on expiry
 
-Use `action.setState` to write values to `user_state` when the timer fires. Downstream pages and agents can branch on whether the participant timed out:
+Use `action.setState` to write values to `session_state` when the timer fires. Downstream pages and agents can branch on whether the participant timed out:
 
 ```yaml
 components:
@@ -117,7 +117,7 @@ components:
           reading_timed_out: true
 ```
 
-On the target page, reference the value with `{{user_state.reading_timed_out}}`.
+On the target page, reference the value with `{{session_state.reading_timed_out}}`.
 
 ## Visual states
 

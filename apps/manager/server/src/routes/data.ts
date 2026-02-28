@@ -51,7 +51,7 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				configId: session.configId,
 				currentPageId: session.currentPageId,
 				status: session.endedAt ? "completed" : "in_progress",
-				user_state: session.user_state ?? {},
+				session_state: session.session_state ?? {},
 				prolific: session.prolific ?? null,
 				userId: session.userId ?? null,
 				createdAt: session.createdAt?.toISOString() ?? null,
@@ -142,7 +142,7 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 			const sessionsCollection = await getSessionsCollection();
 			const sessions = await sessionsCollection
 				.find({ configId })
-				.project({ id: 1, "user_state.chat_group_id": 1 })
+				.project({ id: 1, "session_state.chat_group_id": 1 })
 				.toArray();
 
 			const sessionIds = sessions.map((s) => s.id);
@@ -151,8 +151,8 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 			// Collect all group IDs (session's own ID for human-AI chat, plus chat_group_id for group chats)
 			for (const session of sessions) {
 				groupIds.add(session.id);
-				if (session.user_state?.chat_group_id) {
-					groupIds.add(session.user_state.chat_group_id as string);
+				if (session.session_state?.chat_group_id) {
+					groupIds.add(session.session_state.chat_group_id as string);
 				}
 			}
 

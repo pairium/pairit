@@ -36,7 +36,7 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 >({
 	type: "matchmaking",
 	renderer: ({ component, context }) => {
-		const { sessionId, onAction, onUserStateChange } = context;
+		const { sessionId, onAction, onSessionStateChange } = context;
 		const [status, setStatus] = useState<MatchmakingStatus>("connecting");
 		const [currentCount, setCurrentCount] = useState(1);
 		const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -77,9 +77,9 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 					treatment: data.treatment,
 				});
 
-				// Update user state
-				if (onUserStateChange) {
-					onUserStateChange({
+				// Update session state
+				if (onSessionStateChange) {
+					onSessionStateChange({
 						group_id: data.groupId,
 						chat_group_id: data.groupId,
 						treatment: data.treatment,
@@ -93,7 +93,7 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 					}, 1500);
 				}
 			},
-			[onAction, onUserStateChange, onMatchTarget],
+			[onAction, onSessionStateChange, onMatchTarget],
 		);
 
 		// Handle match timeout

@@ -13,7 +13,7 @@ Every config file supports these top-level fields:
 | `pages` | array | Yes | Page definitions |
 | `agents` | array | No | AI agent definitions (see [Agents](components/agents.md)) |
 | `matchmaking` | array | No | Matchmaking pool configurations |
-| `user_state` | object | No | User state schema with types and defaults |
+| `session_state` | object | No | User state schema with types and defaults |
 | `allowRetake` | boolean | No | Whether completed participants can start a new session (default: `false`) |
 
 ### schema_version
@@ -71,7 +71,7 @@ Component instance shapes:
 - Built-in chat: `{ type: "chat", props: { agents?: string[] } }`
 - Custom component host: `{ type: "component", props: { component: string, props: object, unknownEvents?: "error" | "warn" | "ignore" } }`
 
-All component instances also accept an optional `when` field to conditionally render based on `user_state` (see [Expressions](#expressions)).
+All component instances also accept an optional `when` field to conditionally render based on `session_state` (see [Expressions](#expressions)).
 
 Example page:
 
@@ -127,7 +127,7 @@ pages:
               action:
                 type: go_to
                 branches:
-                  - when: "user_state.sleep_hours < 5"
+                  - when: "session_state.sleep_hours < 5"
                     target: short_sleep_followup
                   - target: outro
 
@@ -151,11 +151,11 @@ pages:
 
 Use expressions to conditionally render components and route between pages. Expressions evaluate with a safe `expr-eval` subset.
 
-The expression evaluator currently supports `user_state.{key} {op} {value}` patterns.
+The expression evaluator currently supports `session_state.{key} {op} {value}` patterns.
 
 Context roots available:
 
-- `user_state` -- participant-scoped state fields
+- `session_state` -- participant-scoped state fields
 
 Planned (not yet implemented):
 
@@ -186,16 +186,16 @@ pages:
               text: "Hours slept"
               answer: numeric
       - type: text
-        when: "user_state.sleep_hours < 5"
+        when: "session_state.sleep_hours < 5"
         props: { text: "We're sorry to hear that. Can you tell us what woke you up?" }
 ```
 
 ## Data store
 
-Declare a `user_state` schema to describe the participant-scoped fields your run uses. The compiler validates assignments against this schema and wires default values into the initial session state.
+Declare a `session_state` schema to describe the participant-scoped fields your run uses. The compiler validates assignments against this schema and wires default values into the initial session state.
 
 ```yaml
-user_state:
+session_state:
   age: int
   consent: bool
   sleep_hours:
@@ -226,6 +226,6 @@ await bulkAssign({
 });
 ```
 
-Assignments outside `user_state.*` are rejected during validation. Surveys automatically write answers into the store using their question ids, so follow-up expressions can branch on the captured values.
+Assignments outside `session_state.*` are rejected during validation. Surveys automatically write answers into the store using their question ids, so follow-up expressions can branch on the captured values.
 
 

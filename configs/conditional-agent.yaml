@@ -51,7 +51,7 @@ pages:
     components:
       - type: text
         props:
-          text: "Thanks! You picked **{{user_state.dish}}**."
+          text: "Thanks! You picked **{{session_state.dish}}**."
 
 agents:
   - id: chef
@@ -59,19 +59,19 @@ agents:
     trigger: on_join
     system: You are a chef.
     prompts:
-      - when: "user_state.dish == 'Pizza'"
+      - when: "session_state.dish == 'Pizza'"
         system: |
           You are an enthusiastic Italian chef. The participant just told you
           they love pizza. Greet them by raving about pizza — mention your
           favorite toppings, dough technique, etc. Keep it to 2-3 sentences.
           Always talk about pizza in every response.
-      - when: "user_state.dish == 'Sushi'"
+      - when: "session_state.dish == 'Sushi'"
         system: |
           You are a Japanese sushi master. The participant just told you
           they love sushi. Greet them by sharing your passion for sushi —
           mention fresh fish, rice preparation, etc. Keep it to 2-3 sentences.
           Always talk about sushi in every response.
-      - when: "user_state.dish == 'Tacos'"
+      - when: "session_state.dish == 'Tacos'"
         system: |
           You are a Mexican street food chef. The participant just told you
           they love tacos. Greet them by celebrating tacos — mention salsas,

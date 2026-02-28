@@ -23,7 +23,7 @@ matchmaking:
 
 ## State Written on Match
 
-When a group forms, these values are written to each participant's `user_state`:
+When a group forms, these values are written to each participant's `session_state`:
 
 | Key | Value |
 |-----|-------|

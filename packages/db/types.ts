@@ -28,7 +28,7 @@ export type SessionDocument = {
 	configId: string;
 	config: unknown;
 	currentPageId: string;
-	user_state: Record<string, unknown>;
+	session_state: Record<string, unknown>;
 	prolific?: ProlificParams | null;
 	endedAt: string | null;
 	userId?: string | null;

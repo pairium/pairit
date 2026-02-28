@@ -72,7 +72,7 @@ pages:
 
             Your reading time has ended. Thank you for participating.
 
-            Reading timed out: **{{user_state.reading_timed_out}}**
+            Reading timed out: **{{session_state.reading_timed_out}}**
           markdown: true
       - type: buttons
         props:

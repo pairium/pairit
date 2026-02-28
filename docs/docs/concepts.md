@@ -28,9 +28,9 @@ buttons:
     action:
       type: go_to
       branches:
-        - when: "user_state.age < 18"
+        - when: "session_state.age < 18"
           target: ineligible_page
-        - when: "user_state.consent == true"
+        - when: "session_state.consent == true"
           target: main_study
         - target: declined_page  # default fallback
 ```
@@ -39,19 +39,19 @@ Branches are evaluated in order; the first matching condition determines the tar
 
 ### Conditional Rendering
 
-Use `when` on any component to show or hide it based on `user_state`. This lets a single page display different content per condition without duplicating pages:
+Use `when` on any component to show or hide it based on `session_state`. This lets a single page display different content per condition without duplicating pages:
 
 ```yaml
 components:
   - type: text
-    when: "user_state.treatment == 'A'"
+    when: "session_state.treatment == 'A'"
     props: { text: "You are in group A." }
   - type: text
-    when: "user_state.treatment == 'B'"
+    when: "session_state.treatment == 'B'"
     props: { text: "You are in group B." }
 ```
 
-Components without `when` always render. The expression syntax is the same as branch conditions: `user_state.{key} {op} {value}`.
+Components without `when` always render. The expression syntax is the same as branch conditions: `session_state.{key} {op} {value}`.
 
 ### Action Types
 
@@ -61,14 +61,14 @@ Components without `when` always render. The expression syntax is the same as br
 
 ## User State
 
-The `user_state` object stores participant data throughout a session. Components automatically write to user state, and expressions can read from it.
+The `session_state` object stores participant data throughout a session. Components automatically write to user state, and expressions can read from it.
 
 ### State Schema
 
-Define expected fields in your config's `user_state` section:
+Define expected fields in your config's `session_state` section:
 
 ```yaml
-user_state:
+session_state:
   age: int
   consent: bool
   treatment:
@@ -87,7 +87,7 @@ Components that assign values use `stateKey` to specify where data is stored:
 components:
   - type: randomization
     props:
-      stateKey: treatment        # writes to user_state.treatment
+      stateKey: treatment        # writes to session_state.treatment
       conditions: [control, A, B]
 ```
 
@@ -102,10 +102,10 @@ User state is persisted to MongoDB with each update. If a participant closes and
 
 ### Accessing State in Expressions
 
-Use `user_state.{fieldName}` in `when` conditions and branch expressions:
+Use `session_state.{fieldName}` in `when` conditions and branch expressions:
 
 ```yaml
-- when: "user_state.treatment == 'A'"
+- when: "session_state.treatment == 'A'"
   target: treatment_a_page
 ```
 
@@ -125,7 +125,7 @@ pages:
         props: { ... }
 ```
 
-The assigned condition is stored at `user_state.{stateKey}` and persists across page refreshes.
+The assigned condition is stored at `session_state.{stateKey}` and persists across page refreshes.
 
 ### Group-level randomization
 
@@ -138,7 +138,7 @@ onEnter:
     scope: group
 ```
 
-This requires that matchmaking has already set `user_state.group_id`.
+This requires that matchmaking has already set `session_state.group_id`.
 
 See [Randomization](components/randomization.md) for full documentation.
 

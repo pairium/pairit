@@ -86,9 +86,7 @@ export function TimerPanel({
 				</span>
 
 				{statusLabel && (
-					<span
-						className={`shrink-0 text-sm font-medium ${colors.label}`}
-					>
+					<span className={`shrink-0 text-sm font-medium ${colors.label}`}>
 						{statusLabel}
 					</span>
 				)}

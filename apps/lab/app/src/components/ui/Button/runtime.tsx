@@ -8,12 +8,12 @@ type ButtonDefinition = ButtonsComponent["props"]["buttons"][number];
 
 function evaluateHighlight(
 	highlightWhen: string | undefined,
-	userState: Record<string, unknown> | undefined,
+	sessionState: Record<string, unknown> | undefined,
 ): boolean {
-	if (!highlightWhen || !userState) return false;
+	if (!highlightWhen || !sessionState) return false;
 
-	// Simple check: if highlightWhen is a path like "chat_ended", check if userState[path] is truthy
-	const value = userState[highlightWhen];
+	// Simple check: if highlightWhen is a path like "chat_ended", check if sessionState[path] is truthy
+	const value = sessionState[highlightWhen];
 	return Boolean(value);
 }
 
@@ -37,7 +37,7 @@ export const ButtonsRuntime = defineRuntimeComponent<
 				{buttons.map((button) => {
 					const isHighlighted = evaluateHighlight(
 						button.highlightWhen,
-						context.userState,
+						context.sessionState,
 					);
 					return (
 						<Button

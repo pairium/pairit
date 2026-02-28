@@ -49,7 +49,7 @@ export type Session = {
 	configId: string;
 	config: Config;
 	currentPageId: string;
-	user_state: Record<string, unknown>;
+	session_state: Record<string, unknown>;
 	prolific?: _ProlificParams | null;
 	endedAt?: string;
 	createdAt?: Date;

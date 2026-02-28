@@ -55,7 +55,7 @@ type StreamingMessage = {
 export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 	type: "chat",
 	renderer: ({ component, context }) => {
-		const { sessionId, userState, onUserStateChange, pageId } = context;
+		const { sessionId, sessionState, onSessionStateChange, pageId } = context;
 		const [messages, setMessages] = useState<ChatMessage[]>([]);
 		const [loading, setLoading] = useState(true);
 		const [chatDisabled, setChatDisabled] = useState(false);
@@ -64,10 +64,11 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 		const seenMessageIds = useRef<Set<string>>(new Set());
 		const hasTriggeredAgents = useRef(false);
 
-		// Resolve groupId asynchronously: userState (matchmaking) > server fetch > explicit prop > session:page fallback
+		// Resolve groupId asynchronously: sessionState (matchmaking) > server fetch > explicit prop > session:page fallback
 		const [resolvedGroupId, setResolvedGroupId] = useState<string | null>(
 			() => {
-				if (userState?.chat_group_id) return userState.chat_group_id as string;
+				if (sessionState?.chat_group_id)
+					return sessionState.chat_group_id as string;
 				if (component.props.groupId)
 					return `${sessionId}:${component.props.groupId}`;
 				return null; // Need to check server
@@ -86,12 +87,12 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 					const session = await getSession(currentSessionId);
 					if (canceled) return;
 
-					const serverGroupId = session.user_state?.chat_group_id as
+					const serverGroupId = session.session_state?.chat_group_id as
 						| string
 						| undefined;
 					if (serverGroupId) {
 						setResolvedGroupId(serverGroupId);
-						onUserStateChange?.({ chat_group_id: serverGroupId });
+						onSessionStateChange?.({ chat_group_id: serverGroupId });
 					} else {
 						// No matchmaking group — fall back to session:page
 						setResolvedGroupId(`${sessionId}:${pageId}`);
@@ -108,7 +109,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			return () => {
 				canceled = true;
 			};
-		}, [resolvedGroupId, sessionId, pageId, onUserStateChange]);
+		}, [resolvedGroupId, sessionId, pageId, onSessionStateChange]);
 
 		// Alias for downstream usage
 		const groupId = resolvedGroupId ?? "";
@@ -157,12 +158,12 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 							const session = await getSession(currentSessionId);
 							if (canceled) return;
 
-							const serverGroupId = session.user_state?.chat_group_id as
+							const serverGroupId = session.session_state?.chat_group_id as
 								| string
 								| undefined;
 							if (serverGroupId && serverGroupId !== currentGroupId) {
 								setResolvedGroupId(serverGroupId);
-								onUserStateChange?.({
+								onSessionStateChange?.({
 									chat_group_id: serverGroupId,
 								});
 								return; // Effect will re-run with new groupId
@@ -186,7 +187,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			return () => {
 				canceled = true;
 			};
-		}, [sessionId, groupId, toViewMessage, onUserStateChange]);
+		}, [sessionId, groupId, toViewMessage, onSessionStateChange]);
 
 		// Trigger join agents on mount (after history loads)
 		useEffect(() => {

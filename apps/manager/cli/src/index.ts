@@ -818,7 +818,7 @@ type SessionExport = {
 	configId: string;
 	currentPageId: string;
 	status: string;
-	user_state: Record<string, unknown>;
+	session_state: Record<string, unknown>;
 	prolific: { prolificPid: string; studyId: string; sessionId: string } | null;
 	userId: string | null;
 	createdAt: string | null;
@@ -874,14 +874,14 @@ type WorkspaceDocumentExport = {
 };
 
 function flattenSession(session: SessionExport): Record<string, unknown> {
-	const { user_state, prolific, ...rest } = session;
+	const { session_state, prolific, ...rest } = session;
 
 	const flattened: Record<string, unknown> = { ...rest };
 
-	// Flatten user_state with prefix
-	if (user_state && typeof user_state === "object") {
-		for (const [key, value] of Object.entries(user_state)) {
-			flattened[`user_state.${key}`] = serializeValue(value);
+	// Flatten session_state with prefix
+	if (session_state && typeof session_state === "object") {
+		for (const [key, value] of Object.entries(session_state)) {
+			flattened[`session_state.${key}`] = serializeValue(value);
 		}
 	}
 

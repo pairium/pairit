@@ -58,7 +58,7 @@ pages:
               action:
                 type: go_to
                 branches:
-                  - when: "user_state.age < 18"
+                  - when: "session_state.age < 18"
                     target: ineligible
                   - target: main_survey
 

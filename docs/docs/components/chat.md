@@ -14,7 +14,7 @@ Open a chat view for real-time messaging. Supports human-human chat (via matchma
 
 Chat rooms are identified by `groupId`. The resolution order is:
 
-1. **Matchmaking**: If participant was matched, uses `user_state.chat_group_id` (shared with matched participants)
+1. **Matchmaking**: If participant was matched, uses `session_state.chat_group_id` (shared with matched participants)
 2. **Explicit prop**: If `groupId` prop is set, uses `{sessionId}:{groupId}` (session-scoped)
 3. **Default**: Uses `{sessionId}:{pageId}` (isolated to this session and page)
 
@@ -32,7 +32,7 @@ pages:
 
   - id: discussion
     components:
-      - type: chat  # Uses user_state.chat_group_id from matchmaking
+      - type: chat  # Uses session_state.chat_group_id from matchmaking
 ```
 
 ### Isolated Chat (AI Only)

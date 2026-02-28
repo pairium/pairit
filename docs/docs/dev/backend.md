@@ -42,7 +42,7 @@ Authentication is handled by [Better Auth](https://www.better-auth.com/).
 #### Sessions
 -   `POST /sessions/start`: Start a new session.
     -   Body: `{ configId }`
-    -   Return: `{ status, sessionId, configId, currentPageId, page, config, user_state, endedAt }`
+    -   Return: `{ status, sessionId, configId, currentPageId, page, config, session_state, endedAt }`
 -   `GET /sessions/:id`: Get session state.
 -   `POST /sessions/:id/advance`: Trigger an action.
     -   Body: `{ target, idempotencyKey }`

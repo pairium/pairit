@@ -1,5 +1,5 @@
 /**
- * Simple expression evaluator for branching conditions like "user_state.age < 18"
+ * Simple expression evaluator for branching conditions like "session_state.age < 18"
  */
 
 type ComparisonOp = "==" | "!=" | "<=" | ">=" | "<" | ">";
@@ -54,14 +54,14 @@ function compare(left: unknown, op: ComparisonOp, right: unknown): boolean {
 
 export function evaluateExpression(
 	expr: string,
-	context: { user_state: Record<string, unknown> },
+	context: { session_state: Record<string, unknown> },
 ): boolean {
-	// Parse expressions like "user_state.age < 18"
-	const match = expr.match(/^user_state\.(\w+)\s*(==|!=|<=|>=|<|>)\s*(.+)$/);
+	// Parse expressions like "session_state.age < 18"
+	const match = expr.match(/^session_state\.(\w+)\s*(==|!=|<=|>=|<|>)\s*(.+)$/);
 	if (!match) return false;
 
 	const [, path, op, rawValue] = match;
-	const left = context.user_state[path];
+	const left = context.session_state[path];
 	const right = parseValue(rawValue.trim());
 
 	return compare(left, op as ComparisonOp, right);

@@ -114,7 +114,7 @@ export async function loadSession(sessionId: string): Promise<Session | null> {
 		configId: data.configId,
 		config: data.config,
 		currentPageId: data.currentPageId,
-		user_state: data.user_state,
+		session_state: data.session_state,
 		prolific: data.prolific ?? null,
 		endedAt: data.endedAt ?? undefined,
 		createdAt: data.createdAt,
@@ -132,7 +132,7 @@ async function createSession(
 		configId: session.configId,
 		config: session.config,
 		currentPageId: session.currentPageId,
-		user_state: session.user_state,
+		session_state: session.session_state,
 		prolific: session.prolific ?? null,
 		endedAt: session.endedAt ?? null,
 		userId: session.userId ?? null,
@@ -162,18 +162,18 @@ async function advanceSession(
 	);
 }
 
-export async function updateUserState(
+export async function updateSessionState(
 	sessionId: string,
 	path: string,
 	value: unknown,
 ): Promise<SessionDocument | null> {
 	const collection = await getSessionsCollection();
 	if (path.includes("$") || path.startsWith(".") || path.endsWith(".")) {
-		throw new Error(`Invalid user_state path: ${path}`);
+		throw new Error(`Invalid session_state path: ${path}`);
 	}
 	return await collection.findOneAndUpdate(
 		{ id: sessionId },
-		{ $set: { [`user_state.${path}`]: value, updatedAt: new Date() } },
+		{ $set: { [`session_state.${path}`]: value, updatedAt: new Date() } },
 		{ returnDocument: "after" },
 	);
 }
@@ -235,7 +235,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 						config,
 						currentPageId: existingSession.currentPageId,
 						page,
-						user_state: existingSession.user_state,
+						session_state: existingSession.session_state,
 						endedAt: existingSession.endedAt,
 					};
 				}
@@ -268,7 +268,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				configId: body.configId,
 				config,
 				currentPageId: config.initialPageId,
-				user_state: {},
+				session_state: {},
 				prolific,
 				userId,
 			};
@@ -282,7 +282,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				config,
 				currentPageId: session.currentPageId,
 				page,
-				user_state: session.user_state,
+				session_state: session.session_state,
 			};
 		},
 		{
@@ -317,7 +317,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				currentPageId: session.currentPageId,
 				page,
 				endedAt: session.endedAt ?? null,
-				user_state: session.user_state ?? {},
+				session_state: session.session_state ?? {},
 			};
 		},
 		{
@@ -340,9 +340,9 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				return { error: "not_found" };
 			}
 
-			// Update each field in user_state
+			// Update each field in session_state
 			for (const [path, value] of Object.entries(body.updates)) {
-				await updateUserState(id, path, value);
+				await updateSessionState(id, path, value);
 			}
 
 			return { success: true };
@@ -379,7 +379,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 					currentPageId: session.currentPageId,
 					page,
 					endedAt: session.endedAt ?? null,
-					user_state: session.user_state ?? {},
+					session_state: session.session_state ?? {},
 					deduplicated: true,
 				};
 			}
@@ -411,7 +411,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				currentPageId: updated.currentPageId,
 				page,
 				endedAt: updated.endedAt ?? null,
-				user_state: updated.user_state ?? {},
+				session_state: updated.session_state ?? {},
 			};
 		},
 		{

@@ -9,7 +9,7 @@ import { getSessionsCollection } from "./db";
  * Verify that a session is a member of a group.
  * - Human-AI chat: groupId === sessionId (legacy)
  * - Session-scoped: groupId starts with "sessionId:"
- * - Matchmaking: session.user_state.chat_group_id === groupId
+ * - Matchmaking: session.session_state.chat_group_id === groupId
  */
 export async function verifyMembership(
 	sessionId: string,
@@ -29,7 +29,7 @@ export async function verifyMembership(
 		return false;
 	}
 
-	return session.user_state?.chat_group_id === groupId;
+	return session.session_state?.chat_group_id === groupId;
 }
 
 /**
@@ -45,7 +45,7 @@ export async function getGroupMembers(groupId: string): Promise<string[]> {
 
 	const sessionsCollection = await getSessionsCollection();
 	const sessions = await sessionsCollection
-		.find({ "user_state.chat_group_id": groupId })
+		.find({ "session_state.chat_group_id": groupId })
 		.project({ id: 1 })
 		.toArray();
 

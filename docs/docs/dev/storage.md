@@ -9,7 +9,7 @@ All data is stored in MongoDB.
 -   **`configs`**: Published experiment configurations.
     -   Schema: `{ configId, owner, config, checksum, metadata, requireAuth, allowRetake, createdAt, updatedAt }`
 -   **`sessions`**: Participant experimentation sessions (application state).
-    -   Schema: `{ id, configId, config, currentPageId, user_state, prolific?, userId?, endedAt?, createdAt, updatedAt }`
+    -   Schema: `{ id, configId, config, currentPageId, session_state, prolific?, userId?, endedAt?, createdAt, updatedAt }`
 -   **`events`**: Audit events and telemetry.
     -   Schema: `{ sessionId, configId, pageId, componentType, componentId, type, timestamp, data, createdAt }`
 -   **`chat_messages`**: Chat message history.

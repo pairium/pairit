@@ -14,7 +14,7 @@ Document all completed P0 features to close out the P0 milestone. Based on git h
 ### 2. Complete concepts.md empty sections
 Three sections are stubs with just headers:
 - **Flow Logic**: Document page transitions, button targets, conditional navigation
-- **User State**: Document `user_state` object, state persistence, `stateKey` patterns
+- **Session State**: Document `session_state` object, state persistence, `stateKey` patterns
 - **Randomization**: Document treatment assignment, conditions array, assignment types
 
 ### 3. Create randomization.md component doc

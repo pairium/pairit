@@ -37,7 +37,7 @@ type StartResponse = {
 	config: CompiledConfig;
 	currentPageId: string;
 	page: Page;
-	user_state?: Record<string, unknown>;
+	session_state?: Record<string, unknown>;
 	endedAt?: string | null;
 	error?: string;
 	message?: string;
@@ -47,7 +47,7 @@ type GetResponse = {
 	currentPageId: string;
 	page: Page;
 	endedAt: string | null;
-	user_state?: Record<string, unknown>;
+	session_state?: Record<string, unknown>;
 };
 type AdvanceResponse = GetResponse;
 type SubmitEventResponse = { eventId: string };

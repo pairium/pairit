@@ -22,7 +22,7 @@ Conditionally highlight a button based on user state. When the specified state k
 buttons:
   - id: finish
     text: "Finish Chat"
-    highlightWhen: chat_ended  # Highlights when user_state.chat_ended is truthy
+    highlightWhen: chat_ended  # Highlights when session_state.chat_ended is truthy
     action: { type: go_to, target: outro }
 ```
 
@@ -31,7 +31,7 @@ This is useful for:
 - Indicating when a required condition is met
 - Guiding participants to the next action
 
-The highlight check is simple: if `user_state.{highlightWhen}` is truthy, the button is highlighted.
+The highlight check is simple: if `session_state.{highlightWhen}` is truthy, the button is highlighted.
 
 ## Events
 - `onClick`: emitted when button is clicked (default event type: "button_click")

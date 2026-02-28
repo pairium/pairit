@@ -36,7 +36,7 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 		}
 
 		// Idempotent: return existing assignment if present
-		const existingValue = session.user_state?.[stateKey];
+		const existingValue = session.session_state?.[stateKey];
 		if (existingValue) {
 			return {
 				condition: existingValue as string,
@@ -46,13 +46,13 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 
 		if (scope === "group") {
 			// Group-level randomization: all members get the same treatment
-			const groupId = session.user_state?.group_id as string | undefined;
+			const groupId = session.session_state?.group_id as string | undefined;
 			if (!groupId) {
 				set.status = 400;
 				return {
 					error: "no_group",
 					message:
-						"Session has no group_id in user_state. Group-scoped randomization requires matchmaking first.",
+						"Session has no group_id in session_state. Group-scoped randomization requires matchmaking first.",
 				};
 			}
 
@@ -60,12 +60,12 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 
 			// Check if any group member already has an assignment
 			const existingMember = await sessionsCollection.findOne({
-				"user_state.group_id": groupId,
-				[`user_state.${stateKey}`]: { $exists: true, $ne: null },
+				"session_state.group_id": groupId,
+				[`session_state.${stateKey}`]: { $exists: true, $ne: null },
 			});
 
 			if (existingMember) {
-				const existingCondition = existingMember.user_state?.[
+				const existingCondition = existingMember.session_state?.[
 					stateKey
 				] as string;
 
@@ -74,7 +74,7 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 					{ id },
 					{
 						$set: {
-							[`user_state.${stateKey}`]: existingCondition,
+							[`session_state.${stateKey}`]: existingCondition,
 							updatedAt: new Date(),
 						},
 					},
@@ -92,10 +92,10 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 			);
 
 			await sessionsCollection.updateMany(
-				{ "user_state.group_id": groupId },
+				{ "session_state.group_id": groupId },
 				{
 					$set: {
-						[`user_state.${stateKey}`]: treatment,
+						[`session_state.${stateKey}`]: treatment,
 						updatedAt: new Date(),
 					},
 				},
@@ -122,7 +122,7 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 			{ id },
 			{
 				$set: {
-					[`user_state.${stateKey}`]: treatment,
+					[`session_state.${stateKey}`]: treatment,
 					updatedAt: new Date(),
 				},
 			},

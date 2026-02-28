@@ -97,12 +97,12 @@ export async function getAgentById(
 export async function getSessionConfig(sessionId: string): Promise<{
 	configId: string;
 	currentPageId: string;
-	userState: Record<string, unknown> | undefined;
+	sessionState: Record<string, unknown> | undefined;
 } | null> {
 	const collection = await getSessionsCollection();
 	const session = await collection.findOne(
 		{ id: sessionId },
-		{ projection: { configId: 1, currentPageId: 1, user_state: 1 } },
+		{ projection: { configId: 1, currentPageId: 1, session_state: 1 } },
 	);
 
 	if (!session) return null;
@@ -110,7 +110,7 @@ export async function getSessionConfig(sessionId: string): Promise<{
 	return {
 		configId: session.configId,
 		currentPageId: session.currentPageId,
-		userState: session.user_state as Record<string, unknown> | undefined,
+		sessionState: session.session_state as Record<string, unknown> | undefined,
 	};
 }
 

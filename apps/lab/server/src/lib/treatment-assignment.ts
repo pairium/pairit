@@ -36,14 +36,14 @@ async function rebuildFromSessions(
 	const collection = await getSessionsCollection();
 	const sessions = await collection
 		.find(
-			{ configId, [`user_state.${stateKey}`]: { $exists: true } },
-			{ projection: { [`user_state.${stateKey}`]: 1 } },
+			{ configId, [`session_state.${stateKey}`]: { $exists: true } },
+			{ projection: { [`session_state.${stateKey}`]: 1 } },
 		)
 		.toArray();
 
 	const counts = new Map(conditions.map((c) => [c, 0]));
 	for (const session of sessions) {
-		const value = session.user_state?.[stateKey] as string;
+		const value = session.session_state?.[stateKey] as string;
 		if (value && counts.has(value)) {
 			counts.set(value, (counts.get(value) ?? 0) + 1);
 		}

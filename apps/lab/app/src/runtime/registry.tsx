@@ -10,8 +10,8 @@ export interface RuntimeComponentContext {
 	onAction: (action: ButtonAction) => void | Promise<void>;
 	registerNavigationGuard: (guard: NavigationGuard) => () => void;
 	sessionId?: string | null;
-	userState?: Record<string, unknown>;
-	onUserStateChange?: (updates: Record<string, unknown>) => void;
+	sessionState?: Record<string, unknown>;
+	onSessionStateChange?: (updates: Record<string, unknown>) => void;
 	pageId?: string;
 }
 
