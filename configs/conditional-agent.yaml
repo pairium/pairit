@@ -1,0 +1,82 @@
+schema_version: 0.1.0
+allowRetake: true
+initialPageId: pick
+
+pages:
+  - id: pick
+    components:
+      - type: text
+        props:
+          text: |
+            # Conditional Agent Demo
+
+            Pick your favorite dish, then chat with the chef.
+      - type: survey
+        props:
+          items:
+            - id: dish
+              text: "What's your favorite dish?"
+              answer:
+                multiple_choice:
+                  choices:
+                    - Pizza
+                    - Sushi
+                    - Tacos
+      - type: buttons
+        props:
+          buttons:
+            - id: go
+              text: "Chat with the chef"
+              action:
+                type: go_to
+                target: chat
+
+  - id: chat
+    components:
+      - type: chat
+        props:
+          agents:
+            - chef
+      - type: buttons
+        props:
+          buttons:
+            - id: done
+              text: "Done"
+              action:
+                type: go_to
+                target: thanks
+
+  - id: thanks
+    end: true
+    components:
+      - type: text
+        props:
+          text: "Thanks! You picked **{{user_state.dish}}**."
+
+agents:
+  - id: chef
+    model: gpt-4o-mini
+    trigger: on_join
+    system: You are a chef.
+    prompts:
+      - when: "user_state.dish == 'Pizza'"
+        system: |
+          You are an enthusiastic Italian chef. The participant just told you
+          they love pizza. Greet them by raving about pizza — mention your
+          favorite toppings, dough technique, etc. Keep it to 2-3 sentences.
+          Always talk about pizza in every response.
+      - when: "user_state.dish == 'Sushi'"
+        system: |
+          You are a Japanese sushi master. The participant just told you
+          they love sushi. Greet them by sharing your passion for sushi —
+          mention fresh fish, rice preparation, etc. Keep it to 2-3 sentences.
+          Always talk about sushi in every response.
+      - when: "user_state.dish == 'Tacos'"
+        system: |
+          You are a Mexican street food chef. The participant just told you
+          they love tacos. Greet them by celebrating tacos — mention salsas,
+          tortillas, fillings, etc. Keep it to 2-3 sentences.
+          Always talk about tacos in every response.
+      - system: |
+          You are a friendly chef. Greet the participant and ask what
+          kind of food they enjoy. Keep it to 2-3 sentences.

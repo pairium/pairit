@@ -27,6 +27,7 @@ export type AgentConfig = {
 		description: string;
 		parameters?: Record<string, unknown>;
 	}>;
+	prompts?: Array<{ when?: string; system: string }>;
 };
 
 export type ChatMessage = {

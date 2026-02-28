@@ -22,6 +22,7 @@ type RawAgent = {
 		description: string;
 		parameters?: Record<string, unknown>;
 	}>;
+	prompts?: Array<{ when?: string; system: string }>;
 };
 
 function isValidAgent(raw: unknown): raw is RawAgent {
@@ -45,6 +46,7 @@ function toAgentConfig(raw: RawAgent): AgentConfig {
 		guardrails: raw.guardrails,
 		reasoningEffort: raw.reasoningEffort,
 		tools: raw.tools,
+		prompts: raw.prompts,
 	};
 }
 
@@ -92,13 +94,15 @@ export async function getAgentById(
 	return agents.find((a) => a.id === agentId) ?? null;
 }
 
-export async function getSessionConfig(
-	sessionId: string,
-): Promise<{ configId: string; currentPageId: string } | null> {
+export async function getSessionConfig(sessionId: string): Promise<{
+	configId: string;
+	currentPageId: string;
+	userState: Record<string, unknown> | undefined;
+} | null> {
 	const collection = await getSessionsCollection();
 	const session = await collection.findOne(
 		{ id: sessionId },
-		{ projection: { configId: 1, currentPageId: 1 } },
+		{ projection: { configId: 1, currentPageId: 1, user_state: 1 } },
 	);
 
 	if (!session) return null;
@@ -106,6 +110,7 @@ export async function getSessionConfig(
 	return {
 		configId: session.configId,
 		currentPageId: session.currentPageId,
+		userState: session.user_state as Record<string, unknown> | undefined,
 	};
 }
 

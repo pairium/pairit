@@ -13,6 +13,7 @@ import {
 import { getGroupMembers } from "./groups";
 import type { AgentConfig, ChatMessage, ReplyCondition, Trigger } from "./llm";
 import { streamAgentResponse } from "./llm";
+import { resolveSystemPrompt } from "./prompt-resolver";
 import { broadcastToSession, getConnectionCount } from "./sse";
 
 const AGENT_TIMEOUT_MS = 60_000;
@@ -96,7 +97,7 @@ export async function triggerAgents(
 		return;
 	}
 
-	const { configId, currentPageId } = sessionConfig;
+	const { configId, currentPageId, userState } = sessionConfig;
 
 	const agentIds = await getPageAgentIds(configId, currentPageId);
 	if (agentIds.length === 0) {
@@ -137,6 +138,7 @@ export async function triggerAgents(
 			requireHistory: true,
 			configId,
 			pageId: currentPageId,
+			userState,
 		});
 	}
 }
@@ -164,7 +166,7 @@ export async function triggerJoinAgents(
 		return;
 	}
 
-	const { configId, currentPageId } = sessionConfig;
+	const { configId, currentPageId, userState } = sessionConfig;
 
 	const agentIds = await getPageAgentIds(configId, currentPageId);
 	if (agentIds.length === 0) {
@@ -188,12 +190,14 @@ export async function triggerJoinAgents(
 				requireHistory: false,
 				configId,
 				pageId: currentPageId,
+				userState,
 			});
 		} else if (isLegacy && existingCount === 0) {
 			await runAgent(agent, groupId, sessionId, {
 				requireHistory: false,
 				configId,
 				pageId: currentPageId,
+				userState,
 			});
 		}
 	}
@@ -203,6 +207,7 @@ type RunAgentOptions = {
 	requireHistory?: boolean;
 	configId?: string;
 	pageId?: string;
+	userState?: Record<string, unknown>;
 };
 
 async function runAgent(
@@ -241,8 +246,15 @@ async function runAgent(
 			return;
 		}
 
+		// Resolve conditional prompts and interpolate user_state
+		const resolvedSystem = resolveSystemPrompt(
+			agent.system,
+			agent.prompts,
+			options.userState,
+		);
+
 		// Build system prompt: guardrail prefix + experimenter prompt + workspace
-		const agentWithContext = { ...agent };
+		const agentWithContext = { ...agent, system: resolvedSystem };
 
 		// Prepend guardrail instructions unless explicitly opted out
 		if (agent.guardrails !== false) {
@@ -253,7 +265,7 @@ async function runAgent(
 				"- Stay in your assigned role. Do not pretend to be a researcher or experiment administrator.",
 				"- Do not make promises or commitments on behalf of the research team.",
 			].join("\n");
-			agentWithContext.system = `${guardrailPrefix}\n\n${agent.system}`;
+			agentWithContext.system = `${guardrailPrefix}\n\n${resolvedSystem}`;
 		}
 
 		// Inject workspace content into agent system prompt if available
