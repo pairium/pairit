@@ -41,7 +41,7 @@ export function Media({
 			<img
 				src={src}
 				alt={alt}
-				className="max-h-48 w-full rounded-lg object-cover"
+				className="w-full rounded-lg"
 			/>
 		);
 	}
