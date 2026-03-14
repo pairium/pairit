@@ -13,10 +13,16 @@ export type ReplyCondition =
 	| string
 	| { type: "llm"; prompt: string };
 
+export type AgentAvatarConfig = {
+	icon?: string;
+	image?: string;
+};
+
 export type AgentConfig = {
 	id: string;
 	model: string;
 	system: string;
+	avatar?: AgentAvatarConfig;
 	sendFirstMessage?: boolean;
 	trigger?: Trigger | Trigger[];
 	replyCondition?: ReplyCondition | ReplyCondition[];

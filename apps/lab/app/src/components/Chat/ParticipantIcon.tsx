@@ -1,13 +1,15 @@
 /**
- * ParticipantIcon - Displays an icon for a chat participant
+ * ParticipantIcon - Displays an icon or image for a chat participant
  */
 
-import { getChatIcon } from "@app/lib/participant-icons";
+import type { ChatAvatarOverrides } from "@app/lib/participant-icons";
+import { resolveChatAvatar } from "@app/lib/participant-icons";
 
 type ParticipantIconProps = {
 	senderId: string;
 	senderType: "participant" | "agent" | "system";
 	isOwn: boolean;
+	avatars?: ChatAvatarOverrides;
 	size?: number;
 	className?: string;
 };
@@ -16,25 +18,34 @@ export function ParticipantIcon({
 	senderId,
 	senderType,
 	isOwn,
+	avatars,
 	size = 20,
 	className = "",
 }: ParticipantIconProps) {
-	const Icon = getChatIcon(senderId, senderType, isOwn);
+	const avatar = resolveChatAvatar({ senderId, senderType, isOwn, avatars });
 
-	if (!Icon) {
+	if (!avatar) {
 		return null;
 	}
 
-	// Own messages get dark background to match bubble
 	const bgClass = isOwn ? "bg-slate-700" : "bg-slate-100";
 	const iconClass = isOwn ? "text-white" : "text-slate-600";
+	const wrapperStyle = { width: size + 8, height: size + 8 };
 
 	return (
 		<div
-			className={`flex shrink-0 items-center justify-center rounded-full ${bgClass} ${className}`}
-			style={{ width: size + 8, height: size + 8 }}
+			className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full ${bgClass} ${className}`}
+			style={wrapperStyle}
 		>
-			<Icon size={size} className={iconClass} />
+			{avatar.type === "image" ? (
+				<img
+					src={avatar.src}
+					alt=""
+					className="h-full w-full object-cover"
+				/>
+			) : (
+				<avatar.icon size={size} className={iconClass} />
+			)}
 		</div>
 	);
 }

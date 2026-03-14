@@ -10,6 +10,8 @@ Define agents in your experiment config's `agents` array:
 agents:
   - id: assistant
     model: gpt-4o
+    avatar:
+      icon: bot
     system: |
       You are a helpful research assistant participating in a group discussion.
       Be concise and stay on topic.
@@ -32,6 +34,31 @@ agents:
               type: number
 ```
 
+## Avatars
+
+Agents can define an optional `avatar` used in chat UIs.
+
+```yaml
+agents:
+  - id: tutor
+    model: gpt-4o
+    avatar:
+      icon: graduation-cap
+    system: You are a tutor.
+
+  - id: chef
+    model: gpt-4o
+    avatar:
+      image: /images/chef.png
+    system: You are a chef.
+```
+
+Notes:
+- `avatar.icon` uses a Lucide icon name. Kebab-case like `graduation-cap` is recommended.
+- `avatar.image` can be a relative public path like `/images/chef.png` or another image URL.
+- If both are provided, `image` wins.
+- If no avatar is set, agents use the default bot icon.
+
 ## Models
 
 Agents support both OpenAI and Anthropic models. The provider is inferred from the model name:
@@ -53,6 +80,7 @@ Agents support both OpenAI and Anthropic models. The provider is inferred from t
 | `id` | string | required | Unique identifier for the agent |
 | `model` | string | required | Model name (e.g., `gpt-4o`, `claude-sonnet-4-5-20250929`) |
 | `system` | string | required | System prompt defining the agent's role and behavior |
+| `avatar` | object | - | Optional chat avatar for this agent. Supports `icon` (Lucide icon name) or `image` (URL/path). |
 | `trigger` | string \| object \| array | `every_message` | When to potentially run the agent. See [Triggers](#triggers). |
 | `replyCondition` | string \| object \| array | `always` | Whether the agent actually responds once triggered. See [Reply Conditions](#reply-conditions). |
 | `sendFirstMessage` | boolean | `false` | **Legacy.** Sends an opening message when chat loads and room is empty. Ignored if `trigger` is set. |

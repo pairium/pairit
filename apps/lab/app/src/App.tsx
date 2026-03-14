@@ -248,6 +248,7 @@ export default function App() {
 						onAction={onAction}
 						sessionId={sessionId}
 						sessionState={sessionState}
+						compiledConfig={compiledConfig}
 						onSessionStateChange={(updates) =>
 							setSessionState((prev) => ({ ...prev, ...updates }))
 						}

@@ -49,6 +49,11 @@ export type EventDocument = {
 	createdAt: Date;
 };
 
+export type ChatMessageAvatar = {
+	icon?: string;
+	image?: string;
+};
+
 export type ChatMessageDocument = {
 	_id?: ObjectId;
 	groupId: string;
@@ -57,6 +62,7 @@ export type ChatMessageDocument = {
 	senderType: "participant" | "agent" | "system";
 	content: string;
 	createdAt: Date;
+	avatar?: ChatMessageAvatar;
 	idempotencyKey?: string;
 };
 

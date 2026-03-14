@@ -3,6 +3,7 @@
  * Displays messages and input field with auto-scroll
  */
 
+import type { ChatAvatarOverrides } from "@app/lib/participant-icons";
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import { ParticipantIcon } from "./ParticipantIcon";
@@ -29,6 +30,7 @@ export type ChatViewProps = {
 	disabled?: boolean;
 	placeholder?: string;
 	streamingMessage?: StreamingMessage | null;
+	avatars?: ChatAvatarOverrides;
 };
 
 export function ChatView({
@@ -37,18 +39,16 @@ export function ChatView({
 	disabled = false,
 	placeholder = "Type a message...",
 	streamingMessage,
+	avatars,
 }: ChatViewProps) {
 	const [input, setInput] = useState("");
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLTextAreaElement>(null);
 
-	// Auto-scroll to bottom when new messages arrive or streaming updates
-	// biome-ignore lint/correctness/useExhaustiveDependencies: We intentionally trigger scroll on messages.length and streaming changes
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 	}, [messages.length, streamingMessage?.content]);
 
-	// Focus input on mount
 	useEffect(() => {
 		inputRef.current?.focus();
 	}, []);
@@ -71,7 +71,6 @@ export function ChatView({
 
 	return (
 		<div className="flex h-[500px] flex-col rounded-2xl border border-slate-200 bg-white">
-			{/* Messages area */}
 			<div className="flex-1 space-y-3 overflow-y-auto p-4">
 				{messages.length === 0 && (
 					<div className="flex h-full items-center justify-center text-sm text-slate-400">
@@ -79,13 +78,18 @@ export function ChatView({
 					</div>
 				)}
 				{messages.map((message) => (
-					<MessageBubble key={message.messageId} message={message} />
+					<MessageBubble
+						key={message.messageId}
+						message={message}
+						avatars={avatars}
+					/>
 				))}
-				{streamingMessage && <StreamingBubble message={streamingMessage} />}
+				{streamingMessage && (
+					<StreamingBubble message={streamingMessage} avatars={avatars} />
+				)}
 				<div ref={messagesEndRef} />
 			</div>
 
-			{/* Input area */}
 			<form
 				onSubmit={handleSubmit}
 				className="flex gap-2 border-t border-slate-200 p-4"
@@ -112,30 +116,31 @@ export function ChatView({
 	);
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({
+	message,
+	avatars,
+}: {
+	message: ChatMessage;
+	avatars?: ChatAvatarOverrides;
+}) {
 	const isOwn = message.isOwn;
 	const isAgent = message.senderType === "agent";
 	const isSystem = message.senderType === "system";
 
-	// Determine bubble styling
 	let bubbleClasses = "max-w-[80%] rounded-2xl px-4 py-2 text-sm";
 	let alignmentClasses = "flex items-start gap-2";
 
 	if (isSystem) {
-		// System messages: centered, muted
 		alignmentClasses = "flex justify-center";
 		bubbleClasses =
 			"rounded-lg bg-slate-100 px-3 py-1.5 text-xs text-slate-500 italic";
 	} else if (isOwn) {
-		// Own messages: right-aligned, dark background
 		alignmentClasses = "flex items-start justify-end gap-2";
 		bubbleClasses += " bg-slate-700 text-white";
 	} else if (isAgent) {
-		// Agent messages: left-aligned, light background
 		alignmentClasses = "flex items-start justify-start gap-2";
 		bubbleClasses += " bg-slate-100 text-slate-900";
 	} else {
-		// Other participant messages: left-aligned, light background
 		alignmentClasses = "flex items-start justify-start gap-2";
 		bubbleClasses += " bg-slate-200 text-slate-900";
 	}
@@ -147,6 +152,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 					senderId={message.senderId}
 					senderType={message.senderType}
 					isOwn={false}
+					avatars={avatars}
 				/>
 			)}
 			<div className={bubbleClasses}>
@@ -156,7 +162,6 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 					{isOwn ? (
 						<Markdown
 							components={{
-								// Override text color for dark backgrounds
 								p: ({ children }) => <p className="text-inherit">{children}</p>,
 								a: ({ children, href }) => (
 									<a
@@ -187,19 +192,27 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 					senderId={message.senderId}
 					senderType={message.senderType}
 					isOwn={true}
+					avatars={avatars}
 				/>
 			)}
 		</div>
 	);
 }
 
-function StreamingBubble({ message }: { message: StreamingMessage }) {
+function StreamingBubble({
+	message,
+	avatars,
+}: {
+	message: StreamingMessage;
+	avatars?: ChatAvatarOverrides;
+}) {
 	return (
 		<div className="flex items-start justify-start gap-2">
 			<ParticipantIcon
 				senderId={message.senderId}
 				senderType={message.senderType}
 				isOwn={false}
+				avatars={avatars}
 			/>
 			<div className="max-w-[80%] rounded-2xl bg-slate-100 px-4 py-2 text-sm text-slate-900">
 				<div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-headings:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">

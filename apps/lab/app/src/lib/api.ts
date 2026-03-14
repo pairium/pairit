@@ -126,6 +126,11 @@ export async function updateState(
 
 // Chat API
 
+export type ChatAvatar = {
+	icon?: string;
+	image?: string;
+};
+
 export type ChatMessage = {
 	messageId: string;
 	groupId: string;
@@ -134,6 +139,7 @@ export type ChatMessage = {
 	senderType: "participant" | "agent" | "system";
 	content: string;
 	createdAt: string;
+	avatar?: ChatAvatar;
 };
 
 type SendChatMessageResponse = {

@@ -144,6 +144,7 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 					senderType: msg.senderType,
 					content: msg.content,
 					createdAt: msg.createdAt.toISOString(),
+					avatar: msg.avatar,
 				})),
 			};
 		},

@@ -6,6 +6,8 @@ export type NavigationGuard = (
 	action: ButtonAction,
 ) => boolean | undefined | Promise<boolean | undefined>;
 
+import type { CompiledConfig } from "./config";
+
 export interface RuntimeComponentContext {
 	onAction: (action: ButtonAction) => void | Promise<void>;
 	registerNavigationGuard: (guard: NavigationGuard) => () => void;
@@ -13,6 +15,7 @@ export interface RuntimeComponentContext {
 	sessionState?: Record<string, unknown>;
 	onSessionStateChange?: (updates: Record<string, unknown>) => void;
 	pageId?: string;
+	compiledConfig?: CompiledConfig | null;
 }
 
 export type RuntimeComponentRenderer<

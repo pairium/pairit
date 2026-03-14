@@ -65,12 +65,17 @@ function coerceConfig(raw: unknown): Config | null {
 
 async function loadConfig(
 	configId: string,
-): Promise<{ config: Config; allowRetake: boolean } | null> {
+): Promise<{ config: Session["config"]; allowRetake: boolean } | null> {
 	const collection = await getConfigsCollection();
 	const data = await collection.findOne({ configId });
 	if (data && typeof data.config !== "undefined") {
 		const config = coerceConfig(data.config);
-		if (config) return { config, allowRetake: data.allowRetake ?? false };
+		if (config) {
+			return {
+				config: data.config as Session["config"],
+				allowRetake: data.allowRetake ?? false,
+			};
+		}
 	}
 	return null;
 }

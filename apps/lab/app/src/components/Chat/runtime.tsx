@@ -3,6 +3,7 @@
  * Handles SSE subscription, message history, and event emission
  */
 
+import type { ChatAvatarOverrides } from "@app/lib/participant-icons";
 import {
 	type ChatMessage as ApiChatMessage,
 	getChatHistory,
@@ -14,12 +15,13 @@ import {
 } from "@app/lib/api";
 import { sseClient } from "@app/lib/sse";
 import { defineRuntimeComponent } from "@app/runtime/define-runtime-component";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type ChatMessage, ChatView } from "./ChatView";
 
 type ChatProps = {
 	placeholder?: string;
 	groupId?: string;
+	avatars?: ChatAvatarOverrides;
 };
 
 type SSEChatMessage = {
@@ -55,7 +57,13 @@ type StreamingMessage = {
 export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 	type: "chat",
 	renderer: ({ component, context }) => {
-		const { sessionId, sessionState, onSessionStateChange, pageId } = context;
+		const {
+			sessionId,
+			sessionState,
+			onSessionStateChange,
+			pageId,
+			compiledConfig,
+		} = context;
 		const [messages, setMessages] = useState<ChatMessage[]>([]);
 		const [loading, setLoading] = useState(true);
 		const [chatDisabled, setChatDisabled] = useState(false);
@@ -64,19 +72,39 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 		const seenMessageIds = useRef<Set<string>>(new Set());
 		const hasTriggeredAgents = useRef(false);
 
-		// Resolve groupId asynchronously: sessionState (matchmaking) > server fetch > explicit prop > session:page fallback
+		const mergedAvatars = useMemo<ChatAvatarOverrides>(() => {
+			const configAgents: Record<string, NonNullable<ChatAvatarOverrides["agent"]>> =
+				Object.fromEntries(
+					(compiledConfig?.agents ?? [])
+						.filter(
+							(agent): agent is {
+								id: string;
+								avatar: NonNullable<ChatAvatarOverrides["agent"]>;
+							} => Boolean(agent.avatar),
+						)
+						.map((agent) => [agent.id, agent.avatar]),
+				);
+
+			return {
+				...component.props.avatars,
+				agents: {
+					...configAgents,
+					...component.props.avatars?.agents,
+				},
+			};
+		}, [compiledConfig?.agents, component.props.avatars]);
+
 		const [resolvedGroupId, setResolvedGroupId] = useState<string | null>(
 			() => {
 				if (sessionState?.chat_group_id)
 					return sessionState.chat_group_id as string;
 				if (component.props.groupId)
 					return `${sessionId}:${component.props.groupId}`;
-				return null; // Need to check server
+				return null;
 			},
 		);
 
 		useEffect(() => {
-			// Already resolved synchronously, or no session
 			if (resolvedGroupId || !sessionId) return;
 
 			let canceled = false;
@@ -94,13 +122,11 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 						setResolvedGroupId(serverGroupId);
 						onSessionStateChange?.({ chat_group_id: serverGroupId });
 					} else {
-						// No matchmaking group — fall back to session:page
 						setResolvedGroupId(`${sessionId}:${pageId}`);
 					}
 				} catch (error) {
 					if (canceled) return;
 					console.error("[Chat] Failed to fetch session for groupId:", error);
-					// Fall back so chat still renders
 					setResolvedGroupId(`${sessionId}:${pageId}`);
 				}
 			}
@@ -111,10 +137,8 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			};
 		}, [resolvedGroupId, sessionId, pageId, onSessionStateChange]);
 
-		// Alias for downstream usage
 		const groupId = resolvedGroupId ?? "";
 
-		// Convert API message to ChatMessage with isOwn flag
 		const toViewMessage = useCallback(
 			(msg: ApiChatMessage | SSEChatMessage): ChatMessage => ({
 				messageId: msg.messageId,
@@ -127,7 +151,6 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			[sessionId],
 		);
 
-		// Load history on mount
 		useEffect(() => {
 			if (!sessionId || !groupId) return;
 
@@ -143,7 +166,6 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 					);
 					if (canceled) return;
 
-					// Track seen message IDs
 					for (const msg of history) {
 						seenMessageIds.current.add(msg.messageId);
 					}
@@ -153,7 +175,6 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 					if (canceled) return;
 
 					if (error instanceof NotAMemberError) {
-						// Re-fetch server state — groupId may be stale
 						try {
 							const session = await getSession(currentSessionId);
 							if (canceled) return;
@@ -166,7 +187,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 								onSessionStateChange?.({
 									chat_group_id: serverGroupId,
 								});
-								return; // Effect will re-run with new groupId
+								return;
 							}
 						} catch (fetchError) {
 							console.error(
@@ -189,14 +210,12 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			};
 		}, [sessionId, groupId, toViewMessage, onSessionStateChange]);
 
-		// Trigger join agents on mount (after history loads)
 		useEffect(() => {
 			if (!sessionId || !groupId || loading) return;
 			if (hasTriggeredAgents.current) return;
 
 			hasTriggeredAgents.current = true;
 
-			// Small delay to ensure SSE connection is ready
 			const timer = setTimeout(() => {
 				startChatAgents(groupId, sessionId).catch((error) => {
 					console.error("[Chat] Failed to start agents:", error);
@@ -206,7 +225,6 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			return () => clearTimeout(timer);
 		}, [loading, sessionId, groupId]);
 
-		// Subscribe to SSE chat_ended events
 		useEffect(() => {
 			if (!sessionId || !groupId) return;
 
@@ -220,7 +238,6 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			return unsubscribe;
 		}, [sessionId, groupId]);
 
-		// Subscribe to SSE chat_stream_end events (tool-only responses)
 		useEffect(() => {
 			if (!sessionId || !groupId) return;
 
@@ -234,14 +251,11 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			return unsubscribe;
 		}, [sessionId, groupId]);
 
-		// Subscribe to SSE chat_message_delta events (streaming)
 		useEffect(() => {
 			if (!sessionId || !groupId) return;
 
 			const unsubscribe = sseClient.on("chat_message_delta", (data) => {
 				const delta = data as SSEChatMessageDelta;
-
-				// Only process deltas for our group
 				if (delta.groupId !== groupId) return;
 
 				setStreamingMessage({
@@ -255,7 +269,6 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			return unsubscribe;
 		}, [sessionId, groupId]);
 
-		// Subscribe to SSE chat_message events
 		useEffect(() => {
 			if (!sessionId || !groupId) return;
 
@@ -263,25 +276,17 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 
 			const unsubscribe = sseClient.on("chat_message", (data) => {
 				const message = data as SSEChatMessage;
-
-				// Only process messages for our group
 				if (message.groupId !== groupId) return;
-
-				// Skip own messages — they are added directly in handleSend
 				if (message.senderId === currentSessionId) return;
-
-				// Dedupe by messageId
 				if (seenMessageIds.current.has(message.messageId)) return;
 				seenMessageIds.current.add(message.messageId);
 
-				// Clear streaming message when final message arrives from agent
 				if (message.senderType === "agent") {
 					setStreamingMessage(null);
 				}
 
 				setMessages((prev) => [...prev, toViewMessage(message)]);
 
-				// Emit onMessageReceive event if configured
 				if (
 					component.events?.onMessageReceive &&
 					message.senderId !== currentSessionId
@@ -302,7 +307,6 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			return unsubscribe;
 		}, [sessionId, groupId, toViewMessage, component.events, component.id]);
 
-		// Handle sending messages
 		const handleSend = useCallback(
 			async (content: string) => {
 				if (!sessionId || !groupId) return;
@@ -310,8 +314,6 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 				try {
 					const result = await sendChatMessage(groupId, sessionId, content);
 
-					// Add to local state immediately using the server-assigned messageId.
-					// The SSE bounce-back will be deduped by seenMessageIds.
 					seenMessageIds.current.add(result.messageId);
 					setMessages((prev) => [
 						...prev,
@@ -325,7 +327,6 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 						},
 					]);
 
-					// Emit onMessageSend event if configured
 					if (component.events?.onMessageSend) {
 						void emitChatEvent(
 							component.id,
@@ -367,6 +368,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 				placeholder={component.props.placeholder}
 				disabled={chatDisabled}
 				streamingMessage={streamingMessage}
+				avatars={mergedAvatars}
 			/>
 		);
 	},

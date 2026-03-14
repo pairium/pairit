@@ -17,6 +17,8 @@ pages:
             1. **Greeter** — `trigger: on_join` — sends a message every time the chat page loads, even if there's already chat history. Try navigating away and back.
             2. **Coach** — `trigger: { every: 3 }` — stays silent until every 3rd participant message, then gives feedback. Count your messages!
             3. **Facilitator** — `replyCondition: "Reply only if the participant asked a direct question or seems stuck."` — receives every message but uses an LLM check to decide whether to actually respond. Try sending statements vs. questions.
+
+            This config also assigns custom avatars to each agent so you can visually test chat avatars, including one image-based avatar.
       - type: buttons
         props:
           buttons:
@@ -113,6 +115,8 @@ agents:
   # Greets every time the chat page loads, even with existing history
   - id: greeter
     model: "gpt-5-mini"
+    avatar:
+      icon: hand
     trigger: on_join
     system: |
       You are a friendly greeter. Say a brief welcome message (one sentence).
@@ -120,6 +124,8 @@ agents:
   # Only responds every 3 participant messages
   - id: coach
     model: "gpt-5-mini"
+    avatar:
+      icon: badge-help
     trigger:
       every: 3
     system: |
@@ -129,6 +135,8 @@ agents:
   # Responds to every message but only when the LLM thinks it's appropriate
   - id: facilitator
     model: "gpt-5-mini"
+    avatar:
+      image: https://placehold.co/64x64/png
     trigger: every_message
     replyCondition: "Reply only if the participant asked a direct question or seems stuck."
     system: |

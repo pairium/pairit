@@ -12,6 +12,10 @@ type RawAgent = {
 	id?: string;
 	model?: string;
 	system?: string;
+	avatar?: {
+		icon?: string;
+		image?: string;
+	};
 	sendFirstMessage?: boolean;
 	trigger?: Trigger | Trigger[];
 	replyCondition?: ReplyCondition | ReplyCondition[];
@@ -40,6 +44,7 @@ function toAgentConfig(raw: RawAgent): AgentConfig {
 		id: raw.id ?? "",
 		model: raw.model ?? "",
 		system: raw.system ?? "",
+		avatar: raw.avatar,
 		sendFirstMessage: raw.sendFirstMessage,
 		trigger: raw.trigger,
 		replyCondition: raw.replyCondition,

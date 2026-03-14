@@ -291,6 +291,7 @@ async function runAgent(
 				groupId,
 				senderId,
 				senderType: "agent",
+				avatar: agent.avatar,
 				delta: "",
 				fullText: "",
 			});
@@ -314,6 +315,7 @@ async function runAgent(
 						groupId,
 						senderId,
 						senderType: "agent",
+						avatar: agent.avatar,
 						delta: delta.text,
 						fullText,
 					});
@@ -330,6 +332,7 @@ async function runAgent(
 				senderId,
 				"agent",
 				fullText,
+				agent.avatar,
 			);
 		}
 
@@ -392,6 +395,7 @@ async function persistAndBroadcastMessage(
 	senderId: string,
 	senderType: "participant" | "agent" | "system",
 	content: string,
+	avatar?: AgentConfig["avatar"],
 ): Promise<void> {
 	const collection = await getChatMessagesCollection();
 	const now = new Date();
@@ -403,6 +407,7 @@ async function persistAndBroadcastMessage(
 		senderType,
 		content,
 		createdAt: now,
+		...(avatar && { avatar }),
 	});
 
 	const messageId = result.insertedId.toString();
@@ -416,6 +421,7 @@ async function persistAndBroadcastMessage(
 		senderType,
 		content,
 		createdAt: now.toISOString(),
+		avatar,
 	};
 
 	for (const memberId of memberIds) {

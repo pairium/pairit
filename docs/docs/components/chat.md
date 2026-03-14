@@ -9,6 +9,7 @@ Open a chat view for real-time messaging. Supports human-human chat (via matchma
 | `agents` | string[] | `[]` | List of agent ids to join the chat (see [Agents](agents.md)) |
 | `groupId` | string | - | Explicit chat group identifier for shared contexts |
 | `placeholder` | string | `"Type a message..."` | Placeholder text in the message input |
+| `avatars` | object | - | Optional chat avatar overrides for `self`, `participant`, `agent`, or specific `agents.{id}` |
 
 ## Group Resolution
 
@@ -48,6 +49,61 @@ pages:
           agents: [assistant]
           placeholder: "Ask me anything..."
 ```
+
+## Avatars
+
+Chat supports optional avatar overrides for:
+- `self`
+- `participant`
+- `agent`
+- `agents.{agentId}` for specific agents
+
+Each avatar can use either:
+- `icon`: a Lucide icon name
+- `image`: an image URL or public path
+
+If both are provided, `image` wins.
+
+```yaml
+pages:
+  - id: ai_chat
+    components:
+      - type: chat
+        props:
+          agents: [assistant, tutor]
+          avatars:
+            self:
+              icon: user-round
+            participant:
+              icon: leaf
+            agent:
+              icon: bot
+            agents:
+              tutor:
+                image: /images/tutor.png
+
+agents:
+  - id: assistant
+    model: gpt-4o
+    avatar:
+      icon: sparkles
+    system: You are a helpful assistant.
+
+  - id: tutor
+    model: gpt-4o
+    avatar:
+      icon: graduation-cap
+    system: You are a tutor.
+```
+
+Precedence:
+1. Specific agent override: `props.avatars.agents.{agentId}`
+2. Agent default: `props.avatars.agent`
+3. Built-in default icon
+
+For icons, use Lucide icon names in kebab-case, like `bot`, `sparkles`, or `graduation-cap`.
+
+Agent-level avatars are configured in `agents[].avatar` and act as the natural default for that agent when no chat-level override is present.
 
 ### Explicit Group Sharing
 
