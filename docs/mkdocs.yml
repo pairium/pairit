@@ -46,8 +46,6 @@ theme:
   topbar_sections: false
 markdown_extensions:
   - md_in_html
-  - toc:
-      permalink: true
   - pymdownx.highlight:
       anchor_linenums: true
       use_pygments: true
