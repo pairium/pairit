@@ -44,11 +44,13 @@ export async function login() {
 	console.log("Initiating login...");
 
 	const loginUrl = `${BASE_URL}/login`;
+	const manualLoginUrl = `${loginUrl}?manual=1`;
 
-	// Try automated loopback flow
-	try {
-		const { createServer } = await import("node:http");
-		const { default: open } = await import("open");
+	// Try automated loopback flow when a local browser is likely available
+	if (canAttemptBrowserLogin()) {
+		try {
+			const { createServer } = await import("node:http");
+			const { default: open } = await import("open");
 
 		const server = createServer();
 		const port = await new Promise<number>((resolve, reject) => {
@@ -106,37 +108,33 @@ export async function login() {
 		console.log("Exchanging authorization code for token...");
 		const token = await exchangeCodeForToken(authCode);
 
-		await saveCredentials({ token });
-		console.log("Successfully logged in!");
-		return;
-	} catch (error) {
-		console.warn(
-			"Automated login failed, falling back to manual entry:",
-			error instanceof Error ? error.message : String(error),
-		);
+			await saveCredentials({ token });
+			console.log("Successfully logged in!");
+			return;
+		} catch (error) {
+			console.warn(
+				"Automated login failed, falling back to manual entry:",
+				error instanceof Error ? error.message : String(error),
+			);
+		}
 	}
 
 	// Fallback Manual Flow
 	console.log(`
-Please visit: ${loginUrl}
+Open this URL in a browser on any machine:
+${manualLoginUrl}
 
-After logging in, you will see a success page. The CLI will handle authentication automatically.
-If automatic login fails, you may need to check your network connection or try again.
+After signing in, the page will show a one-time authorization code.
+Paste that code here to complete CLI login.
 `);
 
-	try {
-		const { default: open } = await import("open");
-		await open(loginUrl);
-	} catch (_e) {
-		// ignore open errors
-	}
-
-	const token = await prompt("Enter session token (from browser): ");
-	if (!token) {
-		console.error("No token provided");
+	const code = await prompt("Enter authorization code: ");
+	if (!code) {
+		console.error("No authorization code provided");
 		process.exit(1);
 	}
 
+	const token = await exchangeCodeForToken(code);
 	await saveCredentials({ token });
 	console.log("Successfully logged in!");
 }
@@ -220,6 +218,18 @@ async function prompt(question: string): Promise<string> {
 			resolve(answer.trim());
 		});
 	});
+}
+
+function canAttemptBrowserLogin(): boolean {
+	if (!process.stdout.isTTY || !process.stdin.isTTY) {
+		return false;
+	}
+
+	if (process.env.SSH_CONNECTION || process.env.SSH_CLIENT || process.env.SSH_TTY) {
+		return false;
+	}
+
+	return process.platform === "darwin" || process.platform === "win32" || Boolean(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
 }
 
 async function loadKeytar(): Promise<{

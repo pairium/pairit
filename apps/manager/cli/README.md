@@ -38,6 +38,7 @@ This makes `pairit` available globally from the `bin` field in package.json.
 
 ```bash
 pairit login                                       # Authenticate (required first)
+# On a remote/headless server, open the printed URL locally and paste back the one-time code
 
 pairit config lint path/to/config.yaml
 pairit config compile path/to/config.yaml

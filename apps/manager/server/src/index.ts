@@ -203,22 +203,20 @@ app
 			| string
 			| undefined;
 
+		const authCode = sessionToken ? generateAuthCode(sessionToken) : undefined;
+
 		// Handle CLI Loopback Flow
 		// If a CLI redirect URI is present (and safe), generate an auth code and redirect
 		const cliRedirect = query.cli_redirect_uri;
+		const manual = query.manual === "1";
 		let redirectUrl: string | undefined;
 
-		if (sessionToken && cliRedirect && typeof cliRedirect === "string") {
+		if (authCode && cliRedirect && typeof cliRedirect === "string") {
 			try {
 				const url = new URL(cliRedirect);
 				// Security: Only allow redirect to localhost/127.0.0.1 for CLI handoff
 				if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
-					// Generate a short-lived authorization code instead of exposing the session token
-					const authCode = generateAuthCode(sessionToken);
 					url.searchParams.set("code", authCode);
-
-					// Client-side redirect to avoid "Mixed Content" blocking (HTTPS -> HTTP)
-					// We render the success page which then redirects via JS
 					redirectUrl = url.toString();
 				}
 			} catch (_e) {
@@ -243,7 +241,16 @@ app
                     If you are not redirected, <a href="${redirectUrl}">click here</a>.
                 </div>
             `
-								: `
+								: manual && authCode
+									? `
+                <p>Copy this one-time authorization code into your CLI. It expires in 60 seconds.</p>
+                <div class="token-box" id="auth-code">${authCode}</div>
+                <div style="display:flex; gap:0.75rem; width:100%; flex-direction:column;">
+                    <button onclick="copyCode()" class="btn btn-blue">Copy Code</button>
+                    <button onclick="window.close()" class="btn btn-primary">Close Window</button>
+                </div>
+            `
+									: `
                 <p>You have successfully authenticated. You can now close this window and return to your CLI.</p>
                 <div style="margin-top: 1.5rem;">
                     <button onclick="window.close()" class="btn btn-blue">Close Window</button>
@@ -255,6 +262,16 @@ app
 		const scriptContent = `
         <script>
             const redirectUrl = ${JSON.stringify(redirectUrl || "")};
+
+            async function copyCode() {
+                const code = document.getElementById('auth-code')?.textContent || '';
+                if (!code) return;
+                try {
+                    await navigator.clipboard.writeText(code);
+                } catch (_error) {
+                    // ignore clipboard failures
+                }
+            }
 
             if (redirectUrl) {
                 setTimeout(() => {
@@ -276,11 +293,12 @@ app
 			},
 		);
 	})
-	.get("/login", () => {
+	.get("/login", ({ query }) => {
+		const manual = query.manual === "1";
 		const content = `
         <div class="card">
             <h1>Pairit CLI Login</h1>
-            <p>Click the button below to sign in with Google. You will be redirected to a page with your session token.</p>
+            <p>${manual ? "Sign in with Google to get a one-time authorization code for your CLI." : "Click the button below to sign in with Google."}</p>
             <button onclick="login()" class="btn btn-blue">
                 <svg class="icon" viewBox="0 0 24 24"><path d="M17.788 5.108A9 9 0 1021 12h-8"></path></svg>
                 Sign in with Google
@@ -298,8 +316,16 @@ app
                     const origin = window.location.origin;
                     // Construct callback URL, passing through the CLI redirect if present
                     let callbackURL = origin + '/login-success';
+                    const callbackParams = new URLSearchParams();
                     if (cliRedirect) {
-                        callbackURL += '?cli_redirect_uri=' + encodeURIComponent(cliRedirect);
+                        callbackParams.set('cli_redirect_uri', cliRedirect);
+                    }
+                    if (${JSON.stringify(true)} && new URLSearchParams(window.location.search).get('manual') === '1') {
+                        callbackParams.set('manual', '1');
+                    }
+                    const callbackQuery = callbackParams.toString();
+                    if (callbackQuery) {
+                        callbackURL += '?' + callbackQuery;
                     }
 
                     const res = await fetch(origin + '/api/auth/sign-in/social', {

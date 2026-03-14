@@ -31,7 +31,7 @@ const program = new Command();
 program
 	.name("pairit")
 	.description("CLI for Pairit experiment configs")
-	.version("0.1.0");
+	.version("0.1.3");
 
 program
 	.command("login")

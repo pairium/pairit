@@ -1,43 +1,43 @@
 {
-	"name": "pairit",
-	"version": "0.1.2",
-	"description": "CLI for the Pairit behavioral science experiment platform",
-	"type": "module",
-	"bin": {
-		"pairit": "dist/index.js"
-	},
-	"files": [
-		"dist"
-	],
-	"scripts": {
-		"build": "bun build src/index.ts --outdir dist --target node",
-		"lint": "tsc --noEmit",
-		"prepublishOnly": "bun run build"
-	},
-	"keywords": [
-		"experiment",
-		"behavioral-science",
-		"research",
-		"cli"
-	],
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/pairium/pairit.git",
-		"directory": "apps/manager/cli"
-	},
-	"homepage": "https://pairium.github.io/pairit/",
-	"license": "MIT",
-	"optionalDependencies": {
-		"keytar": "^7.9.0"
-	},
-	"devDependencies": {
-		"@types/bun": "^1.1.13",
-		"@types/open": "^6.2.1",
-		"better-auth": "^1.4.7",
-		"commander": "^12.1.0",
-		"dotenv": "^17.2.3",
-		"open": "^11.0.0",
-		"typescript": "^5.9.3",
-		"yaml": "^2.6.0"
-	}
+  "name": "pairit",
+  "version": "0.1.4",
+  "description": "CLI for the Pairit behavioral science experiment platform",
+  "type": "module",
+  "bin": {
+    "pairit": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target node",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "bun run build"
+  },
+  "keywords": [
+    "experiment",
+    "behavioral-science",
+    "research",
+    "cli"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pairium/pairit.git",
+    "directory": "apps/manager/cli"
+  },
+  "homepage": "https://pairium.github.io/pairit/",
+  "license": "MIT",
+  "optionalDependencies": {
+    "keytar": "^7.9.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.13",
+    "@types/open": "^6.2.1",
+    "better-auth": "^1.4.7",
+    "commander": "^12.1.0",
+    "dotenv": "^17.2.3",
+    "open": "^11.0.0",
+    "typescript": "^5.9.3",
+    "yaml": "^2.6.0"
+  }
 }

@@ -16,7 +16,7 @@ bun install -g pairit
 pairit login
 ```
 
-This opens a browser window for Google OAuth. Once authenticated, you can manage experiments.
+This opens a browser window for Google OAuth when available. On a remote or headless server, the CLI prints a login URL instead; open it on your local machine, sign in, and paste the one-time authorization code back into the CLI.
 
 ## Create Your First Experiment
 
