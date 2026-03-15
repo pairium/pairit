@@ -5,7 +5,7 @@ A lightweight command line utility for working with Pairit experiment configurat
 - `login` — authenticate with Google OAuth (required for all hosted commands)
 - `config lint` — run minimal validation (schema_version, initialPageId, pages)
 - `config compile` — normalize a YAML config and emit sibling canonical JSON
-- `config upload` — compile and upload a config through the manager service
+- `config upload` — compile and upload a config through the manager service, optionally with per-experiment LLM provider keys
 - `config list` — list configs stored via the manager service
 - `config delete` — delete a stored config
 - `media upload` — upload a binary asset to Cloud Storage via the manager service (uploads are public unless `--private` is passed; the backend selects the bucket unless you override with `--bucket`)
@@ -42,8 +42,9 @@ pairit login                                       # Authenticate (required firs
 
 pairit config lint path/to/config.yaml
 pairit config compile path/to/config.yaml
-pairit config upload configs/simple-survey-basic.yaml --owner you@example.com
-pairit config list --owner you@example.com
+pairit config upload configs/simple-survey-basic.yaml --config-id simple-survey-basic
+pairit config upload configs/agent-study.yaml --config-id agent-study --openai-api-key sk-...
+pairit config list
 pairit config delete 2f3c4d5e...
 
 pairit media upload assets/video.mp4 --content-type video/mp4
@@ -64,7 +65,8 @@ Add `--private` if you need to keep an object private. Use `--bucket <name>` onl
 # Point to local manager server (default is http://localhost:3002)
 export PAIRIT_API_URL=http://localhost:3002
 
-bun run apps/manager/cli/src/index.ts config upload configs/simple-survey-basic.yaml --owner you@example.com
+bun run apps/manager/cli/src/index.ts config upload configs/simple-survey-basic.yaml --config-id simple-survey-basic
+bun run apps/manager/cli/src/index.ts config upload configs/agent-study.yaml --config-id agent-study --openai-api-key sk-...
 bun run apps/manager/cli/src/index.ts config list
 bun run apps/manager/cli/src/index.ts config delete 2f3c4d5e... --force
 
@@ -74,6 +76,23 @@ bun run apps/manager/cli/src/index.ts media delete onboarding/logo.png --force
 ```
 
 `config compile` writes `configs/simple-survey-basic.json` next to the source YAML. `config upload` defaults the config id to a 16-character base64url string derived from the SHA-256 hash of the compiled JSON (unless `--config-id` overrides it).
+
+## Per-experiment LLM credentials
+
+If your config uses AI agents, attach provider credentials when uploading:
+
+```bash
+pairit config upload path/to/config.yaml --config-id my-exp --openai-api-key sk-...
+pairit config upload path/to/config.yaml --config-id my-exp --anthropic-api-key sk-ant-...
+```
+
+Notes:
+- Keys are stored per config, encrypted at rest by the manager server.
+- Re-uploading the same `configId` without a new key keeps the previously stored key for that config.
+- That means billing continues on the experimenter's previously uploaded key, not on a shared platform key.
+- If an agent uses `gpt-*` and the config has no OpenAI key, the run fails.
+- If an agent uses `claude*` and the config has no Anthropic key, the run fails.
+- There is no global platform-key fallback for experiment agent execution.
 
 `data export` creates three files in the output directory:
 - `{configId}-sessions.{format}` — session ID, user_state fields (flattened), timestamps, status

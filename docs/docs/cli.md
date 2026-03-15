@@ -13,10 +13,23 @@ Publish / manage configs (stored in MongoDB via the Manager Server API)
 
 ```zsh
 pairit config upload your_experiment.yaml
+pairit config upload your_experiment.yaml --config-id my-exp --openai-api-key sk-...
+pairit config upload your_experiment.yaml --config-id my-exp --anthropic-api-key sk-ant-...
 pairit config list
 pairit config get <configId> --out compiled.json # TODO
 pairit config delete <configId>
 ```
+
+### Per-experiment LLM credentials
+
+If a config includes AI agents, upload the required provider key with that config.
+
+- `--openai-api-key` is used for OpenAI models like `gpt-4o`
+- `--anthropic-api-key` is used for Anthropic models like `claude-sonnet-*`
+- Keys are encrypted at rest and stored per `configId`
+- Re-uploading the same config without a new key keeps the existing key for that config
+- Agent runs do not fall back to a shared platform API key
+- If the required provider key is missing, the agent run fails
 
 Coming soon
 

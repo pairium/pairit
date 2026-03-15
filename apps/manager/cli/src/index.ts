@@ -89,6 +89,8 @@ configCommand
 	.argument("<config>", "Path to YAML config")
 	.option("--config-id <configId>", "Config id (defaults to hash)")
 	.option("--metadata <json>", "Optional metadata JSON string")
+	.option("--openai-api-key <key>", "OpenAI API key for this experiment")
+	.option("--anthropic-api-key <key>", "Anthropic API key for this experiment")
 	.description("Compile and upload config via Pairit Functions")
 	.action(async (configPath: string, options: UploadOptions) => {
 		try {
@@ -288,6 +290,8 @@ program.parseAsync(process.argv).catch((err) => {
 type UploadOptions = {
 	configId?: string;
 	metadata?: string;
+	openaiApiKey?: string;
+	anthropicApiKey?: string;
 };
 
 type ListOptions = Record<string, never>;
@@ -455,6 +459,10 @@ type UploadPayload = {
 	checksum: string;
 	metadata?: Record<string, unknown> | null;
 	config: unknown;
+	llmCredentials?: {
+		openaiApiKey?: string;
+		anthropicApiKey?: string;
+	};
 	allowRetake?: boolean;
 	requireAuth?: boolean;
 };
@@ -485,12 +493,20 @@ async function buildUploadPayload(
 		metadata.originalFilename = path.basename(configPath);
 	}
 
+	const llmCredentials = {
+		...(options.openaiApiKey && { openaiApiKey: options.openaiApiKey }),
+		...(options.anthropicApiKey && {
+			anthropicApiKey: options.anthropicApiKey,
+		}),
+	};
+
 	return {
 		payload: {
 			configId,
 			checksum,
 			metadata: metadata ?? null,
 			config: parsed,
+			...(Object.keys(llmCredentials).length > 0 && { llmCredentials }),
 			allowRetake,
 			...(requireAuth !== undefined && { requireAuth }),
 		},

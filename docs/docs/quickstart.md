@@ -74,6 +74,26 @@ pairit config lint my-experiment.yaml
 pairit config upload my-experiment.yaml --config-id my-experiment
 ```
 
+If your experiment uses AI agents, include the provider key for that experiment when uploading:
+
+```bash
+pairit config upload my-experiment.yaml \
+  --config-id my-experiment \
+  --openai-api-key sk-...
+```
+
+or:
+
+```bash
+pairit config upload my-experiment.yaml \
+  --config-id my-experiment \
+  --anthropic-api-key sk-ant-...
+```
+
+These keys are stored encrypted per experiment. Pairit does not use a shared platform provider key for experiment agent runs; if the required provider key is missing, the agent run fails.
+
+Re-uploading the same `configId` without a new key keeps the previously stored key for that experiment.
+
 **4. Share the experiment link** with participants: `https://lab.pairium.ai/my-experiment`
 
 ## Export Data

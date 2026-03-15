@@ -5,12 +5,24 @@
 
 import type { ObjectId } from "mongodb";
 
+export type EncryptedSecret = {
+	iv: string;
+	ciphertext: string;
+	authTag: string;
+};
+
+export type ConfigLlmCredentials = {
+	openai?: EncryptedSecret;
+	anthropic?: EncryptedSecret;
+};
+
 export type ConfigDocument = {
 	configId: string;
 	owner?: string;
 	checksum?: string;
 	metadata?: Record<string, unknown> | null;
 	config: unknown;
+	llmCredentials?: ConfigLlmCredentials;
 	requireAuth?: boolean;
 	allowRetake?: boolean;
 	createdAt?: Date | null;

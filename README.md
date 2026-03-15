@@ -37,7 +37,23 @@ This monorepo hosts the Pairit stack.
    # Manage configs
    pairit config lint your_experiment.yaml
    pairit config compile your_experiment.yaml
-   pairit config upload your_experiment.yaml --owner you@example.com
+   pairit config upload your_experiment.yaml --config-id your-experiment
+   ```
+
+   If your experiment uses AI agents, upload provider credentials with the config:
+
+   ```bash
+   pairit config upload your_experiment.yaml \
+     --config-id your-experiment \
+     --openai-api-key sk-...
+   ```
+
+   or:
+
+   ```bash
+   pairit config upload your_experiment.yaml \
+     --config-id your-experiment \
+     --anthropic-api-key sk-ant-...
    ```
 
 3. Share the published experiment link with participants.
@@ -88,7 +104,7 @@ The stack is containerized using Docker and deployed via Google Cloud Build / Ru
 - `STORAGE_PATH` - Storage location (local path or GCS bucket name)
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - For OAuth authentication
 - `AUTH_SECRET` - Better Auth secret (32+ characters, has insecure default in dev)
-- `OPENAI_API_KEY` - OpenAI API key for LLM features
+- `CREDENTIALS_ENCRYPTION_KEY` - 32-byte key (base64 or 64-char hex) used to encrypt per-experiment LLM credentials
 
 **Production only:**
 - `AUTH_BASE_URL` - Base URL for auth endpoints (auto-derived from PORT in dev)
@@ -97,6 +113,18 @@ The stack is containerized using Docker and deployed via Google Cloud Build / Ru
 
 **Optional:**
 - `PAIRIT_API_URL` - Manager server URL for CLI (defaults to `http://localhost:3002`)
+
+## Per-experiment LLM credentials
+
+Agent-backed experiments do not use a shared platform OpenAI or Anthropic key anymore.
+
+- Experimenters upload provider keys per config with `pairit config upload`
+- Keys are encrypted at rest in MongoDB
+- Lab agent calls resolve keys by `configId`
+- If a required provider key is missing, the agent call fails
+- There is no fallback to the platform's global OpenAI or Anthropic env key for experiment agent runs
+
+Re-uploading a config without passing a new provider key keeps the previously stored key for that config. That continues billing the experiment owner's key, not the platform key.
 
 ## Deployment to Google Cloud
 

@@ -12,6 +12,7 @@ import {
 } from "./db";
 import { getGroupMembers } from "./groups";
 import type { AgentConfig, ChatMessage, ReplyCondition, Trigger } from "./llm";
+import { getLlmCredentialsForConfig } from "./llm-credentials";
 import { streamAgentResponse } from "./llm";
 import { resolveSystemPrompt } from "./prompt-resolver";
 import { broadcastToSession, getConnectionCount } from "./sse";
@@ -35,8 +36,11 @@ function resolveConditions(agent: AgentConfig): ReplyCondition[] {
 async function evaluateConditions(
 	agent: AgentConfig,
 	history: ChatMessage[],
+	configId: string,
 ): Promise<boolean> {
 	const conditions = resolveConditions(agent);
+
+	const credentials = await getLlmCredentialsForConfig(configId);
 
 	for (const condition of conditions) {
 		if (condition === "always") continue;
@@ -50,7 +54,9 @@ async function evaluateConditions(
 		};
 
 		let response = "";
-		for await (const delta of streamAgentResponse(conditionAgent, history)) {
+		for await (const delta of streamAgentResponse(conditionAgent, history, {
+			credentials,
+		})) {
 			if (delta.type === "text_delta") response += delta.text;
 		}
 
@@ -234,7 +240,7 @@ async function runAgent(
 		}
 
 		// Evaluate reply conditions before proceeding
-		const shouldReply = await evaluateConditions(agent, history);
+		const shouldReply = await evaluateConditions(agent, history, configId);
 		if (!shouldReply) {
 			return;
 		}
@@ -245,6 +251,8 @@ async function runAgent(
 			);
 			return;
 		}
+
+		const credentials = await getLlmCredentialsForConfig(configId);
 
 		// Resolve conditional prompts and interpolate session_state
 		const resolvedSystem = resolveSystemPrompt(
@@ -301,11 +309,10 @@ async function runAgent(
 		const toolCalls: Array<{ name: string; args: Record<string, unknown> }> =
 			[];
 
-		for await (const delta of streamAgentResponse(
-			agentWithContext,
-			history,
-			abortController.signal,
-		)) {
+		for await (const delta of streamAgentResponse(agentWithContext, history, {
+			credentials,
+			signal: abortController.signal,
+		})) {
 			if (delta.type === "text_delta") {
 				fullText += delta.text;
 				// Broadcast delta to all members for real-time streaming

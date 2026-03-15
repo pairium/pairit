@@ -63,15 +63,17 @@ Notes:
 
 Agents support both OpenAI and Anthropic models. The provider is inferred from the model name:
 
-**OpenAI models** (requires `OPENAI_API_KEY`):
+**OpenAI models** (requires a per-config OpenAI key uploaded with `pairit config upload --openai-api-key ...`):
 - `gpt-4o`, `gpt-4o-mini`
 - `o1`, `o1-mini`, `o3-mini`
 - Any OpenAI-compatible model
 
-**Anthropic models** (requires `ANTHROPIC_API_KEY`):
+**Anthropic models** (requires a per-config Anthropic key uploaded with `pairit config upload --anthropic-api-key ...`):
 - `claude-sonnet-4-5-20250929`
 - `claude-haiku-4-5-20251001`
 - Any model starting with `claude`
+
+Provider keys are stored per experiment, encrypted at rest, and resolved by `configId` at runtime. Agent execution does not fall back to a shared platform API key. If the required provider key is missing, the agent run fails.
 
 ## Parameters
 

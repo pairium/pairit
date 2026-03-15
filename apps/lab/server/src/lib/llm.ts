@@ -5,6 +5,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
+import type { ResolvedLlmCredentials } from "./llm-credentials";
 
 export type Trigger = "every_message" | "on_join" | { every: number };
 
@@ -48,38 +49,57 @@ export type StreamDelta =
 
 type Provider = "openai" | "anthropic";
 
+export type StreamAgentOptions = {
+	credentials?: ResolvedLlmCredentials;
+	signal?: AbortSignal;
+};
+
 function inferProvider(model: string): Provider {
 	if (model.startsWith("claude")) return "anthropic";
 	return "openai";
 }
 
-const openaiClient = new OpenAI({
-	apiKey: process.env.OPENAI_API_KEY,
-});
+function getApiKey(
+	provider: Provider,
+	model: string,
+	credentials?: ResolvedLlmCredentials,
+): string {
+	const apiKey =
+		provider === "anthropic"
+			? credentials?.anthropicApiKey
+			: credentials?.openaiApiKey;
 
-const anthropicClient = new Anthropic({
-	apiKey: process.env.ANTHROPIC_API_KEY,
-});
+	if (!apiKey) {
+		throw new Error(
+			`Missing ${provider} API key for experiment. Upload one with the config before using model ${provider === "anthropic" ? "claude*" : model}`,
+		);
+	}
+
+	return apiKey;
+}
 
 export async function* streamAgentResponse(
 	agent: AgentConfig,
 	history: ChatMessage[],
-	signal?: AbortSignal,
+	options: StreamAgentOptions = {},
 ): AsyncGenerator<StreamDelta> {
 	const provider = inferProvider(agent.model);
 
 	if (provider === "anthropic") {
-		yield* streamAnthropic(agent, history, signal);
+		yield* streamAnthropic(agent, history, options);
 	} else {
-		yield* streamOpenAI(agent, history, signal);
+		yield* streamOpenAI(agent, history, options);
 	}
 }
 
 async function* streamOpenAI(
 	agent: AgentConfig,
 	history: ChatMessage[],
-	signal?: AbortSignal,
+	options: StreamAgentOptions = {},
 ): AsyncGenerator<StreamDelta> {
+	const client = new OpenAI({
+		apiKey: getApiKey("openai", agent.model, options.credentials),
+	});
 	const messages: OpenAI.ChatCompletionMessageParam[] = history.map((m) => ({
 		role: m.role,
 		content: m.content,
@@ -96,7 +116,7 @@ async function* streamOpenAI(
 		}),
 	);
 
-	const stream = await openaiClient.chat.completions.create(
+	const stream = await client.chat.completions.create(
 		{
 			model: agent.model,
 			messages: [{ role: "system", content: agent.system }, ...messages],
@@ -104,7 +124,7 @@ async function* streamOpenAI(
 			tools: tools?.length ? tools : undefined,
 			...(agent.reasoningEffort && { reasoning_effort: agent.reasoningEffort }),
 		},
-		{ signal },
+		{ signal: options.signal },
 	);
 
 	let fullText = "";
@@ -155,8 +175,11 @@ async function* streamOpenAI(
 async function* streamAnthropic(
 	agent: AgentConfig,
 	history: ChatMessage[],
-	signal?: AbortSignal,
+	options: StreamAgentOptions = {},
 ): AsyncGenerator<StreamDelta> {
+	const client = new Anthropic({
+		apiKey: getApiKey("anthropic", agent.model, options.credentials),
+	});
 	const messages: Anthropic.MessageParam[] = history.map((m) => ({
 		role: m.role,
 		content: m.content,
@@ -179,7 +202,9 @@ async function* streamAnthropic(
 		...(tools?.length && { tools }),
 	};
 
-	const stream = anthropicClient.messages.stream(streamParams, { signal });
+	const stream = client.messages.stream(streamParams, {
+		signal: options.signal,
+	});
 
 	let fullText = "";
 

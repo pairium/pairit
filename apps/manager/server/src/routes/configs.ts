@@ -7,6 +7,10 @@
 import { Elysia, t } from "elysia";
 import { authMiddleware } from "../lib/auth-middleware";
 import { getConfigsCollection } from "../lib/db";
+import {
+	encryptLlmCredentials,
+	maskConfiguredCredentials,
+} from "../lib/llm-credentials";
 import type { ConfigDocument } from "../types";
 
 export const configsRoutes = new Elysia({ prefix: "/configs" })
@@ -34,12 +38,14 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 					};
 				}
 
+				const encryptedCredentials = encryptLlmCredentials(body.llmCredentials);
 				const payload: Partial<ConfigDocument> = {
 					configId: body.configId,
 					owner: user.id, // Auto-populate from authenticated user
 					checksum: body.checksum,
 					metadata: body.metadata ?? null,
 					config: body.config,
+					...(encryptedCredentials && { llmCredentials: encryptedCredentials }),
 					requireAuth: body.requireAuth ?? true, // Default to true
 					allowRetake: body.allowRetake ?? false, // Default to false
 					updatedAt: new Date(),
@@ -61,6 +67,7 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 					owner: updated?.owner ?? user.id,
 					checksum: updated?.checksum ?? body.checksum,
 					metadata: updated?.metadata ?? null,
+					llmCredentials: maskConfiguredCredentials(updated?.llmCredentials),
 					requireAuth: updated?.requireAuth ?? true,
 					allowRetake: updated?.allowRetake ?? false,
 					updatedAt:
@@ -89,6 +96,12 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 					t.Union([t.Record(t.String(), t.Unknown()), t.Null()]),
 				),
 				config: t.Unknown(),
+				llmCredentials: t.Optional(
+					t.Object({
+						openaiApiKey: t.Optional(t.String({ minLength: 1 })),
+						anthropicApiKey: t.Optional(t.String({ minLength: 1 })),
+					}),
+				),
 				requireAuth: t.Optional(t.Boolean()),
 				allowRetake: t.Optional(t.Boolean()),
 			}),
@@ -120,6 +133,7 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 							? data.updatedAt.toISOString()
 							: null,
 					metadata: data.metadata ?? null,
+					llmCredentials: maskConfiguredCredentials(data.llmCredentials),
 				}));
 
 				return { configs };
