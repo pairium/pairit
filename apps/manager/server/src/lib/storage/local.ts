@@ -122,6 +122,10 @@ export class LocalStorage implements StorageBackend {
 		return `file://${fullPath}`;
 	}
 
+	async getPublicUrl(key: string): Promise<string> {
+		return this.getUrl(key);
+	}
+
 	async getUploadUrl(): Promise<never> {
 		throw new Error("not_supported");
 	}

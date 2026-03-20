@@ -27,6 +27,17 @@ function estimateBase64Bytes(payload: string): number {
 	return Math.max(0, Math.floor((normalized.length * 3) / 4) - padding);
 }
 
+async function getPublicMediaUrl(
+	object: string,
+	isPublic: boolean,
+): Promise<string | undefined> {
+	if (!isPublic) return undefined;
+	if (typeof storage.getPublicUrl === "function") {
+		return storage.getPublicUrl(object);
+	}
+	return storage.getUrl(object);
+}
+
 export const mediaRoutes = new Elysia({ prefix: "/media" })
 	.use(authMiddleware)
 	.post(
@@ -63,8 +74,10 @@ export const mediaRoutes = new Elysia({ prefix: "/media" })
 				// Upload to storage backend
 				await storage.put(body.object, buffer);
 
-				// Get public URL
-				const publicUrl = await storage.getUrl(body.object);
+				const publicUrl = await getPublicMediaUrl(
+					body.object,
+					body.public !== false,
+				);
 
 				return {
 					bucket: body.bucket || "local",
@@ -120,8 +133,10 @@ export const mediaRoutes = new Elysia({ prefix: "/media" })
 					contentType: body.contentType ?? undefined,
 					expiresInSeconds: body.expiresInSeconds ?? 900,
 				});
-				const publicUrl =
-					body.public === false ? undefined : await storage.getUrl(body.object);
+				const publicUrl = await getPublicMediaUrl(
+					body.object,
+					body.public !== false,
+				);
 
 				return {
 					bucket: body.bucket || "local",

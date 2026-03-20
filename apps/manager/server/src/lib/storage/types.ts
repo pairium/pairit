@@ -34,9 +34,14 @@ export interface StorageBackend {
 	exists(key: string): Promise<boolean>;
 
 	/**
-	 * Get a signed URL for direct access (for GCS) or a local file path
+	 * Get a temporary access URL for direct reads
 	 */
 	getUrl(key: string, expiresInSeconds?: number): Promise<string>;
+
+	/**
+	 * Get a stable public URL when the backend supports it
+	 */
+	getPublicUrl?(key: string): Promise<string>;
 
 	/**
 	 * Get a signed URL for direct uploads when supported by the backend

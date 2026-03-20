@@ -8,7 +8,7 @@ A lightweight command line utility for working with Pairit experiment configurat
 - `config upload` — compile and upload a config through the manager service, optionally with per-experiment LLM provider keys
 - `config list` — list configs stored via the manager service
 - `config delete` — delete a stored config
-- `media upload` — upload a binary asset to Cloud Storage via the manager service (uploads are public unless `--private` is passed; the backend selects the bucket unless you override with `--bucket`)
+- `media upload` — upload a binary asset to Cloud Storage via the manager service (uploads are public unless `--private` is passed; public uploads return a stable asset URL when the backend supports it)
 - `media list` — list media objects in Cloud Storage
 - `media delete` — delete a media object from Cloud Storage
 - `data export` — export sessions, events, and chat messages for a config as CSV/JSON/JSONL

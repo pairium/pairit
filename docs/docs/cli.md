@@ -92,6 +92,6 @@ Published configs live in the `configs` collection (keyed by `configId`) with me
 - `sessions` documents (keyed by `id`) → `{ configId, currentPageId, session_state, endedAt?, createdAt, updatedAt, userId? }`
 - `events` documents → `{ sessionId, configId, pageId, componentType, componentId, type, timestamp, data, createdAt }`
 
-Use `pairit config get <configId>` to download a compiled config snapshot for auditing or debugging (where supported). Media objects live in the configured storage backend (local filesystem for dev, Google Cloud Storage in prod); `pairit media *` commands proxy uploads and deletes via the manager service so the CLI never requires direct GCP credentials.
+Use `pairit config get <configId>` to download a compiled config snapshot for auditing or debugging (where supported). Media objects live in the configured storage backend (local filesystem for dev, Google Cloud Storage in prod); `pairit media *` commands proxy uploads and deletes via the manager service so the CLI never requires direct GCP credentials. Public media uploads should use the stable asset URL returned by the manager service, not a temporary signed read URL.
 
 

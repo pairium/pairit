@@ -6,10 +6,12 @@ import type { SignedUpload, StorageBackend } from "./types";
 
 export class GCSStorage implements StorageBackend {
 	private bucket;
+	private bucketName: string;
 
 	constructor(bucketName: string, projectId?: string) {
 		const storage = new Storage({ projectId });
 		this.bucket = storage.bucket(bucketName);
+		this.bucketName = bucketName;
 	}
 
 	async put(key: string, data: Buffer | Uint8Array | string): Promise<void> {
@@ -63,6 +65,10 @@ export class GCSStorage implements StorageBackend {
 			expires: Date.now() + expiresInSeconds * 1000,
 		});
 		return url;
+	}
+
+	async getPublicUrl(key: string): Promise<string> {
+		return `https://storage.googleapis.com/${this.bucketName}/${encodeURIComponent(key)}`;
 	}
 
 	async getUploadUrl(
