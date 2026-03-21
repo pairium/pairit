@@ -78,6 +78,9 @@
     {
       "id": "dealer",
       "model": "gpt-5-mini",
+      "avatar": {
+        "icon": "badge-dollar-sign"
+      },
       "system": "You are a used car dealer selling a 2019 Honda Civic with 45,000 miles.\nReserve price: $12,000 (won't sell below). Starting ask: $18,000.\nBe friendly but firm. Keep responses SHORT - 1-2 sentences max.\n"
     }
   ]
