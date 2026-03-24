@@ -247,9 +247,8 @@ async function runAgent(
 
 		if (getConnectionCount(sessionId) === 0) {
 			console.log(
-				`[Agent] No SSE connections for session ${sessionId}, skipping`,
+				`[Agent] No SSE connections for session ${sessionId}, proceeding anyway`,
 			);
-			return;
 		}
 
 		const credentials = await getLlmCredentialsForConfig(configId);
