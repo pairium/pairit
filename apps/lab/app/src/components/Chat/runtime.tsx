@@ -314,6 +314,12 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 				try {
 					const result = await sendChatMessage(groupId, sessionId, content);
 
+					if (typeof result.messagesSent === "number") {
+						onSessionStateChange?.({
+							"chat.messages_sent": result.messagesSent,
+						});
+					}
+
 					seenMessageIds.current.add(result.messageId);
 					setMessages((prev) => [
 						...prev,
@@ -342,7 +348,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 					console.error("[Chat] Failed to send message:", error);
 				}
 			},
-			[sessionId, groupId, component.id, component.events],
+			[sessionId, groupId, component.id, component.events, onSessionStateChange],
 		);
 
 		if (!sessionId) {

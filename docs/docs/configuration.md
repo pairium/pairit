@@ -151,7 +151,7 @@ pages:
 
 Use expressions to conditionally render components and route between pages. Expressions evaluate with a safe `expr-eval` subset.
 
-The expression evaluator currently supports `session_state.{key} {op} {value}` patterns.
+The expression evaluator currently supports `session_state.{key} {op} {value}` patterns, including nested dotted paths like `session_state.chat.messages_sent >= 3`.
 
 Context roots available:
 

@@ -2,6 +2,17 @@ import { defineRuntimeComponent } from "@app/runtime/define-runtime-component";
 import type { TextComponent } from "@app/runtime/types";
 import Markdown from "react-markdown";
 
+function getNestedValue(
+	obj: Record<string, unknown> | undefined,
+	path: string,
+): unknown {
+	if (!obj) return undefined;
+	return path.split(".").reduce<unknown>((current, key) => {
+		if (current == null || typeof current !== "object") return undefined;
+		return (current as Record<string, unknown>)[key];
+	}, obj);
+}
+
 /**
  * Interpolate template variables like {{session_state.xxx}} with actual values
  */
@@ -9,9 +20,9 @@ function interpolate(
 	text: string,
 	sessionState: Record<string, unknown> | undefined,
 ): string {
-	return text.replace(/\{\{session_state\.(\w+)\}\}/g, (_, key) => {
-		const value = sessionState?.[key];
-		return value !== undefined ? String(value) : `{{session_state.${key}}}`;
+	return text.replace(/\{\{session_state\.([A-Za-z0-9_.]+)\}\}/g, (_, path) => {
+		const value = getNestedValue(sessionState, path);
+		return value !== undefined ? String(value) : `{{session_state.${path}}}`;
 	});
 }
 

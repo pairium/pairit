@@ -146,6 +146,7 @@ type SendChatMessageResponse = {
 	messageId: string;
 	createdAt: string;
 	deduplicated?: boolean;
+	messagesSent?: number;
 };
 
 type GetChatHistoryResponse = {

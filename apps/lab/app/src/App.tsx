@@ -18,6 +18,30 @@ import type { CompiledConfig } from "./runtime/config";
 import { PageRenderer } from "./runtime/renderer";
 import type { ButtonAction, OnEnterAction, Page } from "./runtime/types";
 
+function mergeNestedUpdates(
+	base: Record<string, unknown>,
+	updates: Record<string, unknown>,
+): Record<string, unknown> {
+	const next = structuredClone(base);
+	for (const [path, value] of Object.entries(updates)) {
+		const keys = path.split(".");
+		if (keys.length === 1) {
+			next[path] = value;
+			continue;
+		}
+		let obj: Record<string, unknown> = next;
+		for (let i = 0; i < keys.length - 1; i++) {
+			const key = keys[i];
+			if (obj[key] == null || typeof obj[key] !== "object") {
+				obj[key] = {};
+			}
+			obj = obj[key] as Record<string, unknown>;
+		}
+		obj[keys[keys.length - 1]] = value;
+	}
+	return next;
+}
+
 async function executeOnEnter(
 	sessionId: string,
 	actions: OnEnterAction[],
@@ -147,23 +171,7 @@ export default function App() {
 		const unsubscribe = sseClient.on("state_updated", (data: unknown) => {
 			const { path, value } = data as { path: string; value: unknown };
 			if (path) {
-				setSessionState((prev) => {
-					const keys = path.split(".");
-					if (keys.length === 1) {
-						return { ...prev, [path]: value };
-					}
-					const next = structuredClone(prev);
-					// biome-ignore lint/suspicious/noExplicitAny: nested state traversal
-					let obj: any = next;
-					for (let i = 0; i < keys.length - 1; i++) {
-						if (obj[keys[i]] == null || typeof obj[keys[i]] !== "object") {
-							obj[keys[i]] = {};
-						}
-						obj = obj[keys[i]];
-					}
-					obj[keys[keys.length - 1]] = value;
-					return next;
-				});
+				setSessionState((prev) => mergeNestedUpdates(prev, { [path]: value }));
 			}
 		});
 
@@ -250,7 +258,7 @@ export default function App() {
 						sessionState={sessionState}
 						compiledConfig={compiledConfig}
 						onSessionStateChange={(updates) =>
-							setSessionState((prev) => ({ ...prev, ...updates }))
+							setSessionState((prev) => mergeNestedUpdates(prev, updates))
 						}
 					/>
 				)}

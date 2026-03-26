@@ -138,6 +138,29 @@ Event Data
 - `agent_id`: which agent sent the message (agent messages only)
 - Custom data can be added via `events.{eventName}.data`
 
+## Session state
+
+Chat now maintains a server-side per-session counter at `session_state.chat.messages_sent` for participant-authored messages. You can use it in conditional UI and text interpolation:
+
+```yaml
+session_state:
+  chat:
+    type: object
+    properties:
+      messages_sent:
+        type: integer
+        default: 0
+
+pages:
+  - id: discussion
+    components:
+      - type: chat
+      - type: text
+        when: "session_state.chat.messages_sent >= 3"
+        props:
+          text: "Thanks — you've sent {{session_state.chat.messages_sent}} messages."
+```
+
 Example
 
 ```yaml

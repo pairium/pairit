@@ -5,15 +5,12 @@
 type ComparisonOp = "==" | "!=" | "<=" | ">=" | "<" | ">";
 
 function parseValue(raw: string): unknown {
-	// Boolean
 	if (raw === "true") return true;
 	if (raw === "false") return false;
 
-	// Number
 	const num = Number(raw);
 	if (!Number.isNaN(num)) return num;
 
-	// String (quoted)
 	if (
 		(raw.startsWith('"') && raw.endsWith('"')) ||
 		(raw.startsWith("'") && raw.endsWith("'"))
@@ -21,8 +18,18 @@ function parseValue(raw: string): unknown {
 		return raw.slice(1, -1);
 	}
 
-	// Default to string
 	return raw;
+}
+
+function getNestedValue(
+	obj: Record<string, unknown> | undefined,
+	path: string,
+): unknown {
+	if (!obj) return undefined;
+	return path.split(".").reduce<unknown>((current, key) => {
+		if (current == null || typeof current !== "object") return undefined;
+		return (current as Record<string, unknown>)[key];
+	}, obj);
 }
 
 function compare(left: unknown, op: ComparisonOp, right: unknown): boolean {
@@ -56,12 +63,13 @@ export function evaluateExpression(
 	expr: string,
 	context: { session_state: Record<string, unknown> },
 ): boolean {
-	// Parse expressions like "session_state.age < 18"
-	const match = expr.match(/^session_state\.(\w+)\s*(==|!=|<=|>=|<|>)\s*(.+)$/);
+	const match = expr.match(
+		/^session_state\.([A-Za-z0-9_.]+)\s*(==|!=|<=|>=|<|>)\s*(.+)$/,
+	);
 	if (!match) return false;
 
 	const [, path, op, rawValue] = match;
-	const left = context.session_state[path];
+	const left = getNestedValue(context.session_state, path);
 	const right = parseValue(rawValue.trim());
 
 	return compare(left, op as ComparisonOp, right);

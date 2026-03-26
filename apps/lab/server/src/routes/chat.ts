@@ -7,7 +7,7 @@
 import { Elysia, t } from "elysia";
 import { MongoServerError, type ObjectId } from "mongodb";
 import { triggerAgents, triggerJoinAgents } from "../lib/agent-runner";
-import { getChatMessagesCollection } from "../lib/db";
+import { getChatMessagesCollection, getSessionsCollection } from "../lib/db";
 import { getGroupMembers, verifyMembership } from "../lib/groups";
 import { broadcastToSession } from "../lib/sse";
 import type { ChatMessageDocument } from "../types";
@@ -71,6 +71,37 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 
 			const messageId = insertedId.toString();
 
+			const effectiveSenderType = senderType ?? "participant";
+			let messagesSent: number | undefined;
+			if (effectiveSenderType === "participant") {
+				const sessions = await getSessionsCollection();
+				const updatedSession = await sessions.findOneAndUpdate(
+					{ id: sessionId },
+					{
+						$inc: { "session_state.chat.messages_sent": 1 },
+						$set: { updatedAt: new Date() },
+					},
+					{
+						returnDocument: "after",
+						projection: { "session_state.chat.messages_sent": 1 },
+					},
+				);
+				messagesSent =
+					typeof updatedSession?.session_state?.chat === "object" &&
+					updatedSession.session_state.chat &&
+					typeof (updatedSession.session_state.chat as Record<string, unknown>)
+						.messages_sent === "number"
+						? ((updatedSession.session_state.chat as Record<string, unknown>)
+								.messages_sent as number)
+						: undefined;
+				if (messagesSent !== undefined) {
+					broadcastToSession(sessionId, "state_updated", {
+						path: "chat.messages_sent",
+						value: messagesSent,
+					});
+				}
+			}
+
 			// Broadcast to all group members
 			const memberIds = await getGroupMembers(groupId);
 			const eventData = {
@@ -88,7 +119,6 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 			}
 
 			// Trigger AI agents if message is from a participant
-			const effectiveSenderType = senderType ?? "participant";
 			if (effectiveSenderType !== "agent" && effectiveSenderType !== "system") {
 				triggerAgents(groupId, sessionId).catch((err) => {
 					console.error("[Chat] Failed to trigger agents:", err);
@@ -98,6 +128,7 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 			return {
 				messageId,
 				createdAt: now.toISOString(),
+				...(messagesSent !== undefined ? { messagesSent } : {}),
 			};
 		},
 		{
