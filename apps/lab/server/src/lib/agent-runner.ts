@@ -19,7 +19,23 @@ import { broadcastToSession, getConnectionCount } from "./sse";
 
 const AGENT_TIMEOUT_MS = 60_000;
 
-const activeRuns = new Map<string, AbortController>();
+const activeGroupRuns = new Set<string>();
+
+async function withGroupRunLock(
+	groupId: string,
+	callback: () => Promise<void>,
+): Promise<void> {
+	if (activeGroupRuns.has(groupId)) {
+		return;
+	}
+
+	activeGroupRuns.add(groupId);
+	try {
+		await callback();
+	} finally {
+		activeGroupRuns.delete(groupId);
+	}
+}
 
 function resolveTriggers(agent: AgentConfig): Trigger[] {
 	if (!agent.trigger) return ["every_message"];
@@ -94,59 +110,57 @@ export async function triggerAgents(
 	groupId: string,
 	sessionId: string,
 ): Promise<void> {
-	if (activeRuns.has(groupId)) {
-		return;
-	}
-
-	const sessionConfig = await getSessionConfig(sessionId);
-	if (!sessionConfig) {
-		return;
-	}
-
-	const { configId, currentPageId, sessionState } = sessionConfig;
-
-	const agentIds = await getPageAgentIds(configId, currentPageId);
-	if (agentIds.length === 0) {
-		return;
-	}
-
-	for (const agentId of agentIds) {
-		const agent = await getAgentById(configId, agentId);
-		if (!agent) {
-			console.error(`[Agent] Agent not found: ${agentId}`);
-			continue;
+	await withGroupRunLock(groupId, async () => {
+		const sessionConfig = await getSessionConfig(sessionId);
+		if (!sessionConfig) {
+			return;
 		}
 
-		const triggers = resolveTriggers(agent);
-		let shouldRun = false;
+		const { configId, currentPageId, sessionState } = sessionConfig;
 
-		for (const trigger of triggers) {
-			if (trigger === "every_message") {
-				shouldRun = true;
-				break;
+		const agentIds = await getPageAgentIds(configId, currentPageId);
+		if (agentIds.length === 0) {
+			return;
+		}
+
+		for (const agentId of agentIds) {
+			const agent = await getAgentById(configId, agentId);
+			if (!agent) {
+				console.error(`[Agent] Agent not found: ${agentId}`);
+				continue;
 			}
-			if (typeof trigger === "object" && "every" in trigger) {
-				const count = await countParticipantMessagesSinceAgent(
-					groupId,
-					agent.id,
-				);
-				if (count >= trigger.every) {
+
+			const triggers = resolveTriggers(agent);
+			let shouldRun = false;
+
+			for (const trigger of triggers) {
+				if (trigger === "every_message") {
 					shouldRun = true;
 					break;
 				}
+				if (typeof trigger === "object" && "every" in trigger) {
+					const count = await countParticipantMessagesSinceAgent(
+						groupId,
+						agent.id,
+					);
+					if (count >= trigger.every) {
+						shouldRun = true;
+						break;
+					}
+				}
+				// "on_join" is irrelevant in the message-triggered path
 			}
-			// "on_join" is irrelevant in the message-triggered path
+
+			if (!shouldRun) continue;
+
+			await runAgent(agent, groupId, sessionId, {
+				requireHistory: true,
+				configId,
+				pageId: currentPageId,
+				sessionState,
+			});
 		}
-
-		if (!shouldRun) continue;
-
-		await runAgent(agent, groupId, sessionId, {
-			requireHistory: true,
-			configId,
-			pageId: currentPageId,
-			sessionState,
-		});
-	}
+	});
 }
 
 /**
@@ -157,56 +171,54 @@ export async function triggerJoinAgents(
 	groupId: string,
 	sessionId: string,
 ): Promise<void> {
-	if (activeRuns.has(groupId)) {
-		return;
-	}
+	await withGroupRunLock(groupId, async () => {
+		const chatCollection = await getChatMessagesCollection();
+		const existingCount = await chatCollection.countDocuments(
+			{ groupId },
+			{ limit: 1 },
+		);
 
-	const chatCollection = await getChatMessagesCollection();
-	const existingCount = await chatCollection.countDocuments(
-		{ groupId },
-		{ limit: 1 },
-	);
-
-	const sessionConfig = await getSessionConfig(sessionId);
-	if (!sessionConfig) {
-		return;
-	}
-
-	const { configId, currentPageId, sessionState } = sessionConfig;
-
-	const agentIds = await getPageAgentIds(configId, currentPageId);
-	if (agentIds.length === 0) {
-		return;
-	}
-
-	for (const agentId of agentIds) {
-		const agent = await getAgentById(configId, agentId);
-		if (!agent) {
-			console.error(`[Agent] Agent not found: ${agentId}`);
-			continue;
+		const sessionConfig = await getSessionConfig(sessionId);
+		if (!sessionConfig) {
+			return;
 		}
 
-		const triggers = resolveTriggers(agent);
-		const hasOnJoin = triggers.includes("on_join");
-		const hasExplicitTrigger = agent.trigger !== undefined;
-		const isLegacy = !hasExplicitTrigger && agent.sendFirstMessage === true;
+		const { configId, currentPageId, sessionState } = sessionConfig;
 
-		if (hasOnJoin) {
-			await runAgent(agent, groupId, sessionId, {
-				requireHistory: false,
-				configId,
-				pageId: currentPageId,
-				sessionState,
-			});
-		} else if (isLegacy && existingCount === 0) {
-			await runAgent(agent, groupId, sessionId, {
-				requireHistory: false,
-				configId,
-				pageId: currentPageId,
-				sessionState,
-			});
+		const agentIds = await getPageAgentIds(configId, currentPageId);
+		if (agentIds.length === 0) {
+			return;
 		}
-	}
+
+		for (const agentId of agentIds) {
+			const agent = await getAgentById(configId, agentId);
+			if (!agent) {
+				console.error(`[Agent] Agent not found: ${agentId}`);
+				continue;
+			}
+
+			const triggers = resolveTriggers(agent);
+			const hasOnJoin = triggers.includes("on_join");
+			const hasExplicitTrigger = agent.trigger !== undefined;
+			const isLegacy = !hasExplicitTrigger && agent.sendFirstMessage === true;
+
+			if (hasOnJoin) {
+				await runAgent(agent, groupId, sessionId, {
+					requireHistory: false,
+					configId,
+					pageId: currentPageId,
+					sessionState,
+				});
+			} else if (isLegacy && existingCount === 0) {
+				await runAgent(agent, groupId, sessionId, {
+					requireHistory: false,
+					configId,
+					pageId: currentPageId,
+					sessionState,
+				});
+			}
+		}
+	});
 }
 
 type RunAgentOptions = {
@@ -224,7 +236,6 @@ async function runAgent(
 ): Promise<void> {
 	const { requireHistory = true, configId = "" } = options;
 	const abortController = new AbortController();
-	activeRuns.set(groupId, abortController);
 
 	const timeout = setTimeout(() => {
 		console.log(`[Agent] Timeout for group ${groupId}`);
@@ -378,7 +389,6 @@ async function runAgent(
 		}
 	} finally {
 		clearTimeout(timeout);
-		activeRuns.delete(groupId);
 	}
 }
 
