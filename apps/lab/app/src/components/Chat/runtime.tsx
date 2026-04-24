@@ -54,6 +54,32 @@ type StreamingMessage = {
 	content: string;
 };
 
+const START_AGENTS_IDEMPOTENCY_WINDOW_MS = 5_000;
+const recentStartAgentKeys = new Map<
+	string,
+	{ key: string; expiresAt: number }
+>();
+
+function getStartAgentsIdempotencyKey(
+	sessionId: string,
+	groupId: string,
+): string {
+	const cacheKey = `${sessionId}:${groupId}`;
+	const now = Date.now();
+	const cached = recentStartAgentKeys.get(cacheKey);
+
+	if (cached && cached.expiresAt > now) {
+		return cached.key;
+	}
+
+	const key = crypto.randomUUID();
+	recentStartAgentKeys.set(cacheKey, {
+		key,
+		expiresAt: now + START_AGENTS_IDEMPOTENCY_WINDOW_MS,
+	});
+	return key;
+}
+
 export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 	type: "chat",
 	renderer: ({ component, context }) => {
@@ -217,7 +243,11 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			hasTriggeredAgents.current = true;
 
 			const timer = setTimeout(() => {
-				startChatAgents(groupId, sessionId).catch((error) => {
+				startChatAgents(
+					groupId,
+					sessionId,
+					getStartAgentsIdempotencyKey(sessionId, groupId),
+				).catch((error) => {
 					console.error("[Chat] Failed to start agents:", error);
 				});
 			}, 300);

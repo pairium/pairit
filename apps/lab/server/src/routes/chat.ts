@@ -7,10 +7,33 @@
 import { Elysia, t } from "elysia";
 import { MongoServerError, type ObjectId } from "mongodb";
 import { triggerAgents, triggerJoinAgents } from "../lib/agent-runner";
-import { getChatMessagesCollection, getSessionsCollection } from "../lib/db";
+import {
+	getChatMessagesCollection,
+	getIdempotencyCollection,
+	getSessionsCollection,
+} from "../lib/db";
 import { getGroupMembers, verifyMembership } from "../lib/groups";
 import { broadcastToSession } from "../lib/sse";
 import type { ChatMessageDocument } from "../types";
+
+async function checkIdempotency(
+	key: string,
+): Promise<{ duplicate: boolean }> {
+	const collection = await getIdempotencyCollection();
+
+	try {
+		await collection.insertOne({
+			key,
+			createdAt: new Date(),
+		});
+		return { duplicate: false };
+	} catch (err) {
+		if (err instanceof MongoServerError && err.code === 11000) {
+			return { duplicate: true };
+		}
+		throw err;
+	}
+}
 
 export const chatRoutes = new Elysia({ prefix: "/chat" })
 	.post(
@@ -189,13 +212,20 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 	.post(
 		"/:groupId/start-agents",
 		async ({ params: { groupId }, body, set }) => {
-			const { sessionId } = body;
+			const { sessionId, idempotencyKey } = body;
 
 			// Verify membership
 			const isMember = await verifyMembership(sessionId, groupId);
 			if (!isMember) {
 				set.status = 403;
 				return { error: "not_a_member" };
+			}
+
+			if (idempotencyKey) {
+				const { duplicate } = await checkIdempotency(idempotencyKey);
+				if (duplicate) {
+					return { ok: true, deduplicated: true };
+				}
 			}
 
 			// Trigger join agents (on_join trigger + legacy sendFirstMessage)
@@ -209,6 +239,7 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 			params: t.Object({ groupId: t.String() }),
 			body: t.Object({
 				sessionId: t.String({ minLength: 1 }),
+				idempotencyKey: t.Optional(t.String({ minLength: 1 })),
 			}),
 		},
 	);

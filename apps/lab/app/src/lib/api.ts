@@ -191,12 +191,13 @@ export async function getChatHistory(
 export async function startChatAgents(
 	groupId: string,
 	sessionId: string,
+	idempotencyKey?: string,
 ): Promise<void> {
 	const r = await fetch(`${baseUrl}/chat/${groupId}/start-agents`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		credentials: "include",
-		body: JSON.stringify({ sessionId }),
+		body: JSON.stringify({ sessionId, ...(idempotencyKey && { idempotencyKey }) }),
 	});
 	if (r.status === 403) throw new NotAMemberError();
 	if (!r.ok) throw new Error("Failed to start chat agents");
