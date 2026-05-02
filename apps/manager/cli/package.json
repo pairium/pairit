@@ -1,6 +1,6 @@
 {
   "name": "pairit",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "CLI for the Pairit behavioral science experiment platform",
   "type": "module",
   "bin": {
@@ -35,7 +35,6 @@
     "@types/open": "^6.2.1",
     "better-auth": "^1.4.7",
     "commander": "^12.1.0",
-    "dotenv": "^17.2.3",
     "open": "^11.0.0",
     "typescript": "^5.9.3",
     "yaml": "^2.6.0"
