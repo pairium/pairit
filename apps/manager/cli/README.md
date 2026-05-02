@@ -99,7 +99,16 @@ Notes:
 - `{configId}-events.{format}` — session ID, event type, component info, payload, timestamps
 - `{configId}-chat-messages.{format}` — group ID, session ID, sender, content, timestamps
 
-All hosted commands require the manager service to be reachable (Cloud Run deployment or local server). Set `PAIRIT_API_URL` to point to the desired target. When unset, the CLI defaults to `http://localhost:3002`.
+All hosted commands require the manager service to be reachable (Cloud Run deployment or local server). By default the CLI talks to the deployed manager. Override via shell environment variables when needed:
+
+- `PAIRIT_API_URL` — manager base URL (e.g. `http://localhost:3002` for local dev)
+- `PAIRIT_LAB_URL` — lab base URL used to print the survey link after `config upload`
+- `PAIRIT_CREDENTIALS_BACKEND` — `keychain` (default when available) or `file`
+- `PAIRIT_MAX_INLINE_MEDIA_BYTES` — switch to signed-URL upload above this size (default 5 MiB)
+
+```bash
+PAIRIT_API_URL=http://localhost:3002 pairit config list
+```
 
 ## Development
 
