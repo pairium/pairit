@@ -77,6 +77,26 @@ else
     echo "✅ Repository $REPO_NAME exists."
 fi
 
+# 0b. Setup media bucket (public-read for participant-facing assets)
+MEDIA_BUCKET="${STORAGE_PATH:-pairit-lab-media}"
+echo "🔧 Checking media bucket gs://$MEDIA_BUCKET..."
+if ! gcloud storage buckets describe "gs://$MEDIA_BUCKET" --project "$PROJECT_ID" &>/dev/null; then
+    echo "🪣 Creating bucket gs://$MEDIA_BUCKET..."
+    gcloud storage buckets create "gs://$MEDIA_BUCKET" \
+        --project="$PROJECT_ID" \
+        --location="$REGION" \
+        --uniform-bucket-level-access
+else
+    echo "✅ Bucket gs://$MEDIA_BUCKET exists."
+fi
+# Grant public read so the stable public URL returned by the manager works.
+# Idempotent: re-applying the binding is a no-op.
+gcloud storage buckets add-iam-policy-binding "gs://$MEDIA_BUCKET" \
+    --project="$PROJECT_ID" \
+    --member=allUsers \
+    --role=roles/storage.objectViewer >/dev/null
+echo "✅ Bucket gs://$MEDIA_BUCKET is publicly readable."
+
 # Define Image Paths
 LAB_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/pairit-lab"
 MANAGER_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/pairit-manager"
@@ -254,4 +274,3 @@ echo "1. Add OAuth redirect URIs to Google Cloud Console:"
 echo "   - ${MANAGER_URL}/api/auth/callback/google"
 echo "   - ${LAB_SERVICE_URL}/api/auth/callback/google"
 echo "2. Whitelist Cloud Run IPs in MongoDB Atlas (or use 0.0.0.0/0 for dev)"
-echo "3. Verify IAM permissions for GCS bucket '${STORAGE_PATH:-pairit-lab-media}'"
