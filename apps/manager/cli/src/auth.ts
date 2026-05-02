@@ -67,10 +67,10 @@ export async function login() {
 		const redirectUri = `http://127.0.0.1:${port}`;
 		const targetUrl = `${loginUrl}?cli_redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-		console.log("Opening browser for authentication...");
+		console.log(`Opening ${loginUrl} in your browser...`);
 		await open(targetUrl);
 
-		console.log(`Waiting for authentication at ${redirectUri}...`);
+		console.log("Waiting for sign-in to complete...");
 
 		// Receive authorization code (not the token directly for security)
 		const authCode = await new Promise<string>((resolve, reject) => {
