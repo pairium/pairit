@@ -75,6 +75,9 @@ export async function ensureIndexes(): Promise<void> {
 		.createIndex({ sessionId: 1, createdAt: 1 });
 	await database
 		.collection("events")
+		.createIndex({ configId: 1, createdAt: 1 });
+	await database
+		.collection("events")
 		.createIndex({ idempotencyKey: 1 }, { unique: true, sparse: true });
 	await database
 		.collection("configs")
@@ -96,6 +99,13 @@ export async function ensureIndexes(): Promise<void> {
 	await database
 		.collection("groups")
 		.createIndex({ groupId: 1 }, { unique: true });
+	await database
+		.collection("groups")
+		.createIndex({ configId: 1, matchedAt: 1 });
+
+	await database
+		.collection("sessions")
+		.createIndex({ configId: 1, createdAt: 1 });
 
 	// Session resumption indexes
 	// OAuth user lookup: find sessions by userId + configId
