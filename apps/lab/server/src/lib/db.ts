@@ -73,7 +73,6 @@ export async function ensureIndexes(): Promise<void> {
 	await database
 		.collection("events")
 		.createIndex({ sessionId: 1, createdAt: 1 });
-	// Data export sort: find({configId}).sort({createdAt})
 	await database
 		.collection("events")
 		.createIndex({ configId: 1, createdAt: 1 });
@@ -100,12 +99,10 @@ export async function ensureIndexes(): Promise<void> {
 	await database
 		.collection("groups")
 		.createIndex({ groupId: 1 }, { unique: true });
-	// Data export sort: find({configId}).sort({matchedAt})
 	await database
 		.collection("groups")
 		.createIndex({ configId: 1, matchedAt: 1 });
 
-	// Data export sort: find({configId}).sort({createdAt})
 	await database
 		.collection("sessions")
 		.createIndex({ configId: 1, createdAt: 1 });
