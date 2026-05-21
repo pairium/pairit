@@ -19,7 +19,9 @@ export type StoredLlmCredentials = {
 function getEncryptionKey(): Buffer {
 	const raw = process.env.CREDENTIALS_ENCRYPTION_KEY;
 	if (!raw) {
-		throw new Error("CREDENTIALS_ENCRYPTION_KEY is required for per-config LLM credentials");
+		throw new Error(
+			"CREDENTIALS_ENCRYPTION_KEY is required for per-config LLM credentials",
+		);
 	}
 
 	const trimmed = raw.trim();
@@ -69,7 +71,9 @@ export function encryptLlmCredentials(
 	return Object.keys(output).length > 0 ? output : undefined;
 }
 
-export function maskConfiguredCredentials(credentials?: StoredLlmCredentials | null): {
+export function maskConfiguredCredentials(
+	credentials?: StoredLlmCredentials | null,
+): {
 	openai: boolean;
 	anthropic: boolean;
 } {

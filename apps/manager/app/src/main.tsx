@@ -18,6 +18,7 @@ import { ConfigDetail } from "./routes/ConfigDetail";
 import { ConfigsList } from "./routes/ConfigsList";
 import { Dashboard } from "./routes/Dashboard";
 import { Media } from "./routes/Media";
+import { SessionDetail } from "./routes/SessionDetail";
 
 let DevTools: () => ReactNode = () => null;
 if (import.meta.env.DEV) {
@@ -64,6 +65,12 @@ const configDataRoute = createRoute({
 	component: ConfigData,
 });
 
+const sessionDetailRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/configs/$configId/sessions/$sessionId",
+	component: SessionDetail,
+});
+
 const mediaRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/media",
@@ -80,6 +87,7 @@ const routeTree = rootRoute.addChildren([
 	dashboardRoute,
 	configsRoute,
 	configDetailRoute,
+	sessionDetailRoute,
 	configDataRoute,
 	mediaRoute,
 	allowlistRoute,

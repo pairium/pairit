@@ -3,13 +3,40 @@ import {
 	type ChatMessageExport,
 	type EventExport,
 	type GroupExport,
+	type Page,
 	type SessionExport,
 	type SurveyResponseExport,
 	type WorkspaceDocumentExport,
 } from "@app/lib/api";
+import { DownloadJsonButton } from "@components/DownloadJsonButton";
 import { PaginatedTable } from "@components/PaginatedTable";
 import { Link, useParams } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { useMemo } from "react";
+
+type Fetcher<T> = (cursor?: string) => Promise<Page<T>>;
+
+function fetcherFor(
+	subpage: string,
+	configId: string,
+): Fetcher<unknown> | null {
+	switch (subpage) {
+		case "sessions":
+			return (c) => api.listSessions(configId, c);
+		case "events":
+			return (c) => api.listEvents(configId, c);
+		case "groups":
+			return (c) => api.listGroups(configId, c);
+		case "surveys":
+			return (c) => api.listSurveyResponses(configId, c);
+		case "chat":
+			return (c) => api.listChatMessages(configId, c);
+		case "workspaces":
+			return (c) => api.listWorkspaceDocuments(configId, c);
+		default:
+			return null;
+	}
+}
 
 const TITLES: Record<string, string> = {
 	sessions: "Sessions",
@@ -69,10 +96,14 @@ export function ConfigData() {
 							{
 								key: "sessionId",
 								label: "Session ID",
-								render: (r) => (
-									<span className="font-mono text-[12px]">
+								render: (r): ReactNode => (
+									<Link
+										to="/configs/$configId/sessions/$sessionId"
+										params={{ configId, sessionId: r.sessionId }}
+										className="font-mono text-[12px] text-slate-900 no-underline hover:underline"
+									>
 										{truncate(r.sessionId, 18)}
-									</span>
+									</Link>
 								),
 							},
 							{
@@ -302,6 +333,7 @@ export function ConfigData() {
 		}
 	}, [configId, subpage]);
 
+	const fetcher = fetcherFor(subpage, configId);
 	return (
 		<div className="space-y-6">
 			<div>
@@ -320,9 +352,17 @@ export function ConfigData() {
 					<span className="mx-2 text-slate-300">/</span>
 					<span className="text-slate-900">{title}</span>
 				</div>
-				<h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-					{title}
-				</h1>
+				<div className="flex items-start justify-between gap-4">
+					<h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+						{title}
+					</h1>
+					{fetcher && (
+						<DownloadJsonButton
+							fetchPage={fetcher}
+							filename={`${configId}-${subpage}.json`}
+						/>
+					)}
+				</div>
 			</div>
 			{table}
 		</div>

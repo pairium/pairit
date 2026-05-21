@@ -172,9 +172,19 @@ export const api = {
 			`/data/${encodeURIComponent(configId)}/sessions${qs({ since, limit })}`,
 		).then((r) => paginated<SessionExport>(r, "sessions")),
 
-	listEvents: (configId: string, since?: string, limit?: string) =>
+	getSession: (configId: string, sessionId: string) =>
+		request<SessionExport>(
+			`/data/${encodeURIComponent(configId)}/sessions/${encodeURIComponent(sessionId)}`,
+		),
+
+	listEvents: (
+		configId: string,
+		since?: string,
+		limit?: string,
+		sessionId?: string,
+	) =>
 		request<Record<string, unknown>>(
-			`/data/${encodeURIComponent(configId)}/events${qs({ since, limit })}`,
+			`/data/${encodeURIComponent(configId)}/events${qs({ since, limit, sessionId })}`,
 		).then((r) => paginated<EventExport>(r, "events")),
 
 	listGroups: (configId: string, since?: string, limit?: string) =>

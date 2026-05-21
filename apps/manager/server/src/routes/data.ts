@@ -112,6 +112,58 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 		},
 	)
 	.get(
+		"/:configId/sessions/:sessionId",
+		async ({ params: { configId, sessionId }, set, user }) => {
+			if (!user) {
+				set.status = 401;
+				return { error: "unauthorized", message: "Not authenticated" };
+			}
+
+			const configsCollection = await getConfigsCollection();
+			const config = await configsCollection.findOne({ configId });
+			if (!config) {
+				set.status = 404;
+				return { error: "not_found", message: "Config not found" };
+			}
+			if (config.owner !== user.id) {
+				set.status = 403;
+				return {
+					error: "forbidden",
+					message: "Not authorized to export this config's data",
+				};
+			}
+
+			const sessionsCollection = await getSessionsCollection();
+			const session = await sessionsCollection.findOne({
+				configId,
+				id: sessionId,
+			});
+			if (!session) {
+				set.status = 404;
+				return { error: "not_found", message: "Session not found" };
+			}
+
+			return {
+				sessionId: session.id,
+				configId: session.configId,
+				currentPageId: session.currentPageId,
+				status: session.endedAt ? "completed" : "in_progress",
+				session_state: session.session_state ?? {},
+				prolific: session.prolific ?? null,
+				userId: session.userId ?? null,
+				createdAt: session.createdAt?.toISOString() ?? null,
+				updatedAt: session.updatedAt?.toISOString() ?? null,
+				endedAt: session.endedAt ?? null,
+			};
+		},
+		{
+			params: t.Object({
+				configId: t.String(),
+				sessionId: t.String(),
+			}),
+		},
+	)
+	.get(
 		"/:configId/events",
 		async ({ params: { configId }, query, set, user }) => {
 			if (!user) {
@@ -141,9 +193,11 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 			const { cursor, limit } = pag;
 
 			const eventsCollection = await getEventsCollection();
+			const base: Record<string, unknown> = { configId };
+			if (query.sessionId) base.sessionId = query.sessionId;
 			const filter = cursor
-				? { configId, ...cursorFilter("createdAt", cursor) }
-				: { configId };
+				? { ...base, ...cursorFilter("createdAt", cursor) }
+				: base;
 			const events = await eventsCollection
 				.find(filter)
 				.sort({ createdAt: 1, _id: 1 })
@@ -171,7 +225,11 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 		},
 		{
 			params: t.Object({ configId: t.String() }),
-			query: paginationQuerySchema,
+			query: t.Object({
+				since: t.Optional(t.String()),
+				limit: t.Optional(t.String()),
+				sessionId: t.Optional(t.String()),
+			}),
 		},
 	)
 	.get(
