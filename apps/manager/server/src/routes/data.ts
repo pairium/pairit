@@ -7,6 +7,14 @@
 import { Elysia, t } from "elysia";
 import { authMiddleware } from "../lib/auth-middleware";
 import {
+	type Cursor,
+	CursorError,
+	cursorFilter,
+	encodeCursor,
+	parseCursor,
+	parseLimit,
+} from "../lib/cursor";
+import {
 	getChatMessagesCollection,
 	getConfigsCollection,
 	getEventsCollection,
@@ -15,17 +23,37 @@ import {
 	getWorkspaceDocumentsCollection,
 } from "../lib/db";
 
+const paginationQuerySchema = t.Object({
+	since: t.Optional(t.String()),
+	limit: t.Optional(t.String()),
+});
+
+type PaginationQuery = { since?: string; limit?: string };
+
+function parsePagination(
+	query: PaginationQuery,
+): { cursor: Cursor | null; limit: number } | CursorError {
+	try {
+		return {
+			cursor: parseCursor(query.since),
+			limit: parseLimit(query.limit),
+		};
+	} catch (err) {
+		if (err instanceof CursorError) return err;
+		throw err;
+	}
+}
+
 export const dataRoutes = new Elysia({ prefix: "/data" })
 	.use(authMiddleware)
 	.get(
 		"/:configId/sessions",
-		async ({ params: { configId }, set, user }) => {
+		async ({ params: { configId }, query, set, user }) => {
 			if (!user) {
 				set.status = 401;
 				return { error: "unauthorized", message: "Not authenticated" };
 			}
 
-			// Verify ownership
 			const configsCollection = await getConfigsCollection();
 			const config = await configsCollection.findOne({ configId });
 			if (!config) {
@@ -40,10 +68,21 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				};
 			}
 
+			const pag = parsePagination(query);
+			if (pag instanceof CursorError) {
+				set.status = 400;
+				return { error: "bad_request", message: pag.message };
+			}
+			const { cursor, limit } = pag;
+
 			const sessionsCollection = await getSessionsCollection();
+			const filter = cursor
+				? { configId, ...cursorFilter("createdAt", cursor) }
+				: { configId };
 			const sessions = await sessionsCollection
-				.find({ configId })
-				.sort({ createdAt: 1 })
+				.find(filter)
+				.sort({ createdAt: 1, _id: 1 })
+				.limit(limit)
 				.toArray();
 
 			const exportData = sessions.map((session) => ({
@@ -59,23 +98,27 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				endedAt: session.endedAt ?? null,
 			}));
 
-			return { sessions: exportData };
+			const last = sessions.at(-1);
+			const nextCursor =
+				sessions.length === limit && last?.createdAt && last._id
+					? encodeCursor(last.createdAt, last._id)
+					: null;
+
+			return { sessions: exportData, nextCursor };
 		},
 		{
-			params: t.Object({
-				configId: t.String(),
-			}),
+			params: t.Object({ configId: t.String() }),
+			query: paginationQuerySchema,
 		},
 	)
 	.get(
 		"/:configId/events",
-		async ({ params: { configId }, set, user }) => {
+		async ({ params: { configId }, query, set, user }) => {
 			if (!user) {
 				set.status = 401;
 				return { error: "unauthorized", message: "Not authenticated" };
 			}
 
-			// Verify ownership
 			const configsCollection = await getConfigsCollection();
 			const config = await configsCollection.findOne({ configId });
 			if (!config) {
@@ -90,10 +133,21 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				};
 			}
 
+			const pag = parsePagination(query);
+			if (pag instanceof CursorError) {
+				set.status = 400;
+				return { error: "bad_request", message: pag.message };
+			}
+			const { cursor, limit } = pag;
+
 			const eventsCollection = await getEventsCollection();
+			const filter = cursor
+				? { configId, ...cursorFilter("createdAt", cursor) }
+				: { configId };
 			const events = await eventsCollection
-				.find({ configId })
-				.sort({ createdAt: 1 })
+				.find(filter)
+				.sort({ createdAt: 1, _id: 1 })
+				.limit(limit)
 				.toArray();
 
 			const exportData = events.map((event) => ({
@@ -107,23 +161,27 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				createdAt: event.createdAt?.toISOString() ?? null,
 			}));
 
-			return { events: exportData };
+			const last = events.at(-1);
+			const nextCursor =
+				events.length === limit && last?.createdAt && last._id
+					? encodeCursor(last.createdAt, last._id)
+					: null;
+
+			return { events: exportData, nextCursor };
 		},
 		{
-			params: t.Object({
-				configId: t.String(),
-			}),
+			params: t.Object({ configId: t.String() }),
+			query: paginationQuerySchema,
 		},
 	)
 	.get(
 		"/:configId/chat-messages",
-		async ({ params: { configId }, set, user }) => {
+		async ({ params: { configId }, query, set, user }) => {
 			if (!user) {
 				set.status = 401;
 				return { error: "unauthorized", message: "Not authenticated" };
 			}
 
-			// Verify ownership
 			const configsCollection = await getConfigsCollection();
 			const config = await configsCollection.findOne({ configId });
 			if (!config) {
@@ -138,10 +196,21 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				};
 			}
 
+			const pag = parsePagination(query);
+			if (pag instanceof CursorError) {
+				set.status = 400;
+				return { error: "bad_request", message: pag.message };
+			}
+			const { cursor, limit } = pag;
+
 			const chatCollection = await getChatMessagesCollection();
+			const filter = cursor
+				? { configId, ...cursorFilter("createdAt", cursor) }
+				: { configId };
 			const messages = await chatCollection
-				.find({ configId })
-				.sort({ createdAt: 1 })
+				.find(filter)
+				.sort({ createdAt: 1, _id: 1 })
+				.limit(limit)
 				.toArray();
 
 			const exportData = messages.map((msg) => ({
@@ -153,17 +222,22 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				createdAt: msg.createdAt?.toISOString() ?? null,
 			}));
 
-			return { messages: exportData };
+			const last = messages.at(-1);
+			const nextCursor =
+				messages.length === limit && last?.createdAt && last._id
+					? encodeCursor(last.createdAt, last._id)
+					: null;
+
+			return { messages: exportData, nextCursor };
 		},
 		{
-			params: t.Object({
-				configId: t.String(),
-			}),
+			params: t.Object({ configId: t.String() }),
+			query: paginationQuerySchema,
 		},
 	)
 	.get(
 		"/:configId/groups",
-		async ({ params: { configId }, set, user }) => {
+		async ({ params: { configId }, query, set, user }) => {
 			if (!user) {
 				set.status = 401;
 				return { error: "unauthorized", message: "Not authenticated" };
@@ -183,10 +257,21 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				};
 			}
 
+			const pag = parsePagination(query);
+			if (pag instanceof CursorError) {
+				set.status = 400;
+				return { error: "bad_request", message: pag.message };
+			}
+			const { cursor, limit } = pag;
+
 			const groupsCollection = await getGroupsCollection();
+			const filter = cursor
+				? { configId, ...cursorFilter("matchedAt", cursor) }
+				: { configId };
 			const groups = await groupsCollection
-				.find({ configId })
-				.sort({ matchedAt: 1 })
+				.find(filter)
+				.sort({ matchedAt: 1, _id: 1 })
+				.limit(limit)
 				.toArray();
 
 			// Explode memberSessionIds → one row per (group, session)
@@ -201,17 +286,22 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				})),
 			);
 
-			return { groups: exportData };
+			const last = groups.at(-1);
+			const nextCursor =
+				groups.length === limit && last?.matchedAt && last._id
+					? encodeCursor(last.matchedAt, last._id)
+					: null;
+
+			return { groups: exportData, nextCursor };
 		},
 		{
-			params: t.Object({
-				configId: t.String(),
-			}),
+			params: t.Object({ configId: t.String() }),
+			query: paginationQuerySchema,
 		},
 	)
 	.get(
 		"/:configId/survey-responses",
-		async ({ params: { configId }, set, user }) => {
+		async ({ params: { configId }, query, set, user }) => {
 			if (!user) {
 				set.status = 401;
 				return { error: "unauthorized", message: "Not authenticated" };
@@ -231,16 +321,29 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				};
 			}
 
+			const pag = parsePagination(query);
+			if (pag instanceof CursorError) {
+				set.status = 400;
+				return { error: "bad_request", message: pag.message };
+			}
+			const { cursor, limit } = pag;
+
+			const baseOr = [
+				{ componentType: "survey" },
+				{ componentType: "paged_survey", "data.status": "completed" },
+			];
+			const filter = cursor
+				? {
+						configId,
+						$and: [{ $or: baseOr }, cursorFilter("createdAt", cursor)],
+					}
+				: { configId, $or: baseOr };
+
 			const eventsCollection = await getEventsCollection();
 			const events = await eventsCollection
-				.find({
-					configId,
-					$or: [
-						{ componentType: "survey" },
-						{ componentType: "paged_survey", "data.status": "completed" },
-					],
-				})
-				.sort({ createdAt: 1 })
+				.find(filter)
+				.sort({ createdAt: 1, _id: 1 })
+				.limit(limit)
 				.toArray();
 
 			const exportData = events.map((event) => ({
@@ -251,17 +354,22 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				data: event.data ?? {},
 			}));
 
-			return { surveyResponses: exportData };
+			const last = events.at(-1);
+			const nextCursor =
+				events.length === limit && last?.createdAt && last._id
+					? encodeCursor(last.createdAt, last._id)
+					: null;
+
+			return { surveyResponses: exportData, nextCursor };
 		},
 		{
-			params: t.Object({
-				configId: t.String(),
-			}),
+			params: t.Object({ configId: t.String() }),
+			query: paginationQuerySchema,
 		},
 	)
 	.get(
 		"/:configId/workspace-documents",
-		async ({ params: { configId }, set, user }) => {
+		async ({ params: { configId }, query, set, user }) => {
 			if (!user) {
 				set.status = 401;
 				return { error: "unauthorized", message: "Not authenticated" };
@@ -281,10 +389,21 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				};
 			}
 
+			const pag = parsePagination(query);
+			if (pag instanceof CursorError) {
+				set.status = 400;
+				return { error: "bad_request", message: pag.message };
+			}
+			const { cursor, limit } = pag;
+
 			const wsCollection = await getWorkspaceDocumentsCollection();
+			const filter = cursor
+				? { configId, ...cursorFilter("updatedAt", cursor) }
+				: { configId };
 			const documents = await wsCollection
-				.find({ configId })
-				.sort({ updatedAt: 1 })
+				.find(filter)
+				.sort({ updatedAt: 1, _id: 1 })
+				.limit(limit)
 				.toArray();
 
 			const exportData = documents.map((doc) => ({
@@ -297,11 +416,16 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				updatedAt: doc.updatedAt?.toISOString() ?? null,
 			}));
 
-			return { workspaceDocuments: exportData };
+			const last = documents.at(-1);
+			const nextCursor =
+				documents.length === limit && last?.updatedAt && last._id
+					? encodeCursor(last.updatedAt, last._id)
+					: null;
+
+			return { workspaceDocuments: exportData, nextCursor };
 		},
 		{
-			params: t.Object({
-				configId: t.String(),
-			}),
+			params: t.Object({ configId: t.String() }),
+			query: paginationQuerySchema,
 		},
 	);
