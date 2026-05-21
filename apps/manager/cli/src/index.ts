@@ -30,7 +30,7 @@ const program = new Command();
 program
 	.name("pairit")
 	.description("CLI for Pairit experiment configs")
-	.version("0.1.8");
+	.version("0.1.9");
 
 program
 	.command("login")
@@ -281,6 +281,81 @@ dataCommand
 		}
 	});
 
+const adminCommand = program
+	.command("admin")
+	.description("Manage manager allowlist (admin only)");
+
+adminCommand
+	.command("add-user")
+	.argument("<email>", "Email to allow")
+	.option("--admin", "Grant admin privileges")
+	.description("Add a user to the manager allowlist")
+	.action(async (email: string, options: AdminAddOptions) => {
+		try {
+			const response = (await callFunctions("/admin/users", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ email, isAdmin: Boolean(options.admin) }),
+			})) as { user?: AllowlistEntry };
+			const entry = response?.user;
+			if (!entry) throw new Error("No user returned");
+			console.log(
+				`✓ Added ${entry.email} (${entry.isAdmin ? "admin" : "researcher"})`,
+			);
+		} catch (error) {
+			reportCliError("Add user failed", error);
+		}
+	});
+
+adminCommand
+	.command("remove-user")
+	.argument("<email>", "Email to remove")
+	.option("--force", "Skip confirmation")
+	.description("Remove a user from the manager allowlist and revoke sessions")
+	.action(async (email: string, options: AdminRemoveOptions) => {
+		try {
+			if (!options.force) {
+				const confirmed = await promptConfirm(
+					`Remove ${email} from allowlist? (y/N)`,
+				);
+				if (!confirmed) {
+					console.log("Removal aborted");
+					return;
+				}
+			}
+			await callFunctions(`/admin/users/${encodeURIComponent(email)}`, {
+				method: "DELETE",
+			});
+			console.log(`✓ Removed ${email}`);
+		} catch (error) {
+			reportCliError("Remove user failed", error);
+		}
+	});
+
+adminCommand
+	.command("list-users")
+	.description("List users on the manager allowlist")
+	.action(async () => {
+		try {
+			const response = (await callFunctions("/admin/users", {
+				method: "GET",
+			})) as { users?: AllowlistEntry[] };
+			const users = response?.users ?? [];
+			if (!users.length) {
+				console.log("No users on the allowlist");
+				return;
+			}
+			users.forEach((u) => {
+				const role = u.isAdmin ? "admin" : "researcher";
+				console.log(
+					`${u.email} | ${role} | addedBy=${u.addedBy} | addedAt=${u.addedAt}`,
+				);
+			});
+		} catch (error) {
+			reportCliError("List users failed", error);
+		}
+	});
+
 program.parseAsync(process.argv).catch((err) => {
 	console.error(err);
 	process.exit(1);
@@ -297,6 +372,21 @@ type ListOptions = Record<string, never>;
 
 type DeleteOptions = {
 	force?: boolean;
+};
+
+type AdminAddOptions = {
+	admin?: boolean;
+};
+
+type AdminRemoveOptions = {
+	force?: boolean;
+};
+
+type AllowlistEntry = {
+	email: string;
+	isAdmin: boolean;
+	addedBy: string;
+	addedAt: string;
 };
 
 type ConfigListEntry = {

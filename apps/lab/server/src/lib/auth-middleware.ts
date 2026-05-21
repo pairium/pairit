@@ -8,8 +8,8 @@
  */
 
 import type { User } from "@pairit/auth";
-import { auth } from "@pairit/auth";
 import { getConfigsCollection, getSessionsCollection } from "../lib/db";
+import { auth } from "./auth";
 
 /**
  * Context type added by the auth middleware
