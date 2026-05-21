@@ -227,40 +227,27 @@ app
 			}
 		}
 
-		const content = `
-        <div class="card">
-            <h1>
-                <svg class="icon" viewBox="0 0 24 24" style="color: var(--emerald-600); width: 32px; height: 32px;">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Login Successful
-            </h1>
-
-            ${
-							redirectUrl
-								? `
-                <p>Redirecting you back to the CLI...</p>
-                <div style="margin-top: 1rem; font-size: 0.875rem; color: var(--slate-600);">
-                    If you are not redirected, <a href="${redirectUrl}">click here</a>.
-                </div>
-            `
-								: manual && authCode
-									? `
-                <p>Copy this one-time authorization code into your CLI. It expires in 60 seconds.</p>
-                <div class="token-box" id="auth-code">${authCode}</div>
-                <div style="display:flex; gap:0.75rem; width:100%; flex-direction:column;">
-                    <button onclick="copyCode()" class="btn btn-blue">Copy Code</button>
-                    <button onclick="window.close()" class="btn btn-primary">Close Window</button>
-                </div>
-            `
-									: `
-                <p>You have successfully authenticated. You can now close this window and return to your CLI.</p>
-                <div style="margin-top: 1.5rem;">
-                    <button onclick="window.close()" class="btn btn-blue">Close Window</button>
-                </div>
-            `
-						}
-        </div>`;
+		const content = redirectUrl
+			? `
+            <h1>Signed in</h1>
+            <p class="subtitle">Returning you to the CLI…</p>
+            <p class="footnote">Nothing happening? <a href="${redirectUrl}">Retry the handoff.</a></p>`
+			: manual && authCode
+				? `
+            <h1>One-time code</h1>
+            <p class="subtitle">Paste this into your terminal. It expires in 60 seconds.</p>
+            <p class="token-meta">Authorization code</p>
+            <div class="token" id="auth-code">${authCode}</div>
+            <div class="btn-row">
+                <button onclick="copyCode()" class="btn btn--primary">Copy code</button>
+                <button onclick="window.close()" class="btn btn--ghost">Close window</button>
+            </div>`
+				: `
+            <h1>Signed in</h1>
+            <p class="subtitle">You're authenticated. You can close this window and return to your CLI.</p>
+            <div class="btn-row">
+                <button onclick="window.close()" class="btn btn--ghost">Close window</button>
+            </div>`;
 
 		const scriptContent = `
         <script>
@@ -285,7 +272,7 @@ app
 
 		return new Response(
 			renderPage({
-				title: "Login Successful",
+				title: "Signed in",
 				content,
 				scripts: scriptContent,
 			}),
@@ -299,28 +286,35 @@ app
 	.get("/access-denied", () => {
 		const contact = getContactEmail();
 		const content = `
-        <div class="card">
             <h1>Access denied</h1>
-            <p>This Pairit manager is invite-only. Your Google account isn't on the allowlist yet.</p>
-            <p>Email <a href="mailto:${contact}">${contact}</a> to request access.</p>
-            <a href="/" class="btn btn-secondary">Back to home</a>
-        </div>`;
-		return new Response(renderPage({ title: "Access denied", content }), {
-			headers: { "content-type": "text/html" },
-			status: 403,
-		});
+            <p class="subtitle">Pairit Manager is invite-only. Your Google account isn't on the allowlist for this instance.</p>
+            <div class="btn-row">
+                <a href="mailto:${contact}" class="btn btn--primary">Request access</a>
+                <a href="/" class="btn btn--ghost">Back to home</a>
+            </div>
+            <p class="footnote">Contact <a href="mailto:${contact}">${contact}</a></p>`;
+		return new Response(
+			renderPage({
+				title: "Access denied",
+				content,
+			}),
+			{
+				headers: { "content-type": "text/html" },
+				status: 403,
+			},
+		);
 	})
 	.get("/login", ({ query }) => {
 		const manual = query.manual === "1";
 		const content = `
-        <div class="card">
-            <h1>Pairit CLI Login</h1>
-            <p>${manual ? "Sign in with Google to get a one-time authorization code for your CLI." : "Click the button below to sign in with Google."}</p>
-            <button onclick="login()" class="btn btn-blue">
-                <svg class="icon" viewBox="0 0 24 24"><path d="M17.788 5.108A9 9 0 1021 12h-8"></path></svg>
-                Sign in with Google
-            </button>
-        </div>`;
+            <h1>Sign in</h1>
+            <p class="subtitle">${manual ? "Authenticate with your allowlisted Google account. We'll hand off a one-time code your CLI can exchange for a session." : "Authenticate with your allowlisted Google account. Your CLI will resume automatically when the handoff completes."}</p>
+            <div class="btn-row">
+                <button onclick="login()" class="btn btn--primary">
+                    Continue with Google
+                </button>
+            </div>
+            <p class="footnote">Not on the allowlist? Ask your operator for an invite.</p>`;
 
 		const scriptContent = `
         <script>
@@ -367,7 +361,7 @@ app
 
 		return new Response(
 			renderPage({
-				title: "Pairit CLI Login",
+				title: "Sign in",
 				content,
 				scripts: scriptContent,
 			}),
@@ -378,39 +372,22 @@ app
 	})
 	.get("/", () => {
 		const content = `
-        <section class="hero">
             <h1>Pairit Manager</h1>
-            <p class="subtitle">API server for the Pairit CLI.</p>
-        </section>
-
-        <div class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
-            <div class="card">
-                <h2>
-                    <svg class="icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                    CLI Login
-                </h2>
-                <p>Authenticate the Pairit CLI to upload configs and export data.</p>
-                <a href="/login" class="btn btn-primary">Login with Google</a>
-            </div>
-
-            <div class="card">
-                <h2>
-                    <svg class="icon" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg>
-                    Documentation
-                </h2>
-                <p>Learn how to create experiments and use the CLI.</p>
-                <a href="https://pairium.github.io/pairit/" class="btn btn-secondary" target="_blank">Read the docs</a>
-            </div>
-
-            <div class="card">
-                <h2>
-                    <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>
-                    Lab
-                </h2>
-                <p>Run experiments with participants.</p>
-                <a href="${LAB_URL}" class="btn btn-secondary">Open Lab</a>
-            </div>
-        </div>`;
+            <p class="subtitle">The API server for the Pairit CLI. Sign in below, or head to the lab to run experiments.</p>
+            <nav class="actions" aria-label="Primary destinations">
+                <a href="/login" class="action">
+                    <span class="label">Sign in to the CLI</span>
+                    <span class="arrow" aria-hidden="true">→</span>
+                </a>
+                <a href="https://pairium.github.io/pairit/" class="action" target="_blank" rel="noopener">
+                    <span class="label">Documentation</span>
+                    <span class="arrow" aria-hidden="true">→</span>
+                </a>
+                <a href="${LAB_URL}" class="action">
+                    <span class="label">Open the lab</span>
+                    <span class="arrow" aria-hidden="true">→</span>
+                </a>
+            </nav>`;
 
 		return new Response(
 			renderPage({
