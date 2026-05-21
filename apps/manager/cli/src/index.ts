@@ -653,6 +653,26 @@ async function resolvePath(configPath: string): Promise<string> {
 	return absolute;
 }
 
+async function fetchAllPages<T>(
+	pathname: string,
+	extract: (response: unknown) => T[],
+): Promise<T[]> {
+	const all: T[] = [];
+	let since: string | null = null;
+	do {
+		const url = since
+			? `${pathname}?since=${encodeURIComponent(since)}`
+			: pathname;
+		const response = (await callFunctions(url, { method: "GET" })) as
+			| { nextCursor?: string | null }
+			| undefined;
+		if (!response) break;
+		all.push(...extract(response));
+		since = response.nextCursor ?? null;
+	} while (since);
+	return all;
+}
+
 async function callFunctions(
 	pathname: string,
 	init: RequestInit = {},
@@ -740,41 +760,44 @@ async function exportData(
 
 	console.log(`Exporting data for ${configId} in ${format} format...`);
 
-	// Fetch all data in parallel
+	const cfg = encodeURIComponent(configId);
 	const [
-		sessionsRes,
-		eventsRes,
-		messagesRes,
-		groupsRes,
-		surveyRes,
-		workspaceRes,
+		sessions,
+		events,
+		messages,
+		groups,
+		surveyResponses,
+		workspaceDocuments,
 	] = await Promise.all([
-		callFunctions(`/data/${encodeURIComponent(configId)}/sessions`, {
-			method: "GET",
-		}) as Promise<{ sessions: SessionExport[] }>,
-		callFunctions(`/data/${encodeURIComponent(configId)}/events`, {
-			method: "GET",
-		}) as Promise<{ events: EventExport[] }>,
-		callFunctions(`/data/${encodeURIComponent(configId)}/chat-messages`, {
-			method: "GET",
-		}) as Promise<{ messages: ChatMessageExport[] }>,
-		callFunctions(`/data/${encodeURIComponent(configId)}/groups`, {
-			method: "GET",
-		}) as Promise<{ groups: GroupExport[] }>,
-		callFunctions(`/data/${encodeURIComponent(configId)}/survey-responses`, {
-			method: "GET",
-		}) as Promise<{ surveyResponses: SurveyResponseExport[] }>,
-		callFunctions(`/data/${encodeURIComponent(configId)}/workspace-documents`, {
-			method: "GET",
-		}) as Promise<{ workspaceDocuments: WorkspaceDocumentExport[] }>,
+		fetchAllPages<SessionExport>(
+			`/data/${cfg}/sessions`,
+			(r) => (r as { sessions?: SessionExport[] }).sessions ?? [],
+		),
+		fetchAllPages<EventExport>(
+			`/data/${cfg}/events`,
+			(r) => (r as { events?: EventExport[] }).events ?? [],
+		),
+		fetchAllPages<ChatMessageExport>(
+			`/data/${cfg}/chat-messages`,
+			(r) => (r as { messages?: ChatMessageExport[] }).messages ?? [],
+		),
+		fetchAllPages<GroupExport>(
+			`/data/${cfg}/groups`,
+			(r) => (r as { groups?: GroupExport[] }).groups ?? [],
+		),
+		fetchAllPages<SurveyResponseExport>(
+			`/data/${cfg}/survey-responses`,
+			(r) =>
+				(r as { surveyResponses?: SurveyResponseExport[] }).surveyResponses ??
+				[],
+		),
+		fetchAllPages<WorkspaceDocumentExport>(
+			`/data/${cfg}/workspace-documents`,
+			(r) =>
+				(r as { workspaceDocuments?: WorkspaceDocumentExport[] })
+					.workspaceDocuments ?? [],
+		),
 	]);
-
-	const sessions = sessionsRes.sessions ?? [];
-	const events = eventsRes.events ?? [];
-	const messages = messagesRes.messages ?? [];
-	const groups = groupsRes.groups ?? [];
-	const surveyResponses = surveyRes.surveyResponses ?? [];
-	const workspaceDocuments = workspaceRes.workspaceDocuments ?? [];
 
 	// Write each data type to its own file
 	await writeExportFile(
