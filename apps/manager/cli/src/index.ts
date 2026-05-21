@@ -761,94 +761,78 @@ async function exportData(
 	console.log(`Exporting data for ${configId} in ${format} format...`);
 
 	const cfg = encodeURIComponent(configId);
-	const [
-		sessions,
-		events,
-		messages,
-		groups,
-		surveyResponses,
-		workspaceDocuments,
-	] = await Promise.all([
-		fetchAllPages<SessionExport>(
-			`/data/${cfg}/sessions`,
-			(r) => (r as { sessions?: SessionExport[] }).sessions ?? [],
-		),
-		fetchAllPages<EventExport>(
-			`/data/${cfg}/events`,
-			(r) => (r as { events?: EventExport[] }).events ?? [],
-		),
-		fetchAllPages<ChatMessageExport>(
-			`/data/${cfg}/chat-messages`,
-			(r) => (r as { messages?: ChatMessageExport[] }).messages ?? [],
-		),
-		fetchAllPages<GroupExport>(
-			`/data/${cfg}/groups`,
-			(r) => (r as { groups?: GroupExport[] }).groups ?? [],
-		),
-		fetchAllPages<SurveyResponseExport>(
-			`/data/${cfg}/survey-responses`,
-			(r) =>
-				(r as { surveyResponses?: SurveyResponseExport[] }).surveyResponses ??
-				[],
-		),
-		fetchAllPages<WorkspaceDocumentExport>(
-			`/data/${cfg}/workspace-documents`,
-			(r) =>
-				(r as { workspaceDocuments?: WorkspaceDocumentExport[] })
-					.workspaceDocuments ?? [],
-		),
-	]);
 
-	// Write each data type to its own file
-	await writeExportFile(
+	await fetchAndWriteExport<SessionExport>(
+		`/data/${cfg}/sessions`,
 		path.join(outDir, `${configId}-sessions`),
-		sessions,
+		(r) => (r as { sessions?: SessionExport[] }).sessions ?? [],
 		format,
 		flattenSession,
+		"sessions",
 	);
-	console.log(`✓ Exported ${sessions.length} sessions`);
 
-	await writeExportFile(
+	await fetchAndWriteExport<EventExport>(
+		`/data/${cfg}/events`,
 		path.join(outDir, `${configId}-events`),
-		events,
+		(r) => (r as { events?: EventExport[] }).events ?? [],
 		format,
 		flattenEvent,
+		"events",
 	);
-	console.log(`✓ Exported ${events.length} events`);
 
-	await writeExportFile(
+	await fetchAndWriteExport<ChatMessageExport>(
+		`/data/${cfg}/chat-messages`,
 		path.join(outDir, `${configId}-chat-messages`),
-		messages,
+		(r) => (r as { messages?: ChatMessageExport[] }).messages ?? [],
 		format,
 		(msg) => msg as unknown as Record<string, unknown>,
+		"chat messages",
 	);
-	console.log(`✓ Exported ${messages.length} chat messages`);
 
-	await writeExportFile(
+	await fetchAndWriteExport<GroupExport>(
+		`/data/${cfg}/groups`,
 		path.join(outDir, `${configId}-groups`),
-		groups,
+		(r) => (r as { groups?: GroupExport[] }).groups ?? [],
 		format,
 		(group) => group as unknown as Record<string, unknown>,
+		"groups",
 	);
-	console.log(`✓ Exported ${groups.length} groups`);
 
-	await writeExportFile(
+	await fetchAndWriteExport<SurveyResponseExport>(
+		`/data/${cfg}/survey-responses`,
 		path.join(outDir, `${configId}-survey-responses`),
-		surveyResponses,
+		(r) =>
+			(r as { surveyResponses?: SurveyResponseExport[] }).surveyResponses ?? [],
 		format,
 		flattenSurveyResponse,
+		"survey responses",
 	);
-	console.log(`✓ Exported ${surveyResponses.length} survey responses`);
 
-	await writeExportFile(
+	await fetchAndWriteExport<WorkspaceDocumentExport>(
+		`/data/${cfg}/workspace-documents`,
 		path.join(outDir, `${configId}-workspace-documents`),
-		workspaceDocuments,
+		(r) =>
+			(r as { workspaceDocuments?: WorkspaceDocumentExport[] })
+				.workspaceDocuments ?? [],
 		format,
 		flattenWorkspaceDocument,
+		"workspace documents",
 	);
-	console.log(`✓ Exported ${workspaceDocuments.length} workspace documents`);
 
 	console.log(`\nFiles written to: ${outDir}`);
+}
+
+async function fetchAndWriteExport<T>(
+	pathname: string,
+	outBase: string,
+	extract: (response: unknown) => T[],
+	format: "csv" | "json" | "jsonl",
+	flatten: (item: T) => Record<string, unknown>,
+	label: string,
+): Promise<void> {
+	const data = await fetchAllPages<T>(pathname, extract);
+	await writeExportFile(outBase, data, format, flatten);
+	console.log(`✓ Exported ${data.length} ${label}`);
 }
 
 type SessionExport = {
