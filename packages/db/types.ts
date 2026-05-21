@@ -70,6 +70,7 @@ export type ChatMessageDocument = {
 	_id?: ObjectId;
 	groupId: string;
 	sessionId: string;
+	configId: string;
 	senderId: string;
 	senderType: "participant" | "agent" | "system";
 	content: string;
