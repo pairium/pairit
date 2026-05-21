@@ -48,6 +48,16 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 				return { error: "not_a_member" };
 			}
 
+			const sessionsCollection = await getSessionsCollection();
+			const session = await sessionsCollection.findOne(
+				{ id: sessionId },
+				{ projection: { configId: 1 } },
+			);
+			if (!session) {
+				set.status = 404;
+				return { error: "session_not_found" };
+			}
+
 			const collection = await getChatMessagesCollection();
 
 			// Check idempotency if key provided
@@ -66,6 +76,7 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 			const message: ChatMessageDocument = {
 				groupId,
 				sessionId,
+				configId: session.configId,
 				senderId: sessionId,
 				senderType: senderType ?? "participant",
 				content,
@@ -97,8 +108,7 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 			const effectiveSenderType = senderType ?? "participant";
 			let messagesSent: number | undefined;
 			if (effectiveSenderType === "participant") {
-				const sessions = await getSessionsCollection();
-				const updatedSession = await sessions.findOneAndUpdate(
+				const updatedSession = await sessionsCollection.findOneAndUpdate(
 					{ id: sessionId },
 					{
 						$inc: { "session_state.chat.messages_sent": 1 },

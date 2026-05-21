@@ -346,6 +346,7 @@ async function runAgent(
 			await persistAndBroadcastMessage(
 				groupId,
 				sessionId,
+				configId,
 				senderId,
 				"agent",
 				fullText,
@@ -382,6 +383,7 @@ async function runAgent(
 			await persistAndBroadcastMessage(
 				groupId,
 				sessionId,
+				configId,
 				"system",
 				"system",
 				"Sorry, I encountered an error. Please try again.",
@@ -408,6 +410,7 @@ async function loadChatHistory(groupId: string): Promise<ChatMessage[]> {
 async function persistAndBroadcastMessage(
 	groupId: string,
 	sessionId: string,
+	configId: string,
 	senderId: string,
 	senderType: "participant" | "agent" | "system",
 	content: string,
@@ -419,6 +422,7 @@ async function persistAndBroadcastMessage(
 	const result = await collection.insertOne({
 		groupId,
 		sessionId,
+		configId,
 		senderId,
 		senderType,
 		content,

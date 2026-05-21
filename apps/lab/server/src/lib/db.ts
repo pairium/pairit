@@ -94,6 +94,9 @@ export async function ensureIndexes(): Promise<void> {
 		.createIndex({ groupId: 1, createdAt: 1 });
 	await database
 		.collection("chat_messages")
+		.createIndex({ configId: 1, createdAt: 1 });
+	await database
+		.collection("chat_messages")
 		.createIndex({ idempotencyKey: 1 }, { unique: true, sparse: true });
 
 	await database
