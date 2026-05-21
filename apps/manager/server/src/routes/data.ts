@@ -235,19 +235,15 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 			const events = await eventsCollection
 				.find({
 					configId,
-					componentType: { $in: ["survey", "paged_survey"] },
+					$or: [
+						{ componentType: "survey" },
+						{ componentType: "paged_survey", "data.status": "completed" },
+					],
 				})
 				.sort({ createdAt: 1 })
 				.toArray();
 
-			// Filter out paged survey per-page events (keep only completions)
-			const filtered = events.filter(
-				(event) =>
-					event.componentType !== "paged_survey" ||
-					event.data?.status === "completed",
-			);
-
-			const exportData = filtered.map((event) => ({
+			const exportData = events.map((event) => ({
 				sessionId: event.sessionId,
 				pageId: event.pageId,
 				componentId: event.componentId,
