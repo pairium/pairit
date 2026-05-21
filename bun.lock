@@ -59,9 +59,30 @@
         "typescript": "^5.9.3",
       },
     },
+    "apps/manager/app": {
+      "name": "@pairit/manager-app",
+      "version": "0.1.0",
+      "dependencies": {
+        "@tailwindcss/vite": "^4.0.6",
+        "@tanstack/react-router": "^1.132.0",
+        "@tanstack/react-router-devtools": "^1.132.0",
+        "better-auth": "^1.4.7",
+        "lucide-react": "^0.545.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "tailwindcss": "^4.0.6",
+      },
+      "devDependencies": {
+        "@types/react": "^19.0.8",
+        "@types/react-dom": "^19.0.3",
+        "@vitejs/plugin-react": "^5.0.4",
+        "typescript": "^5.9.3",
+        "vite": "^7.1.7",
+      },
+    },
     "apps/manager/cli": {
       "name": "pairit",
-      "version": "0.1.6",
+      "version": "0.1.9",
       "bin": {
         "pairit": "dist/index.js",
       },
@@ -298,6 +319,8 @@
     "@pairit/lab-app": ["@pairit/lab-app@workspace:apps/lab/app"],
 
     "@pairit/lab-server": ["@pairit/lab-server@workspace:apps/lab/server"],
+
+    "@pairit/manager-app": ["@pairit/manager-app@workspace:apps/manager/app"],
 
     "@pairit/manager-server": ["@pairit/manager-server@workspace:apps/manager/server"],
 

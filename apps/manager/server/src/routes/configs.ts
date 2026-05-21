@@ -152,6 +152,60 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 			}),
 		},
 	)
+	.get(
+		"/:configId",
+		async ({ params: { configId }, set, user }) => {
+			if (!user) {
+				set.status = 401;
+				return { error: "unauthorized", message: "Not authenticated" };
+			}
+
+			try {
+				const collection = await getConfigsCollection();
+				const data = await collection.findOne({ configId });
+				if (!data) {
+					set.status = 404;
+					return { error: "not_found" };
+				}
+				if (data.owner !== user.id) {
+					set.status = 403;
+					return {
+						error: "forbidden",
+						message: "Not authorized to view this config",
+					};
+				}
+
+				return {
+					configId: data.configId,
+					owner: data.owner,
+					checksum: data.checksum,
+					metadata: data.metadata ?? null,
+					config: data.config,
+					llmCredentials: maskConfiguredCredentials(data.llmCredentials),
+					requireAuth: data.requireAuth ?? true,
+					allowRetake: data.allowRetake ?? false,
+					createdAt:
+						data.createdAt instanceof Date
+							? data.createdAt.toISOString()
+							: null,
+					updatedAt:
+						data.updatedAt instanceof Date
+							? data.updatedAt.toISOString()
+							: null,
+				};
+			} catch (err) {
+				console.error("get error", err);
+				set.status = 500;
+				return {
+					error: "internal",
+					message: err instanceof Error ? err.message : "unknown error",
+				};
+			}
+		},
+		{
+			params: t.Object({ configId: t.String() }),
+		},
+	)
 	.delete(
 		"/:configId",
 		async ({ params: { configId }, set, user }) => {

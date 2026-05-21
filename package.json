@@ -15,7 +15,7 @@
     "test:bun": "bun test packages/ apps/manager/server/",
     "test:lab": "bun run --filter @pairit/lab-app test",
     "build": "bun run --filter '*' build",
-    "dev": "FORCE_AUTH=true NODE_ENV=development bun --env-file=.env run --filter '@pairit/lab-*' --filter '@pairit/manager-server' dev"
+    "dev": "FORCE_AUTH=true NODE_ENV=development bun --env-file=.env run --filter '@pairit/lab-*' --filter '@pairit/manager-*' dev"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.14",
