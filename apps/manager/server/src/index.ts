@@ -5,9 +5,12 @@
 
 import { randomBytes } from "node:crypto";
 import { cors } from "@elysiajs/cors";
-import { auth } from "@pairit/auth";
 import { Elysia, t } from "elysia";
+import { initAllowlist } from "./lib/allowlist-boot";
+import { getContactEmail } from "./lib/allowlist-hooks";
+import { auth } from "./lib/auth";
 import { renderPage } from "./lib/html";
+import { adminRoutes } from "./routes/admin";
 import { configsRoutes } from "./routes/configs";
 import { dataRoutes } from "./routes/data";
 import { mediaRoutes } from "./routes/media";
@@ -293,6 +296,20 @@ app
 			},
 		);
 	})
+	.get("/access-denied", () => {
+		const contact = getContactEmail();
+		const content = `
+        <div class="card">
+            <h1>Access denied</h1>
+            <p>This Pairit manager is invite-only. Your Google account isn't on the allowlist yet.</p>
+            <p>Email <a href="mailto:${contact}">${contact}</a> to request access.</p>
+            <a href="/" class="btn btn-secondary">Back to home</a>
+        </div>`;
+		return new Response(renderPage({ title: "Access denied", content }), {
+			headers: { "content-type": "text/html" },
+			status: 403,
+		});
+	})
 	.get("/login", ({ query }) => {
 		const manual = query.manual === "1";
 		const content = `
@@ -408,8 +425,13 @@ app
 	.use(configsRoutes)
 	.use(dataRoutes)
 	.use(mediaRoutes)
+	.use(adminRoutes)
 	.listen(Number(process.env.PORT) || 3002);
 
 console.log(
 	`🚀 Manager server running on ${app.server?.hostname}:${app.server?.port}`,
 );
+
+initAllowlist().catch((err) => {
+	console.error("[Allowlist] Initialization failed:", err);
+});

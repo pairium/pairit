@@ -5,8 +5,8 @@
 
 import { resolve } from "node:path";
 import { cors } from "@elysiajs/cors";
-import { auth } from "@pairit/auth";
 import { Elysia } from "elysia";
+import { auth } from "./lib/auth";
 import { ensureIndexes } from "./lib/db";
 import { chatRoutes } from "./routes/chat";
 import { eventsRoutes } from "./routes/events";

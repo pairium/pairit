@@ -1,9 +1,11 @@
 /**
- * Shared Better Auth configuration
- * Provides authentication with Google OAuth and MongoDB storage
+ * Shared Better Auth configuration factory.
+ * Each app (lab, manager) constructs its own instance via createAuth() so
+ * app-specific concerns like database hooks can vary.
  */
 
 import { getClient, getDbName } from "@pairit/db";
+import type { BetterAuthOptions } from "better-auth";
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 
@@ -35,14 +37,6 @@ function getAuthSecret(): string {
 	return secret;
 }
 
-const finalSecret = getAuthSecret();
-
-// Use shared MongoDB client from @pairit/db
-// Connection happens lazily on first auth operation via Better Auth's MongoDB adapter
-const client = getClient();
-const dbName = getDbName();
-
-// In dev, derive base URL from PORT; in production, require AUTH_BASE_URL
 function getBaseURL(): string {
 	if (process.env.AUTH_BASE_URL) {
 		return new URL(process.env.AUTH_BASE_URL).origin;
@@ -56,54 +50,55 @@ function getBaseURL(): string {
 	);
 }
 
-const baseURL = getBaseURL();
-console.log("[Auth] Initializing with baseURL:", baseURL);
+export interface CreateAuthOptions {
+	databaseHooks?: BetterAuthOptions["databaseHooks"];
+	onAPIError?: BetterAuthOptions["onAPIError"];
+}
 
-export const auth = betterAuth({
-	database: mongodbAdapter(client.db(dbName)),
-	baseURL,
-	basePath: "/api/auth",
-	secret: finalSecret,
-	trustedOrigins: [
-		...(process.env.AUTH_TRUSTED_ORIGINS
-			? process.env.AUTH_TRUSTED_ORIGINS.split(",")
-			: []),
+export function createAuth(options: CreateAuthOptions = {}) {
+	const finalSecret = getAuthSecret();
+	const client = getClient();
+	const dbName = getDbName();
+	const baseURL = getBaseURL();
+	console.log("[Auth] Initializing with baseURL:", baseURL);
+
+	return betterAuth({
+		database: mongodbAdapter(client.db(dbName)),
 		baseURL,
-		...(IS_DEV
-			? [
-					"http://localhost:3000",
-					"http://localhost:3001",
-					"http://localhost:3002",
-				]
-			: []),
-	],
-
-	// Enable email/password authentication
-	emailAndPassword: {
-		enabled: true,
-		// Require email verification before allowing login
-		requireEmailVerification: false,
-	},
-
-	// Configure Google OAuth
-	socialProviders: {
-		google: {
-			clientId: process.env.GOOGLE_CLIENT_ID || "",
-			clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-			// Request email scope explicitly
-			scope: ["email", "profile", "openid"],
+		basePath: "/api/auth",
+		secret: finalSecret,
+		trustedOrigins: [
+			...(process.env.AUTH_TRUSTED_ORIGINS
+				? process.env.AUTH_TRUSTED_ORIGINS.split(",")
+				: []),
+			baseURL,
+			...(IS_DEV
+				? [
+						"http://localhost:3000",
+						"http://localhost:3001",
+						"http://localhost:3002",
+					]
+				: []),
+		],
+		socialProviders: {
+			google: {
+				clientId: process.env.GOOGLE_CLIENT_ID || "",
+				clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+				scope: ["email", "profile", "openid"],
+			},
 		},
-	},
-
-	// Session management
-	session: {
-		expiresIn: 60 * 60 * 24 * 7, // 7 days
-		updateAge: 60 * 60 * 24, // Update session every 24 hours
-		cookieCache: {
-			enabled: true,
-			maxAge: 5 * 60, // Cache for 5 minutes
+		session: {
+			expiresIn: 60 * 60 * 24 * 7,
+			updateAge: 60 * 60 * 24,
+			cookieCache: {
+				enabled: true,
+				maxAge: 5 * 60,
+			},
 		},
-	},
-});
+		databaseHooks: options.databaseHooks,
+		onAPIError: options.onAPIError,
+	});
+}
 
+export type Auth = ReturnType<typeof createAuth>;
 export type { Session, User } from "./types";

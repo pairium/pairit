@@ -10,6 +10,10 @@ npm install -g pairit
 bun install -g pairit
 ```
 
+## Request access
+
+Manager access is currently invite-only. Email [harang@pairium.ai](mailto:harang@pairium.ai) with the Google account email you want to use, and you'll be added to the allowlist. You only need to do this once.
+
 ## Authenticate
 
 ```bash
@@ -17,6 +21,8 @@ pairit login
 ```
 
 This opens a browser window for Google OAuth when available. On a remote or headless server, the CLI prints a login URL instead; open it on your local machine, sign in, and paste the one-time authorization code back into the CLI.
+
+If you see an "Access denied" page after signing in, your account isn't on the allowlist yet — email [harang@pairium.ai](mailto:harang@pairium.ai) to request access.
 
 ## Create Your First Experiment
 
