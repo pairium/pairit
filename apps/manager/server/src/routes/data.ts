@@ -138,32 +138,9 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				};
 			}
 
-			// Get all sessions for this config to find their chat messages
-			const sessionsCollection = await getSessionsCollection();
-			const sessions = await sessionsCollection
-				.find({ configId })
-				.project({ id: 1, "session_state.chat_group_id": 1 })
-				.toArray();
-
-			const sessionIds = sessions.map((s) => s.id);
-			const groupIds = new Set<string>();
-
-			// Collect all group IDs (session's own ID for human-AI chat, plus chat_group_id for group chats)
-			for (const session of sessions) {
-				groupIds.add(session.id);
-				if (session.session_state?.chat_group_id) {
-					groupIds.add(session.session_state.chat_group_id as string);
-				}
-			}
-
 			const chatCollection = await getChatMessagesCollection();
 			const messages = await chatCollection
-				.find({
-					$or: [
-						{ groupId: { $in: Array.from(groupIds) } },
-						{ sessionId: { $in: sessionIds } },
-					],
-				})
+				.find({ configId })
 				.sort({ createdAt: 1 })
 				.toArray();
 
