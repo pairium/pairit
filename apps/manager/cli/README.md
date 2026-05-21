@@ -12,6 +12,7 @@ A lightweight command line utility for working with Pairit experiment configurat
 - `media list` — list media objects in Cloud Storage
 - `media delete` — delete a media object from Cloud Storage
 - `data export` — export sessions, events, and chat messages for a config as CSV/JSON/JSONL
+- `admin add-user` / `admin remove-user` / `admin list-users` — manage the manager allowlist (admin role required)
 
 ## Install
    
@@ -76,6 +77,24 @@ bun run apps/manager/cli/src/index.ts media delete onboarding/logo.png --force
 ```
 
 `config compile` writes `configs/simple-survey-basic.json` next to the source YAML. `config upload` defaults the config id to a 16-character base64url string derived from the SHA-256 hash of the compiled JSON (unless `--config-id` overrides it).
+
+## Manager allowlist (admin)
+
+Manager sign-ins are gated on a Mongo allowlist. Anyone who isn't on it lands on `/access-denied` after Google sign-in. Use these commands to manage who can sign in. The calling CLI user must be an admin.
+
+```bash
+pairit admin list-users                            # Show everyone on the allowlist
+pairit admin add-user alice@example.com            # Add as researcher
+pairit admin add-user bob@example.com --admin      # Add as admin (can manage the allowlist)
+pairit admin remove-user alice@example.com         # Remove and revoke their sessions
+pairit admin remove-user alice@example.com --force # Skip confirmation prompt
+```
+
+Notes:
+- Bootstrap: `MANAGER_BOOTSTRAP_ADMIN_EMAIL` is seeded as admin on every manager boot. Set it before the first deploy or you'll have no admins.
+- Day-1 migration: on first boot, existing config owners are backfilled as researchers (not the entire user collection, which is shared with lab participants).
+- Self-removal is blocked.
+- The rejection page contact is set by `MANAGER_ADMIN_CONTACT_EMAIL` (defaults to `harang@pairium.ai`).
 
 ## Per-experiment LLM credentials
 
