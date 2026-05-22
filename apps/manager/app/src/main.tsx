@@ -10,11 +10,13 @@ import ReactDOM from "react-dom/client";
 
 import "./styles.css";
 
+import { MeProvider } from "@app/lib/me-context";
 import { AppShell } from "@components/layout/AppShell";
 import { SignInGate } from "@components/SignInGate";
 import { Allowlist } from "./routes/Allowlist";
 import { ConfigData } from "./routes/ConfigData";
 import { ConfigDetail } from "./routes/ConfigDetail";
+import { ConfigGraph } from "./routes/ConfigGraph";
 import { ConfigsList } from "./routes/ConfigsList";
 import { Dashboard } from "./routes/Dashboard";
 import { Media } from "./routes/Media";
@@ -33,9 +35,11 @@ if (import.meta.env.DEV) {
 const rootRoute = createRootRoute({
 	component: () => (
 		<SignInGate>
-			<AppShell>
-				<Outlet />
-			</AppShell>
+			<MeProvider>
+				<AppShell>
+					<Outlet />
+				</AppShell>
+			</MeProvider>
 			<DevTools />
 		</SignInGate>
 	),
@@ -71,6 +75,12 @@ const sessionDetailRoute = createRoute({
 	component: SessionDetail,
 });
 
+const configGraphRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/configs/$configId/graph",
+	component: ConfigGraph,
+});
+
 const mediaRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/media",
@@ -88,6 +98,7 @@ const routeTree = rootRoute.addChildren([
 	configsRoute,
 	configDetailRoute,
 	sessionDetailRoute,
+	configGraphRoute,
 	configDataRoute,
 	mediaRoute,
 	allowlistRoute,

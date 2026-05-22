@@ -184,15 +184,17 @@ export const mediaRoutes = new Elysia({ prefix: "/media" })
 			try {
 				const files = await storage.list(query.prefix);
 
-				const objects: MediaListItem[] = files.map((name: string) => ({
-					name,
-					bucket: "local",
-					size: undefined,
-					updatedAt: null,
-					contentType: null,
-					publicUrl: undefined,
-					metadata: null,
-				}));
+				const objects: MediaListItem[] = await Promise.all(
+					files.map(async (name: string) => ({
+						name,
+						bucket: "local",
+						size: undefined,
+						updatedAt: null,
+						contentType: null,
+						publicUrl: await getPublicMediaUrl(name, true),
+						metadata: null,
+					})),
+				);
 
 				return { objects };
 			} catch (err) {

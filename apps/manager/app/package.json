@@ -15,13 +15,16 @@
 		"@tailwindcss/vite": "^4.0.6",
 		"@tanstack/react-router": "^1.132.0",
 		"@tanstack/react-router-devtools": "^1.132.0",
+		"@xyflow/react": "^12.10.2",
 		"better-auth": "^1.4.7",
+		"dagre": "^0.8.5",
 		"lucide-react": "^0.545.0",
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0",
 		"tailwindcss": "^4.0.6"
 	},
 	"devDependencies": {
+		"@types/dagre": "^0.7.54",
 		"@types/react": "^19.0.8",
 		"@types/react-dom": "^19.0.3",
 		"@vitejs/plugin-react": "^5.0.4",

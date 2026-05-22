@@ -117,6 +117,12 @@ export type MediaObject = {
 	metadata: Record<string, unknown> | null;
 };
 
+export type Me = {
+	id: string;
+	email: string;
+	isAdmin: boolean;
+};
+
 export type AllowlistUser = {
 	email: string;
 	isAdmin: boolean;
@@ -143,6 +149,8 @@ function qs(params: Record<string, string | undefined>): string {
 }
 
 export const api = {
+	me: () => request<Me>("/me"),
+
 	listConfigs: () =>
 		request<{ configs: ConfigSummary[] }>("/configs").then((r) => r.configs),
 

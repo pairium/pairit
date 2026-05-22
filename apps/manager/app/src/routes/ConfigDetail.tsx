@@ -93,6 +93,18 @@ export function ConfigDetail() {
 			</section>
 
 			<section className="space-y-3">
+				<h2 className="text-base font-semibold text-slate-900">Structure</h2>
+				<Link
+					to="/configs/$configId/graph"
+					params={{ configId: config.configId }}
+					className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 no-underline hover:bg-slate-50 hover:border-slate-300 transition-colors flex items-center justify-between"
+				>
+					<span>Page graph</span>
+					<span className="text-slate-400">→</span>
+				</Link>
+			</section>
+
+			<section className="space-y-3">
 				<h2 className="text-base font-semibold text-slate-900">Data</h2>
 				<div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
 					{SUBPAGES.map((s) => (

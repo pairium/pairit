@@ -1,4 +1,6 @@
 import { useSession } from "@app/lib/auth-client";
+import { useMe } from "@app/lib/me-context";
+import { UserMenu } from "@components/UserMenu";
 import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
@@ -34,6 +36,7 @@ function BrandMark() {
 
 export function AppShell({ children }: { children: ReactNode }) {
 	const { data: session } = useSession();
+	const { me } = useMe();
 	const path = useRouterState({ select: (s) => s.location.pathname });
 
 	const isActive = (to: string) =>
@@ -63,25 +66,24 @@ export function AppShell({ children }: { children: ReactNode }) {
 							{item.label}
 						</Link>
 					))}
-					{ADMIN_NAV.map((item) => (
-						<Link
-							key={item.to}
-							to={item.to}
-							className={`text-sm px-3 py-1.5 rounded-md no-underline ${
-								isActive(item.to)
-									? "bg-slate-900 text-white"
-									: "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-							}`}
-						>
-							{item.label}
-						</Link>
-					))}
+					{me?.isAdmin &&
+						ADMIN_NAV.map((item) => (
+							<Link
+								key={item.to}
+								to={item.to}
+								className={`text-sm px-3 py-1.5 rounded-md no-underline ${
+									isActive(item.to)
+										? "bg-slate-900 text-white"
+										: "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+								}`}
+							>
+								{item.label}
+							</Link>
+						))}
 				</nav>
 				<div className="ml-auto text-xs text-slate-500">
 					{session?.user?.email ? (
-						<span className="px-2.5 py-1 border border-slate-200 bg-white rounded-full">
-							{session.user.email}
-						</span>
+						<UserMenu email={session.user.email} />
 					) : (
 						<span className="px-2.5 py-1 border border-slate-200 bg-white rounded-full">
 							Invite-only

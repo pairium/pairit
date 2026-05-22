@@ -13,6 +13,7 @@ import { renderPage } from "./lib/html";
 import { adminRoutes } from "./routes/admin";
 import { configsRoutes } from "./routes/configs";
 import { dataRoutes } from "./routes/data";
+import { meRoutes } from "./routes/me";
 import { mediaRoutes } from "./routes/media";
 
 const IS_DEV = process.env.NODE_ENV === "development";
@@ -399,6 +400,7 @@ app
 			},
 		);
 	})
+	.use(meRoutes)
 	.use(configsRoutes)
 	.use(dataRoutes)
 	.use(mediaRoutes)
