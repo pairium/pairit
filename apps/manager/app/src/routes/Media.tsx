@@ -2,7 +2,7 @@ import { api, type MediaObject } from "@app/lib/api";
 import { Lightbox } from "@components/Lightbox";
 import { Button } from "@components/ui/Button";
 import { Input } from "@components/ui/Input";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const IMAGE_EXTENSIONS = new Set([
 	"png",
@@ -21,6 +21,23 @@ function isImage(name: string): boolean {
 	return IMAGE_EXTENSIONS.has(name.slice(dot + 1).toLowerCase());
 }
 
+function fileToBase64(file: File): Promise<string> {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => {
+			const result = reader.result;
+			if (typeof result !== "string") {
+				reject(new Error("Failed to read file"));
+				return;
+			}
+			const comma = result.indexOf(",");
+			resolve(comma >= 0 ? result.slice(comma + 1) : result);
+		};
+		reader.onerror = () => reject(reader.error ?? new Error("Read error"));
+		reader.readAsDataURL(file);
+	});
+}
+
 export function Media() {
 	const [objects, setObjects] = useState<MediaObject[] | null>(null);
 	const [prefix, setPrefix] = useState("");
@@ -28,6 +45,9 @@ export function Media() {
 	const [preview, setPreview] = useState<{ src: string; alt: string } | null>(
 		null,
 	);
+	const [uploading, setUploading] = useState(false);
+	const [uploadError, setUploadError] = useState<string | null>(null);
+	const fileInputRef = useRef<HTMLInputElement | null>(null);
 
 	const reload = async (p: string) => {
 		setError(null);
@@ -42,6 +62,24 @@ export function Media() {
 	useEffect(() => {
 		reload("");
 	}, []);
+
+	const handleUpload = async (files: FileList | null) => {
+		if (!files || files.length === 0) return;
+		setUploadError(null);
+		setUploading(true);
+		try {
+			for (const file of Array.from(files)) {
+				const data = await fileToBase64(file);
+				await api.uploadMedia(file.name, data, file.type || null);
+			}
+			await reload(prefix);
+			if (fileInputRef.current) fileInputRef.current.value = "";
+		} catch (e) {
+			setUploadError(e instanceof Error ? e.message : "Upload failed");
+		} finally {
+			setUploading(false);
+		}
+	};
 
 	const handleDelete = async (name: string) => {
 		if (!confirm(`Delete "${name}"?`)) return;
@@ -64,23 +102,42 @@ export function Media() {
 				</p>
 			</div>
 
-			<form
-				className="flex gap-2"
-				onSubmit={(e) => {
-					e.preventDefault();
-					reload(prefix);
-				}}
-			>
-				<Input
-					placeholder="Filter by prefix (optional)"
-					value={prefix}
-					onChange={(e) => setPrefix(e.target.value)}
-					className="max-w-md"
-				/>
-				<Button type="submit" variant="ghost">
-					Filter
-				</Button>
-			</form>
+			<div className="flex flex-wrap gap-2 items-center">
+				<form
+					className="flex gap-2 flex-1 min-w-[20rem]"
+					onSubmit={(e) => {
+						e.preventDefault();
+						reload(prefix);
+					}}
+				>
+					<Input
+						placeholder="Filter by prefix (optional)"
+						value={prefix}
+						onChange={(e) => setPrefix(e.target.value)}
+						className="flex-1 max-w-md"
+					/>
+					<Button type="submit" variant="ghost">
+						Filter
+					</Button>
+				</form>
+				<div>
+					<input
+						ref={fileInputRef}
+						type="file"
+						multiple
+						className="hidden"
+						onChange={(e) => handleUpload(e.target.files)}
+					/>
+					<Button
+						type="button"
+						onClick={() => fileInputRef.current?.click()}
+						disabled={uploading}
+					>
+						{uploading ? "Uploading…" : "Upload file"}
+					</Button>
+				</div>
+			</div>
+			{uploadError && <p className="text-sm text-red-600">{uploadError}</p>}
 
 			{error && <p className="text-sm text-red-600">{error}</p>}
 			{!objects && !error && <p className="text-sm text-slate-500">Loading…</p>}

@@ -1,4 +1,8 @@
-import { api, type ConfigDetail as ConfigDetailType } from "@app/lib/api";
+import {
+	api,
+	type ConfigCounts,
+	type ConfigDetail as ConfigDetailType,
+} from "@app/lib/api";
 import { Button } from "@components/ui/Button";
 import { Link, useParams } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -8,18 +12,33 @@ function formatDate(s: string | null): string {
 	return new Date(s).toLocaleString();
 }
 
-const SUBPAGES = [
-	{ slug: "sessions", label: "Sessions" },
-	{ slug: "events", label: "Events" },
-	{ slug: "groups", label: "Groups" },
-	{ slug: "surveys", label: "Survey responses" },
-	{ slug: "chat", label: "Chat messages" },
-	{ slug: "workspaces", label: "Workspace docs" },
+const SUBPAGES: {
+	slug: string;
+	label: string;
+	countKey: keyof ConfigCounts;
+}[] = [
+	{ slug: "sessions", label: "Sessions", countKey: "sessions" },
+	{ slug: "events", label: "Events", countKey: "events" },
+	{ slug: "groups", label: "Groups", countKey: "groups" },
+	{ slug: "surveys", label: "Survey responses", countKey: "surveys" },
+	{ slug: "chat", label: "Chat messages", countKey: "chatMessages" },
+	{
+		slug: "workspaces",
+		label: "Workspace docs",
+		countKey: "workspaceDocuments",
+	},
 ];
+
+function formatCount(n: number | undefined): string {
+	if (n === undefined) return "";
+	if (n >= 1000) return `${(n / 1000).toFixed(n >= 10_000 ? 0 : 1)}k`;
+	return n.toString();
+}
 
 export function ConfigDetail() {
 	const { configId } = useParams({ from: "/configs/$configId" });
 	const [config, setConfig] = useState<ConfigDetailType | null>(null);
+	const [counts, setCounts] = useState<ConfigCounts | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -27,6 +46,10 @@ export function ConfigDetail() {
 			.getConfig(configId)
 			.then(setConfig)
 			.catch((e: Error) => setError(e.message));
+		api
+			.getCounts(configId)
+			.then(setCounts)
+			.catch(() => setCounts(null));
 	}, [configId]);
 
 	const handleDelete = async () => {
@@ -107,17 +130,27 @@ export function ConfigDetail() {
 			<section className="space-y-3">
 				<h2 className="text-base font-semibold text-slate-900">Data</h2>
 				<div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-					{SUBPAGES.map((s) => (
-						<Link
-							key={s.slug}
-							to="/configs/$configId/$subpage"
-							params={{ configId: config.configId, subpage: s.slug }}
-							className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 no-underline hover:bg-slate-50 hover:border-slate-300 transition-colors flex items-center justify-between"
-						>
-							<span>{s.label}</span>
-							<span className="text-slate-400">→</span>
-						</Link>
-					))}
+					{SUBPAGES.map((s) => {
+						const count = counts?.[s.countKey];
+						return (
+							<Link
+								key={s.slug}
+								to="/configs/$configId/$subpage"
+								params={{ configId: config.configId, subpage: s.slug }}
+								className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 no-underline hover:bg-slate-50 hover:border-slate-300 transition-colors flex items-center justify-between gap-2"
+							>
+								<span>{s.label}</span>
+								<span className="flex items-center gap-2 text-slate-500">
+									{count !== undefined && (
+										<span className="font-mono text-[12px]">
+											{formatCount(count)}
+										</span>
+									)}
+									<span className="text-slate-400">→</span>
+								</span>
+							</Link>
+						);
+					})}
 				</div>
 			</section>
 

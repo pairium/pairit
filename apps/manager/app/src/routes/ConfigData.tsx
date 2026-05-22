@@ -10,6 +10,7 @@ import {
 } from "@app/lib/api";
 import { DownloadJsonButton } from "@components/DownloadJsonButton";
 import { PaginatedTable } from "@components/PaginatedTable";
+import { StatusPill } from "@components/StatusPill";
 import { Link, useParams } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
@@ -54,26 +55,6 @@ function formatDate(s: string | null): string {
 
 function truncate(s: string, n: number): string {
 	return s.length <= n ? s : `${s.slice(0, n)}…`;
-}
-
-function StatusPill({
-	status,
-}: {
-	status: "completed" | "in_progress" | "active";
-}) {
-	const cls =
-		status === "completed"
-			? "bg-slate-100 text-slate-700"
-			: status === "active" || status === "in_progress"
-				? "bg-emerald-50 text-emerald-700"
-				: "bg-slate-100 text-slate-700";
-	return (
-		<span
-			className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium ${cls}`}
-		>
-			{status.replace("_", " ")}
-		</span>
-	);
 }
 
 export function ConfigData() {

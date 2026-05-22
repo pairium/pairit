@@ -44,8 +44,133 @@ function parsePagination(
 	}
 }
 
+const SESSION_ABANDON_THRESHOLD_MS = 30 * 60 * 1000;
+
+export type SessionStatus = "completed" | "in_progress" | "abandoned";
+
+export function computeSessionStatus(
+	endedAt: string | null | undefined,
+	updatedAt: Date | null | undefined,
+	now: number = Date.now(),
+): SessionStatus {
+	if (endedAt) return "completed";
+	if (
+		updatedAt instanceof Date &&
+		now - updatedAt.getTime() > SESSION_ABANDON_THRESHOLD_MS
+	) {
+		return "abandoned";
+	}
+	return "in_progress";
+}
+
 export const dataRoutes = new Elysia({ prefix: "/data" })
 	.use(authMiddleware)
+	.get("/recent", async ({ set, user }) => {
+		if (!user) {
+			set.status = 401;
+			return { error: "unauthorized", message: "Not authenticated" };
+		}
+
+		const configsCollection = await getConfigsCollection();
+		const ownedConfigs = await configsCollection
+			.find({ owner: user.id }, { projection: { configId: 1 } })
+			.toArray();
+		if (ownedConfigs.length === 0) {
+			return { sessions: [] };
+		}
+		const configIds = ownedConfigs.map((c) => c.configId);
+
+		const sessionsCollection = await getSessionsCollection();
+		const recent = await sessionsCollection
+			.find({ configId: { $in: configIds } })
+			.sort({ createdAt: -1, _id: -1 })
+			.limit(10)
+			.toArray();
+
+		const now = Date.now();
+		return {
+			sessions: recent.map((session) => ({
+				sessionId: session.id,
+				configId: session.configId,
+				currentPageId: session.currentPageId,
+				status: computeSessionStatus(session.endedAt, session.updatedAt, now),
+				userId: session.userId ?? null,
+				createdAt: session.createdAt?.toISOString() ?? null,
+				updatedAt: session.updatedAt?.toISOString() ?? null,
+			})),
+		};
+	})
+	.get(
+		"/:configId/counts",
+		async ({ params: { configId }, set, user }) => {
+			if (!user) {
+				set.status = 401;
+				return { error: "unauthorized", message: "Not authenticated" };
+			}
+
+			const configsCollection = await getConfigsCollection();
+			const config = await configsCollection.findOne({ configId });
+			if (!config) {
+				set.status = 404;
+				return { error: "not_found", message: "Config not found" };
+			}
+			if (config.owner !== user.id) {
+				set.status = 403;
+				return {
+					error: "forbidden",
+					message: "Not authorized to view this config's data",
+				};
+			}
+
+			const [
+				sessionsCollection,
+				eventsCollection,
+				groupsCollection,
+				chatCollection,
+				wsCollection,
+			] = await Promise.all([
+				getSessionsCollection(),
+				getEventsCollection(),
+				getGroupsCollection(),
+				getChatMessagesCollection(),
+				getWorkspaceDocumentsCollection(),
+			]);
+
+			const [
+				sessions,
+				events,
+				groups,
+				chatMessages,
+				workspaceDocuments,
+				surveys,
+			] = await Promise.all([
+				sessionsCollection.countDocuments({ configId }),
+				eventsCollection.countDocuments({ configId }),
+				groupsCollection.countDocuments({ configId }),
+				chatCollection.countDocuments({ configId }),
+				wsCollection.countDocuments({ configId }),
+				eventsCollection.countDocuments({
+					configId,
+					$or: [
+						{ componentType: "survey" },
+						{ componentType: "paged_survey", "data.status": "completed" },
+					],
+				}),
+			]);
+
+			return {
+				sessions,
+				events,
+				groups,
+				chatMessages,
+				workspaceDocuments,
+				surveys,
+			};
+		},
+		{
+			params: t.Object({ configId: t.String() }),
+		},
+	)
 	.get(
 		"/:configId/sessions",
 		async ({ params: { configId }, query, set, user }) => {
@@ -85,11 +210,12 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				.limit(limit)
 				.toArray();
 
+			const now = Date.now();
 			const exportData = sessions.map((session) => ({
 				sessionId: session.id,
 				configId: session.configId,
 				currentPageId: session.currentPageId,
-				status: session.endedAt ? "completed" : "in_progress",
+				status: computeSessionStatus(session.endedAt, session.updatedAt, now),
 				session_state: session.session_state ?? {},
 				prolific: session.prolific ?? null,
 				userId: session.userId ?? null,
@@ -147,7 +273,7 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				sessionId: session.id,
 				configId: session.configId,
 				currentPageId: session.currentPageId,
-				status: session.endedAt ? "completed" : "in_progress",
+				status: computeSessionStatus(session.endedAt, session.updatedAt),
 				session_state: session.session_state ?? {},
 				prolific: session.prolific ?? null,
 				userId: session.userId ?? null,

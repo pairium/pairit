@@ -1,5 +1,6 @@
 import { api, type EventExport, type SessionExport } from "@app/lib/api";
 import { PaginatedTable } from "@components/PaginatedTable";
+import { StatusPill } from "@components/StatusPill";
 import { Link, useParams } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
@@ -28,11 +29,6 @@ export function SessionDetail() {
 
 	if (error) return <p className="text-sm text-red-600">{error}</p>;
 	if (!session) return <p className="text-sm text-slate-500">Loading…</p>;
-
-	const statusClass =
-		session.status === "completed"
-			? "bg-slate-100 text-slate-700"
-			: "bg-emerald-50 text-emerald-700";
 
 	return (
 		<div className="space-y-8">
@@ -66,11 +62,7 @@ export function SessionDetail() {
 					<h1 className="text-2xl font-semibold tracking-tight text-slate-900 font-mono">
 						{truncate(session.sessionId, 24)}
 					</h1>
-					<span
-						className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium ${statusClass}`}
-					>
-						{session.status.replace("_", " ")}
-					</span>
+					<StatusPill status={session.status} />
 				</div>
 			</div>
 

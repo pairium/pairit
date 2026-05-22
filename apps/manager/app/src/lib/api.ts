@@ -47,11 +47,13 @@ export type ConfigDetail = ConfigSummary & {
 	allowRetake: boolean;
 };
 
+export type SessionStatus = "completed" | "in_progress" | "abandoned";
+
 export type SessionExport = {
 	sessionId: string;
 	configId: string;
 	currentPageId: string;
-	status: "completed" | "in_progress";
+	status: SessionStatus;
 	session_state: Record<string, unknown>;
 	prolific: unknown;
 	userId: string | null;
@@ -123,6 +125,25 @@ export type Me = {
 	isAdmin: boolean;
 };
 
+export type RecentSession = {
+	sessionId: string;
+	configId: string;
+	currentPageId: string;
+	status: SessionStatus;
+	userId: string | null;
+	createdAt: string | null;
+	updatedAt: string | null;
+};
+
+export type ConfigCounts = {
+	sessions: number;
+	events: number;
+	groups: number;
+	chatMessages: number;
+	workspaceDocuments: number;
+	surveys: number;
+};
+
 export type AllowlistUser = {
 	email: string;
 	isAdmin: boolean;
@@ -175,6 +196,14 @@ export const api = {
 			method: "DELETE",
 		}),
 
+	listRecentSessions: () =>
+		request<{ sessions: RecentSession[] }>("/data/recent").then(
+			(r) => r.sessions,
+		),
+
+	getCounts: (configId: string) =>
+		request<ConfigCounts>(`/data/${encodeURIComponent(configId)}/counts`),
+
 	listSessions: (configId: string, since?: string, limit?: string) =>
 		request<Record<string, unknown>>(
 			`/data/${encodeURIComponent(configId)}/sessions${qs({ since, limit })}`,
@@ -214,6 +243,16 @@ export const api = {
 		request<Record<string, unknown>>(
 			`/data/${encodeURIComponent(configId)}/workspace-documents${qs({ since, limit })}`,
 		).then((r) => paginated<WorkspaceDocumentExport>(r, "workspaceDocuments")),
+
+	uploadMedia: (
+		object: string,
+		dataBase64: string,
+		contentType: string | null,
+	) =>
+		request<MediaObject>("/media/upload", {
+			method: "POST",
+			body: JSON.stringify({ object, data: dataBase64, contentType }),
+		}),
 
 	listMedia: (prefix?: string) =>
 		request<{ objects: MediaObject[] }>(`/media${qs({ prefix })}`).then(
