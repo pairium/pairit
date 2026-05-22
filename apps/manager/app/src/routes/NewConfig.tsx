@@ -61,23 +61,23 @@ export function NewConfig() {
 			<div>
 				<div className="text-sm text-slate-500 mb-2">
 					<Link to="/configs" className="hover:text-slate-900 no-underline">
-						Configs
+						Experiments
 					</Link>
 					<span className="mx-2 text-slate-300">/</span>
 					<span className="text-slate-900">New</span>
 				</div>
 				<h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-					New config
+					New experiment
 				</h1>
 				<p className="text-sm text-slate-600 mt-1">
-					Edit the YAML below and save. Leave Config ID blank to auto-generate
-					one from the contents.
+					Edit the YAML below and save. Leave Experiment ID blank to
+					auto-generate one from the contents.
 				</p>
 			</div>
 
 			<div className="flex flex-wrap items-center gap-3">
 				<label htmlFor="new-config-id" className="text-sm text-slate-700">
-					Config ID
+					Experiment ID
 				</label>
 				<Input
 					id="new-config-id"

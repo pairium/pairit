@@ -32,6 +32,18 @@ function asString(v: unknown): string | null {
 	return typeof v === "string" ? v : null;
 }
 
+/**
+ * Normalize pages to an array. Raw configs use `pages: Page[]`; compiled
+ * configs (what the lab consumes / what the server returns) store
+ * `pages: Record<string, Page>` keyed by id. Both shapes appear depending on
+ * whether we're reading from `rawYaml` or `config.pages`.
+ */
+function pagesToArray(v: unknown): unknown[] {
+	if (Array.isArray(v)) return v;
+	const obj = asObject(v);
+	return obj ? Object.values(obj) : [];
+}
+
 /** Walk a component subtree and call cb for every `action: { type, target }`. */
 function visitActions(component: unknown, cb: (action: Unknown) => void): void {
 	const obj = asObject(component);
@@ -54,7 +66,7 @@ export function buildPageGraph(config: unknown): PageGraph {
 	if (!root) return { initialPageId: null, nodes: [], edges: [] };
 
 	const initialPageId = asString(root.initialPageId);
-	const pages = asArray(root.pages);
+	const pages = pagesToArray(root.pages);
 	const nodes: PageNode[] = [];
 	const edges: PageEdge[] = [];
 	const validIds = new Set<string>();

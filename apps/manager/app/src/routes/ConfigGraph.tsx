@@ -31,7 +31,7 @@ export function ConfigGraph() {
 			<div>
 				<div className="text-sm text-slate-500 mb-2">
 					<Link to="/configs" className="hover:text-slate-900 no-underline">
-						Configs
+						Experiments
 					</Link>
 					<span className="mx-2 text-slate-300">/</span>
 					<Link

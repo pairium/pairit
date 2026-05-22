@@ -35,11 +35,9 @@ export function ConfigsList() {
 			<div className="flex justify-between items-start gap-3">
 				<div>
 					<h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-						Configs
+						Experiments
 					</h1>
-					<p className="text-sm text-slate-600 mt-1">
-						Experiment configs you own.
-					</p>
+					<p className="text-sm text-slate-600 mt-1">Experiments you own.</p>
 				</div>
 				<div className="flex items-center gap-4 pt-1">
 					<RefreshButton onClick={load} refreshing={refreshing} />
@@ -48,7 +46,7 @@ export function ConfigsList() {
 						className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 no-underline"
 					>
 						<Plus size={14} />
-						<span>New config</span>
+						<span>New experiment</span>
 					</Link>
 				</div>
 			</div>
@@ -56,7 +54,7 @@ export function ConfigsList() {
 			{!configs && !error && <p className="text-sm text-slate-500">Loading…</p>}
 			{configs && configs.length === 0 && (
 				<div className="rounded-2xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-500">
-					No configs yet.
+					No experiments yet.
 				</div>
 			)}
 			{configs && configs.length > 0 && (
@@ -64,7 +62,9 @@ export function ConfigsList() {
 					<table className="w-full text-sm">
 						<thead className="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wider">
 							<tr>
-								<th className="text-left px-4 py-2.5 font-medium">Config ID</th>
+								<th className="text-left px-4 py-2.5 font-medium">
+									Experiment ID
+								</th>
 								<th className="text-left px-4 py-2.5 font-medium">Checksum</th>
 								<th className="text-left px-4 py-2.5 font-medium">Updated</th>
 							</tr>

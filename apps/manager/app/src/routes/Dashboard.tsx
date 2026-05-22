@@ -55,14 +55,14 @@ export function Dashboard() {
 					Dashboard
 				</h1>
 				<p className="text-sm text-slate-600 mt-1">
-					Your configs and recent activity.
+					Your experiments and recent activity.
 				</p>
 			</div>
 
 			<section className="space-y-3">
 				<div className="flex justify-between items-center">
 					<h2 className="text-base font-semibold text-slate-900">
-						Recent configs
+						Recent experiments
 					</h2>
 					<div className="flex items-center gap-3">
 						<RefreshButton
@@ -83,7 +83,7 @@ export function Dashboard() {
 				)}
 				{configs && configs.length === 0 && (
 					<div className="rounded-2xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-500">
-						No configs yet. Upload one with the CLI:{" "}
+						No experiments yet. Upload one with the CLI:{" "}
 						<code>pairit config upload</code>.
 					</div>
 				)}
@@ -93,7 +93,7 @@ export function Dashboard() {
 							<thead className="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wider">
 								<tr>
 									<th className="text-left px-4 py-2.5 font-medium">
-										Config ID
+										Experiment ID
 									</th>
 									<th className="text-left px-4 py-2.5 font-medium">Updated</th>
 								</tr>
@@ -143,7 +143,9 @@ export function Dashboard() {
 							<thead className="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wider">
 								<tr>
 									<th className="text-left px-4 py-2.5 font-medium">Session</th>
-									<th className="text-left px-4 py-2.5 font-medium">Config</th>
+									<th className="text-left px-4 py-2.5 font-medium">
+										Experiment
+									</th>
 									<th className="text-left px-4 py-2.5 font-medium">Status</th>
 									<th className="text-left px-4 py-2.5 font-medium">Page</th>
 									<th className="text-left px-4 py-2.5 font-medium">Started</th>

@@ -11,7 +11,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import type { PageGraph as PageGraphType, PageNode } from "@app/lib/page-graph";
 import dagre from "dagre";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
 const NODE_WIDTH = 220;
 const NODE_HEIGHT = 96;
@@ -19,20 +19,22 @@ const NODE_HEIGHT = 96;
 type PageNodeData = {
 	page: PageNode;
 	isInitial: boolean;
+	clickable: boolean;
 };
 
 function PageGraphNode({ data }: NodeProps<Node<PageNodeData>>) {
-	const { page, isInitial } = data;
+	const { page, isInitial, clickable } = data;
 	const ring = isInitial
 		? "ring-2 ring-slate-900"
 		: page.end
 			? "ring-1 ring-slate-300"
 			: "ring-1 ring-slate-200";
 	const accent = page.end ? "bg-slate-50" : isInitial ? "bg-white" : "bg-white";
+	const cursor = clickable ? "cursor-pointer hover:ring-slate-400" : "";
 
 	return (
 		<div
-			className={`rounded-xl shadow-sm ${ring} ${accent} px-4 py-3 text-left`}
+			className={`rounded-xl shadow-sm ${ring} ${accent} ${cursor} px-4 py-3 text-left transition-shadow`}
 			style={{ width: NODE_WIDTH }}
 		>
 			<Handle type="target" position={Position.Top} className="!bg-slate-400" />
@@ -65,7 +67,7 @@ function PageGraphNode({ data }: NodeProps<Node<PageNodeData>>) {
 
 const nodeTypes: NodeTypes = { page: PageGraphNode };
 
-function layoutGraph(graph: PageGraphType) {
+function layoutGraph(graph: PageGraphType, clickable: boolean) {
 	const g = new dagre.graphlib.Graph();
 	g.setGraph({ rankdir: "TB", ranksep: 60, nodesep: 30 });
 	g.setDefaultEdgeLabel(() => ({}));
@@ -84,7 +86,7 @@ function layoutGraph(graph: PageGraphType) {
 			id: page.id,
 			type: "page",
 			position: { x: pos.x - NODE_WIDTH / 2, y: pos.y - NODE_HEIGHT / 2 },
-			data: { page, isInitial: page.id === graph.initialPageId },
+			data: { page, isInitial: page.id === graph.initialPageId, clickable },
 			draggable: false,
 		};
 	});
@@ -103,19 +105,43 @@ function layoutGraph(graph: PageGraphType) {
 	return { nodes, edges };
 }
 
-export function PageGraph({ graph }: { graph: PageGraphType }) {
-	const { nodes, edges } = useMemo(() => layoutGraph(graph), [graph]);
+type PageGraphProps = {
+	graph: PageGraphType;
+	onPageClick?: (pageId: string) => void;
+	height?: string;
+};
+
+export function PageGraph({
+	graph,
+	onPageClick,
+	height = "600px",
+}: PageGraphProps) {
+	const clickable = !!onPageClick;
+	const { nodes, edges } = useMemo(
+		() => layoutGraph(graph, clickable),
+		[graph, clickable],
+	);
+
+	const handleNodeClick = useCallback(
+		(_: unknown, node: Node<PageNodeData>) => {
+			onPageClick?.(node.id);
+		},
+		[onPageClick],
+	);
 
 	if (nodes.length === 0) {
 		return (
 			<div className="rounded-2xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-500">
-				No pages in this config.
+				No pages in this experiment.
 			</div>
 		);
 	}
 
 	return (
-		<div className="rounded-2xl border border-slate-200 bg-white overflow-hidden h-[600px]">
+		<div
+			className="rounded-2xl border border-slate-200 bg-white overflow-hidden"
+			style={{ height }}
+		>
 			<ReactFlow
 				nodes={nodes}
 				edges={edges}
@@ -125,7 +151,8 @@ export function PageGraph({ graph }: { graph: PageGraphType }) {
 				proOptions={{ hideAttribution: true }}
 				nodesDraggable={false}
 				nodesConnectable={false}
-				elementsSelectable={false}
+				elementsSelectable={clickable}
+				onNodeClick={clickable ? handleNodeClick : undefined}
 			>
 				<Background color="#e2e8f0" gap={20} />
 			</ReactFlow>

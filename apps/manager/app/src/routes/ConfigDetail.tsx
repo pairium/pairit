@@ -4,11 +4,13 @@ import {
 	type ConfigCounts,
 	type ConfigDetail as ConfigDetailType,
 } from "@app/lib/api";
+import { buildPageGraph } from "@app/lib/page-graph";
+import { PageGraph } from "@components/PageGraph";
 import { Button } from "@components/ui/Button";
-import { YamlEditor } from "@components/YamlEditor";
+import { YamlEditor, type YamlEditorHandle } from "@components/YamlEditor";
 import { Link, useParams } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import YAML from "yaml";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import YAML, { LineCounter } from "yaml";
 
 function formatDate(s: string | null): string {
 	if (!s) return "—";
@@ -47,6 +49,41 @@ function deriveYaml(detail: ConfigDetailType): string {
 	}
 }
 
+function buildPageIdToLine(yamlText: string): Map<string, number> {
+	const map = new Map<string, number>();
+	if (!yamlText) return map;
+	try {
+		const lineCounter = new LineCounter();
+		const doc = YAML.parseDocument(yamlText, { lineCounter });
+		const pages = doc.get("pages", true);
+		// Raw YAML stores pages as a seq; compiled configs stringified back to
+		// YAML store them as a map keyed by id.
+		if (YAML.isSeq(pages)) {
+			for (const item of pages.items) {
+				if (!YAML.isMap(item)) continue;
+				const idNode = item.get("id", true);
+				if (
+					YAML.isScalar(idNode) &&
+					typeof idNode.value === "string" &&
+					idNode.range
+				) {
+					map.set(idNode.value, lineCounter.linePos(idNode.range[0]).line);
+				}
+			}
+		} else if (YAML.isMap(pages)) {
+			for (const pair of pages.items) {
+				const key = pair.key;
+				if (YAML.isScalar(key) && typeof key.value === "string" && key.range) {
+					map.set(key.value, lineCounter.linePos(key.range[0]).line);
+				}
+			}
+		}
+	} catch {
+		// invalid YAML during editing → no jump targets
+	}
+	return map;
+}
+
 export function ConfigDetail() {
 	const { configId } = useParams({ from: "/configs/$configId" });
 	const [config, setConfig] = useState<ConfigDetailType | null>(null);
@@ -56,6 +93,7 @@ export function ConfigDetail() {
 	const [draft, setDraft] = useState("");
 	const [saving, setSaving] = useState(false);
 	const [saveError, setSaveError] = useState<string | null>(null);
+	const yamlRef = useRef<YamlEditorHandle | null>(null);
 
 	useEffect(() => {
 		api
@@ -69,6 +107,24 @@ export function ConfigDetail() {
 	}, [configId]);
 
 	const yamlText = useMemo(() => (config ? deriveYaml(config) : ""), [config]);
+	const displayedYaml = editing ? draft : yamlText;
+	const pageIdToLine = useMemo(
+		() => buildPageIdToLine(displayedYaml),
+		[displayedYaml],
+	);
+	const graph = useMemo(
+		() => (config ? buildPageGraph(config.config) : null),
+		[config],
+	);
+
+	const handlePageClick = useCallback(
+		(pageId: string) => {
+			const line = pageIdToLine.get(pageId);
+			if (line === undefined) return;
+			yamlRef.current?.scrollToLine(line);
+		},
+		[pageIdToLine],
+	);
 
 	const handleEdit = () => {
 		setDraft(yamlText);
@@ -100,7 +156,7 @@ export function ConfigDetail() {
 	};
 
 	const handleDelete = async () => {
-		if (!confirm(`Delete config "${configId}"? This cannot be undone.`)) {
+		if (!confirm(`Delete experiment "${configId}"? This cannot be undone.`)) {
 			return;
 		}
 		try {
@@ -119,7 +175,7 @@ export function ConfigDetail() {
 			<div>
 				<div className="text-sm text-slate-500 mb-2">
 					<Link to="/configs" className="hover:text-slate-900 no-underline">
-						Configs
+						Experiments
 					</Link>
 					<span className="mx-2 text-slate-300">/</span>
 					<span className="text-slate-900">{config.configId}</span>
@@ -163,18 +219,6 @@ export function ConfigDetail() {
 			</section>
 
 			<section className="space-y-3">
-				<h2 className="text-base font-semibold text-slate-900">Structure</h2>
-				<Link
-					to="/configs/$configId/graph"
-					params={{ configId: config.configId }}
-					className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 no-underline hover:bg-slate-50 hover:border-slate-300 transition-colors flex items-center justify-between"
-				>
-					<span>Page graph</span>
-					<span className="text-slate-400">→</span>
-				</Link>
-			</section>
-
-			<section className="space-y-3">
 				<h2 className="text-base font-semibold text-slate-900">Data</h2>
 				<div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
 					{SUBPAGES.map((s) => {
@@ -201,10 +245,35 @@ export function ConfigDetail() {
 				</div>
 			</section>
 
+			{graph && graph.nodes.length > 0 && (
+				<section className="space-y-3">
+					<div className="flex justify-between items-end gap-3">
+						<div>
+							<h2 className="text-base font-semibold text-slate-900">Pages</h2>
+							<p className="text-xs text-slate-500 mt-0.5">
+								Click a node to jump to its YAML.
+							</p>
+						</div>
+						<Link
+							to="/configs/$configId/graph"
+							params={{ configId: config.configId }}
+							className="text-sm text-slate-600 hover:text-slate-900 no-underline"
+						>
+							Full view →
+						</Link>
+					</div>
+					<PageGraph
+						graph={graph}
+						onPageClick={handlePageClick}
+						height="420px"
+					/>
+				</section>
+			)}
+
 			<section className="space-y-3">
 				<div className="flex justify-between items-center">
 					<h2 className="text-base font-semibold text-slate-900">
-						Config YAML
+						Experiment YAML
 					</h2>
 					<div className="flex items-center gap-2">
 						{editing ? (
@@ -234,7 +303,8 @@ export function ConfigDetail() {
 					</p>
 				)}
 				<YamlEditor
-					value={editing ? draft : yamlText}
+					ref={yamlRef}
+					value={displayedYaml}
 					onChange={editing ? setDraft : undefined}
 					readOnly={!editing}
 				/>

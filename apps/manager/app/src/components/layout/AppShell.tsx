@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 
 const NAV = [
 	{ to: "/", label: "Dashboard" },
-	{ to: "/configs", label: "Configs" },
+	{ to: "/configs", label: "Experiments" },
 	{ to: "/media", label: "Media" },
 ];
 
