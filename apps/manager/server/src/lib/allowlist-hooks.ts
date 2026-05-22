@@ -8,11 +8,11 @@
  */
 
 import type { BetterAuthOptions } from "better-auth";
-import { APIError } from "better-auth/api";
+import { APIError, getOAuthState } from "better-auth/api";
 import { findAllowed } from "./allowlist";
 
 export function getContactEmail(): string {
-	return process.env.MANAGER_ADMIN_CONTACT_EMAIL || "harang@pairium.ai";
+	return process.env.MANAGER_ADMIN_CONTACT_EMAIL || "pairit@pairium.ai";
 }
 
 function deniedMessage(): string {
@@ -36,7 +36,9 @@ function isOAuthCallback(ctx: HookContext | undefined): boolean {
 	return path.startsWith("/callback") || path.startsWith("/oauth2/callback");
 }
 
-function accessDeniedURL(ctx: HookContext): string {
+async function accessDeniedURL(ctx: HookContext): Promise<string> {
+	const state = await getOAuthState();
+	if (state?.errorURL) return state.errorURL;
 	return (
 		ctx.context.options.onAPIError?.errorURL ??
 		`${ctx.context.baseURL.replace(/\/api\/auth\/?$/, "")}/access-denied`
@@ -68,7 +70,7 @@ export const allowlistHooks: BetterAuthOptions["databaseHooks"] = {
 				if (user?.email && (await findAllowed(user.email))) return;
 
 				if (isOAuthCallback(hookCtx)) {
-					throw hookCtx.redirect(accessDeniedURL(hookCtx));
+					throw hookCtx.redirect(await accessDeniedURL(hookCtx));
 				}
 				throw new APIError("FORBIDDEN", {
 					message: deniedMessage(),

@@ -19,6 +19,11 @@ function bypassToApp(req: IncomingMessage) {
 
 export default defineConfig({
 	plugins: [viteReact(), tailwindcss()],
+	define: {
+		"import.meta.env.VITE_MANAGER_CONTACT_EMAIL": JSON.stringify(
+			process.env.MANAGER_ADMIN_CONTACT_EMAIL ?? "pairit@pairium.ai",
+		),
+	},
 	resolve: {
 		alias: {
 			"@": resolve(__dirname, "./src"),
