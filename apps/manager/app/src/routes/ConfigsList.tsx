@@ -1,6 +1,7 @@
 import { api, type ConfigSummary } from "@app/lib/api";
+import { RefreshButton } from "@components/RefreshButton";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 function formatDate(s: string | null): string {
 	if (!s) return "—";
@@ -10,24 +11,39 @@ function formatDate(s: string | null): string {
 export function ConfigsList() {
 	const [configs, setConfigs] = useState<ConfigSummary[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [refreshing, setRefreshing] = useState(false);
+
+	const load = useCallback(async () => {
+		setRefreshing(true);
+		setError(null);
+		try {
+			setConfigs(await api.listConfigs());
+		} catch (e) {
+			setError(e instanceof Error ? e.message : "Failed to load");
+		} finally {
+			setRefreshing(false);
+		}
+	}, []);
 
 	useEffect(() => {
-		api
-			.listConfigs()
-			.then(setConfigs)
-			.catch((e: Error) => setError(e.message));
-	}, []);
+		load();
+	}, [load]);
 
 	return (
 		<div className="space-y-6">
-			<div>
-				<h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-					Configs
-				</h1>
-				<p className="text-sm text-slate-600 mt-1">
-					Experiment configs you own. Upload new ones with{" "}
-					<code className="text-[12px]">pairit config upload</code>.
-				</p>
+			<div className="flex justify-between items-start gap-3">
+				<div>
+					<h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+						Configs
+					</h1>
+					<p className="text-sm text-slate-600 mt-1">
+						Experiment configs you own. Upload new ones with{" "}
+						<code className="text-[12px]">pairit config upload</code>.
+					</p>
+				</div>
+				<div className="pt-1">
+					<RefreshButton onClick={load} refreshing={refreshing} />
+				</div>
 			</div>
 			{error && <p className="text-sm text-red-600">{error}</p>}
 			{!configs && !error && <p className="text-sm text-slate-500">Loading…</p>}

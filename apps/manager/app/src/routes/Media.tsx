@@ -1,5 +1,6 @@
 import { api, type MediaObject } from "@app/lib/api";
 import { Lightbox } from "@components/Lightbox";
+import { RefreshButton } from "@components/RefreshButton";
 import { Button } from "@components/ui/Button";
 import { Input } from "@components/ui/Input";
 import { useEffect, useRef, useState } from "react";
@@ -47,14 +48,18 @@ export function Media() {
 	);
 	const [uploading, setUploading] = useState(false);
 	const [uploadError, setUploadError] = useState<string | null>(null);
+	const [refreshing, setRefreshing] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 
 	const reload = async (p: string) => {
 		setError(null);
+		setRefreshing(true);
 		try {
 			setObjects(await api.listMedia(p || undefined));
 		} catch (e) {
 			setError(e instanceof Error ? e.message : "Failed to load");
+		} finally {
+			setRefreshing(false);
 		}
 	};
 
@@ -93,13 +98,21 @@ export function Media() {
 
 	return (
 		<div className="space-y-6">
-			<div>
-				<h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-					Media
-				</h1>
-				<p className="text-sm text-slate-600 mt-1">
-					Files in the storage backend.
-				</p>
+			<div className="flex justify-between items-start gap-3">
+				<div>
+					<h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+						Media
+					</h1>
+					<p className="text-sm text-slate-600 mt-1">
+						Files in the storage backend.
+					</p>
+				</div>
+				<div className="pt-1">
+					<RefreshButton
+						onClick={() => reload(prefix)}
+						refreshing={refreshing}
+					/>
+				</div>
 			</div>
 
 			<div className="flex flex-wrap gap-2 items-center">

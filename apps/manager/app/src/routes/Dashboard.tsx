@@ -1,7 +1,8 @@
 import { api, type ConfigSummary, type RecentSession } from "@app/lib/api";
+import { RefreshButton } from "@components/RefreshButton";
 import { StatusPill } from "@components/StatusPill";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 function formatDate(s: string | null): string {
 	if (!s) return "—";
@@ -16,17 +17,36 @@ export function Dashboard() {
 	const [configs, setConfigs] = useState<ConfigSummary[] | null>(null);
 	const [recent, setRecent] = useState<RecentSession[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [refreshingConfigs, setRefreshingConfigs] = useState(false);
+	const [refreshingSessions, setRefreshingSessions] = useState(false);
+
+	const loadConfigs = useCallback(async () => {
+		setRefreshingConfigs(true);
+		setError(null);
+		try {
+			setConfigs(await api.listConfigs());
+		} catch (e) {
+			setError(e instanceof Error ? e.message : "Failed to load");
+		} finally {
+			setRefreshingConfigs(false);
+		}
+	}, []);
+
+	const loadRecent = useCallback(async () => {
+		setRefreshingSessions(true);
+		try {
+			setRecent(await api.listRecentSessions());
+		} catch {
+			setRecent([]);
+		} finally {
+			setRefreshingSessions(false);
+		}
+	}, []);
 
 	useEffect(() => {
-		api
-			.listConfigs()
-			.then(setConfigs)
-			.catch((e: Error) => setError(e.message));
-		api
-			.listRecentSessions()
-			.then(setRecent)
-			.catch(() => setRecent([]));
-	}, []);
+		loadConfigs();
+		loadRecent();
+	}, [loadConfigs, loadRecent]);
 
 	return (
 		<div className="space-y-8">
@@ -44,12 +64,18 @@ export function Dashboard() {
 					<h2 className="text-base font-semibold text-slate-900">
 						Recent configs
 					</h2>
-					<Link
-						to="/configs"
-						className="text-sm text-slate-600 hover:text-slate-900"
-					>
-						View all →
-					</Link>
+					<div className="flex items-center gap-3">
+						<RefreshButton
+							onClick={loadConfigs}
+							refreshing={refreshingConfigs}
+						/>
+						<Link
+							to="/configs"
+							className="text-sm text-slate-600 hover:text-slate-900"
+						>
+							View all →
+						</Link>
+					</div>
 				</div>
 				{error && <p className="text-sm text-red-600">{error}</p>}
 				{!configs && !error && (
@@ -99,9 +125,12 @@ export function Dashboard() {
 			</section>
 
 			<section className="space-y-3">
-				<h2 className="text-base font-semibold text-slate-900">
-					Recent sessions
-				</h2>
+				<div className="flex justify-between items-center">
+					<h2 className="text-base font-semibold text-slate-900">
+						Recent sessions
+					</h2>
+					<RefreshButton onClick={loadRecent} refreshing={refreshingSessions} />
+				</div>
 				{!recent && <p className="text-sm text-slate-500">Loading…</p>}
 				{recent && recent.length === 0 && (
 					<div className="rounded-2xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-500">
