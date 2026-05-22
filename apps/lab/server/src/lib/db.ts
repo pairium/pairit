@@ -75,7 +75,7 @@ export async function ensureIndexes(): Promise<void> {
 		.createIndex({ sessionId: 1, createdAt: 1 });
 	await database
 		.collection("events")
-		.createIndex({ configId: 1, createdAt: 1 });
+		.createIndex({ configId: 1, createdAt: 1, _id: 1 });
 	await database
 		.collection("events")
 		.createIndex({ idempotencyKey: 1 }, { unique: true, sparse: true });
@@ -94,7 +94,7 @@ export async function ensureIndexes(): Promise<void> {
 		.createIndex({ groupId: 1, createdAt: 1 });
 	await database
 		.collection("chat_messages")
-		.createIndex({ configId: 1, createdAt: 1 });
+		.createIndex({ configId: 1, createdAt: 1, _id: 1 });
 	await database
 		.collection("chat_messages")
 		.createIndex({ idempotencyKey: 1 }, { unique: true, sparse: true });
@@ -104,11 +104,11 @@ export async function ensureIndexes(): Promise<void> {
 		.createIndex({ groupId: 1 }, { unique: true });
 	await database
 		.collection("groups")
-		.createIndex({ configId: 1, matchedAt: 1 });
+		.createIndex({ configId: 1, matchedAt: 1, _id: 1 });
 
 	await database
 		.collection("sessions")
-		.createIndex({ configId: 1, createdAt: 1 });
+		.createIndex({ configId: 1, createdAt: 1, _id: 1 });
 
 	// Session resumption indexes
 	// OAuth user lookup: find sessions by userId + configId
@@ -129,7 +129,7 @@ export async function ensureIndexes(): Promise<void> {
 		.createIndex({ groupId: 1 }, { unique: true });
 	await database
 		.collection("workspace_documents")
-		.createIndex({ configId: 1, updatedAt: 1 });
+		.createIndex({ configId: 1, updatedAt: 1, _id: 1 });
 
 	console.log("[DB] All indexes ensured");
 }
