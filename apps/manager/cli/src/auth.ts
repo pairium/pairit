@@ -52,61 +52,61 @@ export async function login() {
 			const { createServer } = await import("node:http");
 			const { default: open } = await import("open");
 
-		const server = createServer();
-		const port = await new Promise<number>((resolve, reject) => {
-			server.listen(0, "127.0.0.1", () => {
-				const address = server.address();
-				if (address && typeof address === "object") {
-					resolve(address.port);
-				} else {
-					reject(new Error("Could not determine port"));
-				}
-			});
-		});
-
-		const redirectUri = `http://127.0.0.1:${port}`;
-		const targetUrl = `${loginUrl}?cli_redirect_uri=${encodeURIComponent(redirectUri)}`;
-
-		console.log(`Opening ${loginUrl} in your browser...`);
-		await open(targetUrl);
-
-		console.log("Waiting for sign-in to complete...");
-
-		// Receive authorization code (not the token directly for security)
-		const authCode = await new Promise<string>((resolve, reject) => {
-			// Set 2 minute timeout
-			const timeout = setTimeout(() => {
-				server.close();
-				reject(new Error("Login timed out"));
-			}, 120000);
-
-			server.on("request", (req, res) => {
-				try {
-					const url = new URL(req.url || "/", `http://${req.headers.host}`);
-					const code = url.searchParams.get("code");
-
-					if (code) {
-						res.writeHead(200, { "Content-Type": "text/html" });
-						res.end(
-							`<!DOCTYPE html><html><head><title>Login Successful</title></head><body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><h1>Authenticated!</h1><p>You can close this window and return to your CLI.</p></div><script>setTimeout(()=>window.close(),3000)</script></body></html>`,
-						);
-						clearTimeout(timeout);
-						server.close();
-						resolve(code);
+			const server = createServer();
+			const port = await new Promise<number>((resolve, reject) => {
+				server.listen(0, "127.0.0.1", () => {
+					const address = server.address();
+					if (address && typeof address === "object") {
+						resolve(address.port);
 					} else {
-						res.writeHead(400);
-						res.end("Missing authorization code");
+						reject(new Error("Could not determine port"));
 					}
-				} catch (_e) {
-					res.writeHead(500);
-					res.end("Error processing request");
-				}
+				});
 			});
-		});
 
-		// Exchange the authorization code for a session token
-		console.log("Exchanging authorization code for token...");
-		const token = await exchangeCodeForToken(authCode);
+			const redirectUri = `http://127.0.0.1:${port}`;
+			const targetUrl = `${loginUrl}?cli_redirect_uri=${encodeURIComponent(redirectUri)}`;
+
+			console.log(`Opening ${loginUrl} in your browser...`);
+			await open(targetUrl);
+
+			console.log("Waiting for sign-in to complete...");
+
+			// Receive authorization code (not the token directly for security)
+			const authCode = await new Promise<string>((resolve, reject) => {
+				// Set 2 minute timeout
+				const timeout = setTimeout(() => {
+					server.close();
+					reject(new Error("Login timed out"));
+				}, 120000);
+
+				server.on("request", (req, res) => {
+					try {
+						const url = new URL(req.url || "/", `http://${req.headers.host}`);
+						const code = url.searchParams.get("code");
+
+						if (code) {
+							res.writeHead(200, { "Content-Type": "text/html" });
+							res.end(
+								`<!DOCTYPE html><html><head><title>Login Successful</title></head><body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><h1>Authenticated!</h1><p>You can close this window and return to your CLI.</p></div><script>setTimeout(()=>window.close(),3000)</script></body></html>`,
+							);
+							clearTimeout(timeout);
+							server.close();
+							resolve(code);
+						} else {
+							res.writeHead(400);
+							res.end("Missing authorization code");
+						}
+					} catch (_e) {
+						res.writeHead(500);
+						res.end("Error processing request");
+					}
+				});
+			});
+
+			// Exchange the authorization code for a session token
+			console.log("Exchanging authorization code for token...");
+			const token = await exchangeCodeForToken(authCode);
 
 			await saveCredentials({ token });
 			console.log("Successfully logged in!");
@@ -225,11 +225,19 @@ function canAttemptBrowserLogin(): boolean {
 		return false;
 	}
 
-	if (process.env.SSH_CONNECTION || process.env.SSH_CLIENT || process.env.SSH_TTY) {
+	if (
+		process.env.SSH_CONNECTION ||
+		process.env.SSH_CLIENT ||
+		process.env.SSH_TTY
+	) {
 		return false;
 	}
 
-	return process.platform === "darwin" || process.platform === "win32" || Boolean(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
+	return (
+		process.platform === "darwin" ||
+		process.platform === "win32" ||
+		Boolean(process.env.DISPLAY || process.env.WAYLAND_DISPLAY)
+	);
 }
 
 async function loadKeytar(): Promise<{

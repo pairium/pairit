@@ -42,6 +42,7 @@ export type ConfigSummary = {
 
 export type ConfigDetail = ConfigSummary & {
 	config: unknown;
+	rawYaml: string | null;
 	createdAt: string | null;
 	requireAuth: boolean;
 	allowRetake: boolean;
@@ -187,6 +188,12 @@ export const api = {
 		allowRetake?: boolean;
 	}) =>
 		request<ConfigDetail>("/configs/upload", {
+			method: "POST",
+			body: JSON.stringify(body),
+		}),
+
+	uploadConfigYaml: (body: { configId?: string; yaml: string }) =>
+		request<ConfigDetail>("/configs/yaml", {
 			method: "POST",
 			body: JSON.stringify(body),
 		}),

@@ -16,14 +16,13 @@ export function RefreshButton({
 			type="button"
 			onClick={onClick}
 			disabled={refreshing}
-			aria-label={label}
-			title={label}
-			className="text-slate-500 hover:text-slate-900 disabled:opacity-50 p-1 -m-1"
+			className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 disabled:opacity-50"
 		>
 			<RefreshCw
-				size={16}
+				size={14}
 				className={refreshing ? "animate-spin" : undefined}
 			/>
+			<span>{label}</span>
 		</button>
 	);
 }

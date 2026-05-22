@@ -5,25 +5,14 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import {
+	buildCompiled,
+	compileYaml,
+	lintConfig as lintParsed,
+	parseYaml,
+} from "@pairit/config-compiler";
 import { Command } from "commander";
-import YAML from "yaml";
 import { getAuthHeaders, login } from "./auth.js";
-
-type ExperimentPage = {
-	id: string;
-	onEnter?: unknown[];
-	components?: unknown[];
-};
-
-type ExperimentConfig = {
-	schema_version?: string;
-	initialPageId?: string;
-	pages?: ExperimentPage[];
-	agents?: unknown[];
-	matchmaking?: unknown;
-	allowRetake?: boolean;
-	requireAuth?: boolean;
-};
 
 const program = new Command();
 
@@ -53,7 +42,7 @@ configCommand
 	.description("Run minimal validation on a config file")
 	.action(async (configPath: string) => {
 		try {
-			await lintConfig(configPath);
+			await lintConfigFile(configPath);
 			console.log(`✓ ${configPath} passed lint checks`);
 		} catch (error) {
 			if (error instanceof Error) {
@@ -71,7 +60,7 @@ configCommand
 	.description("Compile YAML config to canonical JSON next to source")
 	.action(async (configPath: string) => {
 		try {
-			const outPath = await compileConfig(configPath);
+			const outPath = await compileConfigToFile(configPath);
 			console.log(`✓ Wrote compiled JSON to ${outPath}`);
 		} catch (error) {
 			if (error instanceof Error) {
@@ -428,118 +417,20 @@ type DataExportOptions = {
 	out: string;
 };
 
-async function lintConfig(configPath: string): Promise<void> {
-	const config = await loadConfig(configPath);
-
-	const errors: string[] = [];
-	if (!config.schema_version) {
-		errors.push("missing schema_version");
-	}
-	if (!config.initialPageId) {
-		errors.push("missing initialPageId");
-	}
-	if (!Array.isArray(config.pages) || config.pages.length === 0) {
-		errors.push("pages must be a non-empty array");
-	}
-	if (Array.isArray(config.pages)) {
-		config.pages.forEach((page, index) => {
-			if (!page.id) {
-				errors.push(`pages[${index}] is missing id`);
-			}
-		});
-	}
-
-	if (errors.length) {
-		throw new Error(errors.join(", "));
-	}
+async function lintConfigFile(configPath: string): Promise<void> {
+	const source = await readConfigSource(configPath);
+	lintParsed(parseYaml(source));
 }
 
-type MatchmakingPoolConfig = {
-	id: string;
-	num_users?: number;
-	timeoutSeconds?: number;
-	timeoutTarget?: string;
-	assignment?: {
-		type?: "random" | "balanced_random" | "block";
-		conditions?: string[];
-	};
-};
-
-type ComponentWithProps = {
-	type: string;
-	id?: string;
-	props?: Record<string, unknown>;
-};
-
-async function compileConfig(configPath: string): Promise<string> {
-	const config = await loadConfig(configPath);
-
-	// Build pool config lookup from matchmaking array
-	const poolConfigs = new Map<string, MatchmakingPoolConfig>();
-	if (Array.isArray(config.matchmaking)) {
-		for (const pool of config.matchmaking as MatchmakingPoolConfig[]) {
-			if (pool.id) {
-				poolConfigs.set(pool.id, pool);
-			}
-		}
-	}
-
-	const pages: Record<string, Record<string, unknown>> = {};
-	for (const page of config.pages ?? []) {
-		const { id, ...rest } = page;
-
-		// Process components: auto-generate IDs and merge pool configs
-		if (Array.isArray(rest.components)) {
-			rest.components = (rest.components as ComponentWithProps[]).map(
-				(comp, index) => {
-					// Auto-generate component ID if missing
-					const withId = comp.id
-						? comp
-						: { ...comp, id: `${comp.type}-${index}` };
-
-					if (withId.type === "matchmaking" && withId.props?.poolId) {
-						const poolConfig = poolConfigs.get(withId.props.poolId as string);
-						if (poolConfig) {
-							return {
-								...withId,
-								props: {
-									...withId.props,
-									num_users: poolConfig.num_users,
-									timeoutSeconds: poolConfig.timeoutSeconds,
-									timeoutTarget: poolConfig.timeoutTarget,
-									assignmentType: poolConfig.assignment?.type,
-									conditions: poolConfig.assignment?.conditions,
-								},
-							};
-						}
-					}
-					return withId;
-				},
-			);
-		}
-
-		pages[id] = { id, ...rest };
-	}
-
-	const pageIds = Object.keys(pages);
-	const output: Record<string, unknown> = {
-		schema_version: config.schema_version ?? "0.1.0",
-		initialPageId: config.initialPageId ?? pageIds[0] ?? "intro",
-		pages,
-	};
-	if (config.agents) {
-		output.agents = config.agents;
-	}
-	if (config.matchmaking) {
-		output.matchmaking = config.matchmaking;
-	}
-
+async function compileConfigToFile(configPath: string): Promise<string> {
+	const source = await readConfigSource(configPath);
+	const compiled = buildCompiled(parseYaml(source));
 	const resolvedPath = await resolvePath(configPath);
 	const outPath = path.join(
 		path.dirname(resolvedPath),
 		`${path.basename(resolvedPath, path.extname(resolvedPath))}.json`,
 	);
-	await writeFile(outPath, JSON.stringify(output, null, 2), "utf8");
+	await writeFile(outPath, JSON.stringify(compiled, null, 2), "utf8");
 	return outPath;
 }
 
@@ -548,6 +439,7 @@ type UploadPayload = {
 	checksum: string;
 	metadata?: Record<string, unknown> | null;
 	config: unknown;
+	rawYaml?: string;
 	llmCredentials?: {
 		openaiApiKey?: string;
 		anthropicApiKey?: string;
@@ -560,24 +452,16 @@ async function buildUploadPayload(
 	configPath: string,
 	options: UploadOptions,
 ): Promise<{ payload: UploadPayload; checksum: string }> {
-	// Load source YAML to read top-level flags (not preserved in compiled output)
-	const sourceConfig = await loadConfig(configPath);
-	const allowRetake = sourceConfig.allowRetake === true;
-	const requireAuth = sourceConfig.requireAuth;
+	const source = await readConfigSource(configPath);
+	// Also write compiled JSON next to source for parity with prior CLI behavior.
+	await compileConfigToFile(configPath);
+	const compiled = compileYaml(source);
 
-	const compiledPath = await compileConfig(configPath);
-	const compiledContent = await readFile(compiledPath, "utf8");
-	const hashBuffer = createHash("sha256").update(compiledContent).digest();
-	const checksum = hashBuffer.toString("hex");
-	const parsed = JSON.parse(compiledContent) as unknown;
-
-	const configId = options.configId ?? toBase64Url(hashBuffer.subarray(0, 12));
+	const configId = options.configId ?? compiled.defaultConfigId;
 
 	const metadata = options.metadata
 		? (JSON.parse(options.metadata) as Record<string, unknown>)
 		: {};
-
-	// Auto-populate original filename if not manually provided
 	if (!metadata.originalFilename) {
 		metadata.originalFilename = path.basename(configPath);
 	}
@@ -592,14 +476,17 @@ async function buildUploadPayload(
 	return {
 		payload: {
 			configId,
-			checksum,
+			checksum: compiled.checksum,
 			metadata: metadata ?? null,
-			config: parsed,
+			config: compiled.config,
+			rawYaml: source,
 			...(Object.keys(llmCredentials).length > 0 && { llmCredentials }),
-			allowRetake,
-			...(requireAuth !== undefined && { requireAuth }),
+			allowRetake: compiled.allowRetake,
+			...(compiled.requireAuth !== undefined && {
+				requireAuth: compiled.requireAuth,
+			}),
 		},
-		checksum,
+		checksum: compiled.checksum,
 	};
 }
 
@@ -723,14 +610,9 @@ function toBase64Url(buffer: Buffer): string {
 		.replace(/=+$/g, "");
 }
 
-async function loadConfig(configPath: string): Promise<ExperimentConfig> {
+async function readConfigSource(configPath: string): Promise<string> {
 	const resolvedPath = await resolvePath(configPath);
-	const content = await readFile(resolvedPath, "utf8");
-	const parsed = YAML.parse(content);
-	if (!parsed || typeof parsed !== "object") {
-		throw new Error("config must be an object");
-	}
-	return parsed as ExperimentConfig;
+	return readFile(resolvedPath, "utf8");
 }
 
 async function resolvePath(configPath: string): Promise<string> {

@@ -1,6 +1,7 @@
 import { api, type ConfigSummary } from "@app/lib/api";
 import { RefreshButton } from "@components/RefreshButton";
 import { Link } from "@tanstack/react-router";
+import { Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 function formatDate(s: string | null): string {
@@ -37,12 +38,18 @@ export function ConfigsList() {
 						Configs
 					</h1>
 					<p className="text-sm text-slate-600 mt-1">
-						Experiment configs you own. Upload new ones with{" "}
-						<code className="text-[12px]">pairit config upload</code>.
+						Experiment configs you own.
 					</p>
 				</div>
-				<div className="pt-1">
+				<div className="flex items-center gap-4 pt-1">
 					<RefreshButton onClick={load} refreshing={refreshing} />
+					<Link
+						to="/configs/new"
+						className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 no-underline"
+					>
+						<Plus size={14} />
+						<span>New config</span>
+					</Link>
 				</div>
 			</div>
 			{error && <p className="text-sm text-red-600">{error}</p>}

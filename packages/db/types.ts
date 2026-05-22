@@ -22,6 +22,7 @@ export type ConfigDocument = {
 	checksum?: string;
 	metadata?: Record<string, unknown> | null;
 	config: unknown;
+	rawYaml?: string | null;
 	llmCredentials?: ConfigLlmCredentials;
 	requireAuth?: boolean;
 	allowRetake?: boolean;

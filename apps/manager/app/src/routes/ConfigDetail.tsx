@@ -1,11 +1,14 @@
 import {
+	ApiError,
 	api,
 	type ConfigCounts,
 	type ConfigDetail as ConfigDetailType,
 } from "@app/lib/api";
 import { Button } from "@components/ui/Button";
+import { YamlEditor } from "@components/YamlEditor";
 import { Link, useParams } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import YAML from "yaml";
 
 function formatDate(s: string | null): string {
 	if (!s) return "—";
@@ -35,11 +38,24 @@ function formatCount(n: number | undefined): string {
 	return n.toString();
 }
 
+function deriveYaml(detail: ConfigDetailType): string {
+	if (detail.rawYaml) return detail.rawYaml;
+	try {
+		return YAML.stringify(detail.config);
+	} catch {
+		return "";
+	}
+}
+
 export function ConfigDetail() {
 	const { configId } = useParams({ from: "/configs/$configId" });
 	const [config, setConfig] = useState<ConfigDetailType | null>(null);
 	const [counts, setCounts] = useState<ConfigCounts | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [editing, setEditing] = useState(false);
+	const [draft, setDraft] = useState("");
+	const [saving, setSaving] = useState(false);
+	const [saveError, setSaveError] = useState<string | null>(null);
 
 	useEffect(() => {
 		api
@@ -51,6 +67,37 @@ export function ConfigDetail() {
 			.then(setCounts)
 			.catch(() => setCounts(null));
 	}, [configId]);
+
+	const yamlText = useMemo(() => (config ? deriveYaml(config) : ""), [config]);
+
+	const handleEdit = () => {
+		setDraft(yamlText);
+		setSaveError(null);
+		setEditing(true);
+	};
+
+	const handleCancel = () => {
+		setEditing(false);
+		setSaveError(null);
+	};
+
+	const handleSave = async () => {
+		setSaving(true);
+		setSaveError(null);
+		try {
+			const updated = await api.uploadConfigYaml({ configId, yaml: draft });
+			setConfig(updated);
+			setEditing(false);
+		} catch (e) {
+			if (e instanceof ApiError) {
+				setSaveError(e.message);
+			} else {
+				setSaveError(e instanceof Error ? e.message : "Save failed");
+			}
+		} finally {
+			setSaving(false);
+		}
+	};
 
 	const handleDelete = async () => {
 		if (!confirm(`Delete config "${configId}"? This cannot be undone.`)) {
@@ -155,10 +202,42 @@ export function ConfigDetail() {
 			</section>
 
 			<section className="space-y-3">
-				<h2 className="text-base font-semibold text-slate-900">Config JSON</h2>
-				<pre className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-[12px] font-mono text-slate-800 overflow-x-auto max-h-96">
-					{JSON.stringify(config.config, null, 2)}
-				</pre>
+				<div className="flex justify-between items-center">
+					<h2 className="text-base font-semibold text-slate-900">
+						Config YAML
+					</h2>
+					<div className="flex items-center gap-2">
+						{editing ? (
+							<>
+								<Button
+									type="button"
+									variant="ghost"
+									onClick={handleCancel}
+									disabled={saving}
+								>
+									Cancel
+								</Button>
+								<Button type="button" onClick={handleSave} disabled={saving}>
+									{saving ? "Saving…" : "Save"}
+								</Button>
+							</>
+						) : (
+							<Button type="button" variant="ghost" onClick={handleEdit}>
+								Edit
+							</Button>
+						)}
+					</div>
+				</div>
+				{saveError && (
+					<p className="text-sm text-red-600 whitespace-pre-wrap">
+						{saveError}
+					</p>
+				)}
+				<YamlEditor
+					value={editing ? draft : yamlText}
+					onChange={editing ? setDraft : undefined}
+					readOnly={!editing}
+				/>
 			</section>
 		</div>
 	);

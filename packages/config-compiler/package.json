@@ -1,0 +1,16 @@
+{
+	"name": "@pairit/config-compiler",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./index.ts"
+	},
+	"dependencies": {
+		"yaml": "^2.6.1"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.1.13",
+		"typescript": "^5.9.3"
+	}
+}

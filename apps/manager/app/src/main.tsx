@@ -20,6 +20,7 @@ import { ConfigGraph } from "./routes/ConfigGraph";
 import { ConfigsList } from "./routes/ConfigsList";
 import { Dashboard } from "./routes/Dashboard";
 import { Media } from "./routes/Media";
+import { NewConfig } from "./routes/NewConfig";
 import { SessionDetail } from "./routes/SessionDetail";
 
 let DevTools: () => ReactNode = () => null;
@@ -55,6 +56,12 @@ const configsRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/configs",
 	component: ConfigsList,
+});
+
+const configNewRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/configs/new",
+	component: NewConfig,
 });
 
 const configDetailRoute = createRoute({
@@ -96,6 +103,7 @@ const allowlistRoute = createRoute({
 const routeTree = rootRoute.addChildren([
 	dashboardRoute,
 	configsRoute,
+	configNewRoute,
 	configDetailRoute,
 	sessionDetailRoute,
 	configGraphRoute,
