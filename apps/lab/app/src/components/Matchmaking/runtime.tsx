@@ -40,10 +40,6 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 		const [status, setStatus] = useState<MatchmakingStatus>("connecting");
 		const [currentCount, setCurrentCount] = useState(1);
 		const [elapsedSeconds, setElapsedSeconds] = useState(0);
-		const [matchResult, setMatchResult] = useState<{
-			groupId?: string;
-			treatment?: string;
-		}>({});
 
 		const startTimeRef = useRef<number>(Date.now());
 		const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -72,10 +68,6 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 
 				// Update status
 				setStatus("matched");
-				setMatchResult({
-					groupId: data.groupId,
-					treatment: data.treatment,
-				});
 
 				// Update session state
 				if (onSessionStateChange) {
@@ -251,8 +243,6 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 				targetCount={targetCount}
 				timeoutSeconds={timeoutSeconds}
 				elapsedSeconds={elapsedSeconds}
-				groupId={matchResult.groupId}
-				treatment={matchResult.treatment}
 				onCancel={status === "waiting" ? handleCancel : undefined}
 			/>
 		);
