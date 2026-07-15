@@ -16,8 +16,6 @@ export type MatchmakingPanelProps = {
 	targetCount: number;
 	timeoutSeconds: number;
 	elapsedSeconds: number;
-	groupId?: string;
-	treatment?: string;
 	onCancel?: () => void;
 };
 
@@ -27,8 +25,6 @@ export function MatchmakingPanel({
 	targetCount,
 	timeoutSeconds,
 	elapsedSeconds,
-	groupId,
-	treatment,
 	onCancel,
 }: MatchmakingPanelProps) {
 	const remainingSeconds = Math.max(0, timeoutSeconds - elapsedSeconds);
@@ -119,21 +115,6 @@ export function MatchmakingPanel({
 							You've been matched with other participants
 						</p>
 					</div>
-					{(groupId || treatment) && (
-						<div className="w-full rounded-lg bg-slate-50 p-3 text-sm">
-							{groupId && (
-								<p className="text-slate-600">
-									<span className="font-medium">Group:</span>{" "}
-									{groupId.slice(0, 8)}...
-								</p>
-							)}
-							{treatment && (
-								<p className="text-slate-600">
-									<span className="font-medium">Condition:</span> {treatment}
-								</p>
-							)}
-						</div>
-					)}
 				</>
 			)}
 
