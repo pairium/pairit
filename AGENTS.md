@@ -47,13 +47,40 @@ packages/
 - **Backend**: Elysia, MongoDB
 - **Auth**: Better Auth with Google OAuth
 
-## Experiment Configs
+## Manager allowlist
 
-Configs are stored in MongoDB.
+Add experimenters with the published CLI. You must be logged in as an admin (`pairit login`). The seeded admin is `harang@pairium.ai` (`MANAGER_BOOTSTRAP_ADMIN_EMAIL`). A Gmail login can be on the allowlist as a researcher and still get 403 on admin commands.
 
 ```bash
-pairit config upload config.yaml --config-id id # Upload single config
+pairit admin add-user person@example.com            # researcher
+pairit admin add-user person@example.com --admin    # can manage the allowlist
+pairit admin list-users
 ```
+
+`error: unknown command 'admin'` means the global CLI is stale. Source in `apps/manager/cli` can be ahead of npm.
+
+## Publish the CLI
+
+The CLI package is `apps/manager/cli`, published as `pairit` on npm (owner: `harangju`). Bump `version` in `package.json` and `program.version()` in `src/index.ts`.
+
+```bash
+cd apps/manager/cli
+npm login          # must be harangju
+npm publish        # runs the build via prepublishOnly
+npm install -g pairit
+```
+
+A 404 from `npm publish` is npm hiding an auth error. Check `npm whoami` — it should print `harangju`. Use `--otp` if 2FA is on.
+
+## Global install
+
+Use npm, not bun:
+
+```bash
+npm install -g pairit
+```
+
+Do not also `bun install -g pairit`. Two copies end up on PATH (`~/.local/bin` vs `~/.bun/bin`) and the old one can win. If that happens: `bun remove -g pairit`. Confirm with `which pairit` and `pairit --version`.
 
 ## Documentation
 
