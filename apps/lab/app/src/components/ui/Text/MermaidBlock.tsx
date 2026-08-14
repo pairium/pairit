@@ -9,6 +9,11 @@ function loadMermaid() {
 			mermaid.initialize({
 				startOnLoad: false,
 				securityLevel: "strict",
+				theme: "default",
+				themeVariables: {
+					darkMode: false,
+					background: "transparent",
+				},
 			});
 			return mermaid;
 		});

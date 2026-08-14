@@ -16,19 +16,35 @@ function MarkdownCode({
 	if (isMermaidCode(className)) {
 		return <MermaidBlock source={String(children).replace(/\n$/, "")} />;
 	}
+	const isBlock = Boolean(className) || String(children).includes("\n");
 	return (
-		<code className={className} {...props}>
+		<code
+			className={
+				isBlock ? className : "rounded bg-slate-100 px-1 py-0.5 text-slate-800"
+			}
+			{...props}
+		>
 			{children}
 		</code>
 	);
 }
 
 function MarkdownPre({ children }: { children?: ReactNode }) {
-	const child = Array.isArray(children) ? children[0] : children;
-	if (isValidElement(child) && child.type === MermaidBlock) {
-		return child;
+	const nodes = Array.isArray(children) ? children : [children];
+	const isMermaid = nodes.some(
+		(node) =>
+			(isValidElement<{ className?: string }>(node) &&
+				isMermaidCode(node.props.className)) ||
+			(isValidElement(node) && node.type === MermaidBlock),
+	);
+	if (isMermaid) {
+		return <>{children}</>;
 	}
-	return <pre>{children}</pre>;
+	return (
+		<pre className="not-prose my-4 overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
+			{children}
+		</pre>
+	);
 }
 
 function getNestedValue(
