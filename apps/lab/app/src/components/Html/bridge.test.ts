@@ -18,8 +18,11 @@ function loadHelper() {
 	document.body.appendChild(iframe);
 	helperFrames.push(iframe);
 	const win = iframe.contentWindow;
-	if (!win) throw new Error("missing iframe window");
-	win.eval(PAIRIT_HELPER_SCRIPT);
+	const doc = iframe.contentDocument;
+	if (!win || !doc) throw new Error("missing iframe window");
+	const script = doc.createElement("script");
+	script.textContent = PAIRIT_HELPER_SCRIPT;
+	doc.documentElement.appendChild(script);
 	return {
 		win,
 		pairit: (win as unknown as { pairit: PairitApi }).pairit,
