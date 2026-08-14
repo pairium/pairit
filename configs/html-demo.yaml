@@ -1,0 +1,69 @@
+schema_version: 0.1.0
+allowRetake: true
+requireAuth: false
+initialPageId: intro
+
+pages:
+  - id: intro
+    onEnter:
+      - type: randomize
+        assignmentType: random
+        conditions:
+          - A
+          - B
+        stateKey: treatment
+    components:
+      - type: text
+        props:
+          text: |
+            # HTML embed demo
+
+            On the next page you will rate an item with a custom slider.
+            Your condition is assigned when you continue.
+      - type: buttons
+        props:
+          buttons:
+            - id: start
+              text: Continue
+              action:
+                type: go_to
+                target: task
+
+  - id: task
+    components:
+      - type: html
+        id: slider_task
+        props:
+          src: html-demo/slider.html
+          read:
+            - treatment
+          write:
+            - rating
+            - rt_ms
+          height: 280
+          required: true
+        events:
+          onState:
+            type: slider_response
+          onDone:
+            type: slider_done
+      - type: buttons
+        props:
+          buttons:
+            - id: next
+              text: Next
+              action:
+                type: go_to
+                target: thanks
+
+  - id: thanks
+    end: true
+    components:
+      - type: text
+        props:
+          text: |
+            # Thanks
+
+            Condition: **{{session_state.treatment}}**
+
+            Rating: **{{session_state.rating}}**

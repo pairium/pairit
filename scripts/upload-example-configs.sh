@@ -57,6 +57,7 @@ PLAIN_CONFIGS=(
     timer-demo
     randomization-demo
     team-decision
+    html-demo
 )
 
 echo "📦 Uploading agent configs (with credentials)..."

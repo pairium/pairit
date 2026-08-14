@@ -74,6 +74,8 @@ pages:
 pairit config lint my-experiment.yaml
 ```
 
+If a page uses an `html` component, keep the `.html` file next to the YAML (`src: slider.html`). Lint lists the file; upload attaches it. See [HTML](components/html.md).
+
 **3. Upload to the server:**
 
 ```bash

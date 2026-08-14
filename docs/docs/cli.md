@@ -41,7 +41,6 @@ pairit simulate --seed 42 your_experiment.yaml
 
 - Normalizes helper shorthands (`text`, `buttons`, `componentType`) into canonical component entries.
 - Expands survey questions so each answer has a declared type (and required choices for `multiple_choice`).
-- Resolves custom component references and records the version used at publish time for auditing.
 
 Compiled JSON can be written with `--out <file>` to inspect what the runtime will consume.
 
@@ -53,6 +52,22 @@ Compiled JSON can be written with `--out <file>` to inspect what the runtime wil
 - Require unique button ids per page and ensure every `go_to`/branch target exists.
 - Verify `assign` statements only touch `session_state.*` and that RHS types match the schema.
 - Reject unknown `action.type` values and undeclared component events.
+
+## HTML embeds
+
+Reference a local `.html` file from an `html` component (`src: slider.html`). No extra command.
+
+```zsh
+pairit config lint experiment.yaml
+# ✓ experiment.yaml passed lint checks
+#   html slider_task ← slider.html (4.2 KB)
+
+pairit config upload experiment.yaml --config-id my-exp
+# ✓ Attached slider.html (4.2 KB)
+# ✓ Uploaded my-exp (…)
+```
+
+Lint checks that each `src` exists, is a local `.html` file, is not a URL, and is under 1 MB. Upload attaches the file to the published config and includes it in the checksum. Compile does not attach file bytes. See [HTML](components/html.md).
 
 ## Media
 

@@ -1,5 +1,7 @@
 # Custom Components
 
+This is a future path for first-party React components shipped in the lab app. Experimenters cannot upload a custom component. For experimenter-authored UI, use the [HTML](../components/html.md) component.
+
 Mount registered custom components with validated props and events.
 
 Registry entries (author-time)
@@ -56,5 +58,3 @@ Runtime behavior
 - When the component emits an event, the runtime validates it against the declared schema before routing or assignments run.
 - Undeclared events follow the `unknownEvents` policy; use `warn` during development to log unexpected usage without aborting the session.
 - If the registry does not have an implementation for a declared component id, the runtime throws `missing_component` and blocks the run until the implementation ships.
-
-

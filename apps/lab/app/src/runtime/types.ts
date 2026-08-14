@@ -24,6 +24,7 @@ type ComponentEventMap = {
 	"live-workspace": "onEdit";
 	form: "onSubmit" | "onFieldChange";
 	timer: "onStart" | "onWarning" | "onExpiry";
+	html: "onLoad" | "onState" | "onDone";
 };
 
 type ComponentEventName<TType extends keyof ComponentEventMap> =
@@ -66,6 +67,19 @@ export type ButtonsComponent = ComponentInstance<
 export type MediaComponent = ComponentInstance<
 	"media",
 	{ type: string; src: string; alt?: string; label?: string; captions?: string }
+>;
+
+export type HtmlComponent = ComponentInstance<
+	"html",
+	{
+		src?: string;
+		html?: string;
+		read?: string[];
+		write?: string[];
+		height?: number;
+		required?: boolean;
+		action?: ButtonAction;
+	}
 >;
 
 export type AnyComponentInstance = ComponentInstance<
