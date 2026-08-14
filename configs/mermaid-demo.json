@@ -1,0 +1,47 @@
+{
+  "schema_version": "0.1.0",
+  "initialPageId": "intro",
+  "pages": {
+    "intro": {
+      "id": "intro",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "Here is the study flow:\n\n```mermaid\nflowchart LR\n  consent --> survey\n  survey --> thanks\n```\n\nA normal code block stays as code:\n\n```\nnot a diagram\n```\n"
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "done",
+                "text": "Done",
+                "action": {
+                  "type": "go_to",
+                  "target": "thanks"
+                }
+              }
+            ]
+          },
+          "id": "buttons-1"
+        }
+      ]
+    },
+    "thanks": {
+      "id": "thanks",
+      "end": true,
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "Thanks!"
+          },
+          "id": "text-0"
+        }
+      ]
+    }
+  }
+}
