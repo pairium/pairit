@@ -1,6 +1,6 @@
 # Randomization
 
-Assign participants to experimental conditions.
+Assign participants to experimental conditions. See the [Randomization example](../examples.md#randomization).
 
 ## Recommended: `onEnter` hooks
 

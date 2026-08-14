@@ -1,6 +1,6 @@
 # Agents
 
-AI agents participate in chat conversations as server-hosted participants. Agents are defined at the config level and attached to chat components via the `agents` prop.
+AI agents participate in chat conversations as server-hosted participants. Agents are defined at the config level and attached to chat components via the `agents` prop. See the [AI Chat](../examples.md#ai-chat), [Agent Triggers](../examples.md#agent-triggers), [Conditional Agent](../examples.md#conditional-agent), and [AI Mediation](../examples.md#ai-mediation) examples.
 
 ## Configuration
 

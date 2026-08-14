@@ -1,8 +1,8 @@
 # Text
 
-Display static text. Content is always rendered as markdown. Fenced `mermaid` blocks render as diagrams.
+Display static text. Content is always rendered as markdown. 
 
-Mermaid works in Text only, not in Chat.
+Fenced `mermaid` blocks render as diagrams. See the [Mermaid example](../examples.md#mermaid).
 
 Props
 - text: string

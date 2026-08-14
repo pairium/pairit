@@ -1,6 +1,6 @@
 # Matchmaking
 
-Enqueue the current session into a server-managed pool until enough participants arrive to form a group. On match, the server initializes `session_state` (including `chat_group_id`). On timeout, it can auto-navigate to a fallback page.
+Enqueue the current session into a server-managed pool until enough participants arrive to form a group. On match, the server initializes `session_state` (including `chat_group_id`). On timeout, it can auto-navigate to a fallback page. See the [Team Decision example](../examples.md#team-decision).
 
 ## Props
 

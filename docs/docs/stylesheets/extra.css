@@ -45,6 +45,12 @@ code {
 .card h3 {
   margin: 0 0 0.25rem 0 !important;
   font-size: 1.1rem !important;
+  scroll-margin-top: calc(var(--header-height, 3.5rem) + 1.75rem);
+}
+
+.card:has(:target) {
+  border-color: var(--foreground, #18181b);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--foreground, #18181b) 14%, transparent);
 }
 
 .card p {

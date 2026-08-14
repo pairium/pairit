@@ -1,6 +1,6 @@
 # Chat
 
-Open a chat view for real-time messaging. Supports human-human chat (via matchmaking) and human-AI chat (via agents).
+Open a chat view for real-time messaging. Supports human-human chat (via matchmaking) and human-AI chat (via agents). See the [AI Chat](../examples.md#ai-chat) and [Multi-Chat](../examples.md#multi-chat) examples.
 
 ## Props
 

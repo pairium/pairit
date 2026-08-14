@@ -1,6 +1,6 @@
 # Timer
 
-Countdown timer that auto-navigates when time expires. Use it for timed reading passages, discussion deadlines, or any page that should advance automatically after a set duration.
+Countdown timer that auto-navigates when time expires. Use it for timed reading passages, discussion deadlines, or any page that should advance automatically after a set duration. See the [Timer example](../examples.md#timer).
 
 ## Props
 

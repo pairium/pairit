@@ -1,6 +1,6 @@
 # Survey
 
-Survey groups manage a sequence of questions with validation and paging. On submit, answers are written to `session_state` keyed by question `id`.
+Survey groups manage a sequence of questions with validation and paging. On submit, answers are written to `session_state` keyed by question `id`. See the [Survey example](../examples.md#survey).
 
 Events
 - `onSubmit`: emitted automatically when survey is submitted (default event type: "survey_submission")

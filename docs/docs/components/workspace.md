@@ -1,6 +1,6 @@
 # Workspace
 
-Embed a collaborative, real-time workspace alongside chat or survey pages. Supports freeform (markdown) and structured (individual fields) editing, per-participant or per-group scoping, and agent read/write via tool calls.
+Embed a collaborative, real-time workspace alongside chat or survey pages. Supports freeform (markdown) and structured (individual fields) editing, per-participant or per-group scoping, and agent read/write via tool calls. See the [Workspace example](../examples.md#workspace).
 
 ## Props
 
