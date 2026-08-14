@@ -1,0 +1,39 @@
+schema_version: 0.1.0
+allowRetake: true
+requireAuth: false
+initialPageId: intro
+
+pages:
+  - id: intro
+    components:
+      - type: text
+        props:
+          text: |
+            Here is the study flow:
+
+            ```mermaid
+            flowchart LR
+              consent --> survey
+              survey --> thanks
+            ```
+
+            A normal code block stays as code:
+
+            ```
+            not a diagram
+            ```
+      - type: buttons
+        props:
+          buttons:
+            - id: done
+              text: "Done"
+              action:
+                type: go_to
+                target: thanks
+
+  - id: thanks
+    end: true
+    components:
+      - type: text
+        props:
+          text: "Thanks!"

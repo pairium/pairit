@@ -25,9 +25,11 @@ export type AuthContext = {
 export async function deriveAuthContext({
 	request,
 	params,
+	body,
 }: {
 	request: Request;
 	params?: Record<string, string | undefined>;
+	body?: unknown;
 }): Promise<AuthContext> {
 	const url = new URL(request.url);
 	const sessionId = params?.id as string | undefined;
@@ -39,14 +41,21 @@ export async function deriveAuthContext({
 		const sessionDoc = await sessionsCollection.findOne({ id: sessionId });
 		configId = sessionDoc?.configId;
 	} else if (
+		body &&
+		typeof body === "object" &&
+		"configId" in body &&
+		typeof body.configId === "string"
+	) {
+		configId = body.configId;
+	} else if (
 		request.method === "POST" &&
 		url.pathname.endsWith("/sessions/start")
 	) {
 		try {
 			const cloned = request.clone();
-			const body = await cloned.json();
-			if (body && typeof body === "object" && "configId" in body) {
-				configId = body.configId;
+			const parsed = await cloned.json();
+			if (parsed && typeof parsed === "object" && "configId" in parsed) {
+				configId = parsed.configId;
 			}
 		} catch {
 			// Ignore body parsing errors

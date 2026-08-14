@@ -1,6 +1,8 @@
 # Text
 
-Display static text. Content is always rendered as markdown.
+Display static text. Content is always rendered as markdown. Fenced `mermaid` blocks render as diagrams.
+
+Mermaid works in Text only, not in Chat.
 
 Props
 - text: string
@@ -19,4 +21,19 @@ pages:
           markdown: false
 ```
 
+Mermaid example
 
+````yaml
+pages:
+  - id: intro
+    components:
+      - type: text
+        props:
+          text: |
+            Here is the study flow:
+
+            ```mermaid
+            flowchart LR
+              consent --> survey
+            ```
+````
