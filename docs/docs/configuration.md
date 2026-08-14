@@ -51,7 +51,7 @@ When `allowRetake: true`:
 
 ## Pages
 
-Pages declare which components appear and which buttons can advance the run. Built-in components cover common UI; custom components mount via a registry entry.
+Pages declare which components appear and which buttons can advance the run. Built-in components cover common UI. For your own UI, use the [HTML](components/html.md) component.
 
 Common page fields:
 
@@ -70,7 +70,6 @@ Component instance shapes:
 - Built-in matchmaking: `{ type: "matchmaking", props: { poolId: string } }`
 - Built-in chat: `{ type: "chat", props: { agents?: string[] } }`
 - Built-in html: `{ type: "html", props: { src: string, read?: string[], write?: string[], height?: number, required?: bool } }`
-- Custom component host: `{ type: "component", props: { component: string, props: object, unknownEvents?: "error" | "warn" | "ignore" } }`
 
 All component instances also accept an optional `when` field to conditionally render based on `session_state` (see [Expressions](#expressions)).
 

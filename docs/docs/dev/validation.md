@@ -2,7 +2,7 @@
 
 Compilation
 - Validate props against schemas where applicable
-- Record resolved custom component versions for audit
+- Record resolved first-party custom component versions for audit (see [Custom Components](custom.md))
 - Ensure survey questions define answer kinds and required choices
 
 JSON Schema coverage

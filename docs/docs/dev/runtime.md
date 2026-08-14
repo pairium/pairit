@@ -30,7 +30,7 @@ Key points:
 - The renderer iterates over `page.components`, rendering each `{ type, props }` pair via the component registry.
 - `parseProps` applies runtime-only defaults (for example, filling in optional arrays) and surfaces schema validation errors early.
 - The default entry exists so unknown component types render an explicit “missing renderer” placeholder rather than crashing.
-- Custom components use the `component` host. The host reads the component id from props, checks the registry for a matching implementation, and enforces the contract declared in the config (`propsSchema`, events, capabilities).
+- A future first-party React registry may use the `component` host. See [Custom Components](custom.md). Experimenter-authored UI uses the [HTML](../components/html.md) component.
 
 ## Routing context
 

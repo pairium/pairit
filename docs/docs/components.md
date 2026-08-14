@@ -49,7 +49,6 @@ Components without `when` always render. See [Expressions](configuration.md#expr
 | [Timer](components/timer.md) | Countdown timer with auto-navigation |
 | [Workspace](components/workspace.md) | Collaborative workspaces |
 | [HTML](components/html.md) | Upload a custom UI in a locked-down frame |
-| [Custom](components/custom.md) | Mount custom React components |
 
 ## Event Hooks
 

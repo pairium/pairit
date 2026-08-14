@@ -23,7 +23,6 @@ nav:
       - Media: components/media.md
       - HTML: components/html.md
       - Form: components/form.md
-      - Custom Components: components/custom.md
   - Guides:
       - Agent Guardrails: guides/agent-guardrails.md
   - Developer:
@@ -35,6 +34,7 @@ nav:
       - Matchmaking: dev/matchmaking.md
       - Storage: dev/storage.md
       - Validation: dev/validation.md
+      - Custom Components: dev/custom.md
       - Deployment: dev/deployment.md
 theme:
   name: shadcn

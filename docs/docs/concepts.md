@@ -96,6 +96,8 @@ Common `stateKey` patterns:
 - `group_id` - matchmaking group identifier
 - `chat_group_id` - chat room identifier
 
+HTML embeds do not use `stateKey`. List the keys on the component: `read` to send values in, `write` to allow `pairit.setState` to save them. Keys not in `write` are dropped. See [HTML](components/html.md#how-data-moves).
+
 ### State Persistence
 
 User state is persisted to MongoDB with each update. If a participant closes and reopens their session, their state is restored automatically.
@@ -199,7 +201,7 @@ The `data` field is flexible and component-specific:
 - **Matchmaking events**: Contains `pool_id`, `group_size`, `wait_duration_seconds`
 - **Chat events**: Contains `chat_group_id`, `message_id`, `sender_type`
 - **Form events**: Contains `form_id`, `field_values`, `field_id` (on change)
-- **HTML events**: Contains `event` plus any data the embed sent through `pairit.setState` or `pairit.event`
+- **HTML events**: `onState` includes the allowed `updates` from `pairit.setState` (keys not in `write` are dropped). `pairit.event` logs a custom name and payload and does not change `session_state`. See [HTML](components/html.md#what-gets-saved).
 
 #### Storage
 

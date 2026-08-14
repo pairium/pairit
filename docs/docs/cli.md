@@ -41,7 +41,6 @@ pairit simulate --seed 42 your_experiment.yaml
 
 - Normalizes helper shorthands (`text`, `buttons`, `componentType`) into canonical component entries.
 - Expands survey questions so each answer has a declared type (and required choices for `multiple_choice`).
-- Resolves custom component references and records the version used at publish time for auditing.
 
 Compiled JSON can be written with `--out <file>` to inspect what the runtime will consume.
 
