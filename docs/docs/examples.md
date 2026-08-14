@@ -19,6 +19,19 @@ The simplest experiment: one question, one button.
 
 <div class="card" markdown>
 
+### Mermaid
+
+Render a diagram from a mermaid fence in a Text component.
+
+<div class="card-links">
+<a href="https://lab-432501290611.us-central1.run.app/mermaid-demo" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
+<a href="https://github.com/pairium/pairit/blob/main/configs/mermaid-demo.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
+</div>
+
+</div>
+
+<div class="card" markdown>
+
 ### Survey
 
 Multi-page survey with different question types.
