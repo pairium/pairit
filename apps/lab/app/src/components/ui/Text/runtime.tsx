@@ -1,6 +1,35 @@
 import { defineRuntimeComponent } from "@app/runtime/define-runtime-component";
 import type { TextComponent } from "@app/runtime/types";
+import { type ComponentProps, isValidElement, type ReactNode } from "react";
 import Markdown from "react-markdown";
+import { MermaidBlock } from "./MermaidBlock";
+
+function isMermaidCode(className?: string) {
+	return /(?:^|\s)language-mermaid(?:\s|$)/.test(className ?? "");
+}
+
+function MarkdownCode({
+	className,
+	children,
+	...props
+}: ComponentProps<"code">) {
+	if (isMermaidCode(className)) {
+		return <MermaidBlock source={String(children).replace(/\n$/, "")} />;
+	}
+	return (
+		<code className={className} {...props}>
+			{children}
+		</code>
+	);
+}
+
+function MarkdownPre({ children }: { children?: ReactNode }) {
+	const child = Array.isArray(children) ? children[0] : children;
+	if (isValidElement(child) && child.type === MermaidBlock) {
+		return child;
+	}
+	return <pre>{children}</pre>;
+}
 
 function getNestedValue(
 	obj: Record<string, unknown> | undefined,
@@ -41,7 +70,14 @@ export const TextRuntime = defineRuntimeComponent<
 
 		return (
 			<div className="prose prose-slate max-w-none">
-				<Markdown>{interpolatedText}</Markdown>
+				<Markdown
+					components={{
+						code: MarkdownCode,
+						pre: MarkdownPre,
+					}}
+				>
+					{interpolatedText}
+				</Markdown>
 			</div>
 		);
 	},
