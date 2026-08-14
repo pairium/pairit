@@ -14,20 +14,12 @@
     value.textContent = slider.value;
   });
 
-  function applyTreatment(state) {
-    const treatment = state && state.treatment;
-    if (treatment) {
+  pairit.ready(function (state) {
+    if (state.treatment) {
       label.textContent =
-        "Condition " + treatment + ": How do you feel about this?";
+        "Condition " + state.treatment + ": How do you feel about this?";
     }
-  }
-
-  window.addEventListener("pairit:init", function (event) {
-    applyTreatment(event.detail);
   });
-  if (window.pairit && window.pairit.state) {
-    applyTreatment(window.pairit.state);
-  }
 
   document.getElementById("submit").addEventListener("click", function () {
     pairit.setState({

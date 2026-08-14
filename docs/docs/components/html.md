@@ -2,7 +2,7 @@
 
 Upload your own UI and show it in a locked-down frame. Use it for custom sliders, games, or a pre-built React app. See the [HTML example](../examples.md#html).
 
-The file is uploaded with the config. Pairit only exchanges the `session_state` keys you list. Pairit does not style the HTML inside the frame — the file looks however you wrote it.
+The file is uploaded with the config. Pairit only exchanges the `session_state` keys you list.
 
 ## Props
 
@@ -25,7 +25,28 @@ The file is uploaded with the config. Pairit only exchanges the `session_state` 
 
 Custom data can be added via `events.{eventName}.data`. The embed can also call `pairit.event(name, data)` to log extra events.
 
+## Helper API
+
+Pairit injects a `pairit` helper. That name is reserved.
+
+| Call | Direction | Writes | Description |
+|------|-----------|--------|-------------|
+| `pairit.ready(fn)` | In | — | Runs once with the `read` keys after load. Safe to call late. |
+| `pairit.setState(data)` | Out | `session_state`, `onState` | Saves keys listed in `write`. Extra keys are dropped. |
+| `pairit.event(name, data)` | Out | Event log | Logs a custom event. Does not change `session_state`. |
+| `pairit.done()` | Out | `onDone` | Marks the task finished. Unlocks Next if `required`. Does not save data. |
+
+`pairit.state` is the same snapshot `ready` receives.
+
+- Keys not in `read` are never sent into the iframe.
+- Keys not in `write` are never saved. There is no error — they are dropped.
+- A key in `read` that is not in `session_state` yet is omitted from `pairit.state`.
+- `setState` with no allowed keys is ignored. `onState` does not fire.
+- Incoming keys are sent once on load. Later `session_state` changes do not reach the iframe.
+
 ## Usage
+
+### Local file
 
 Put the HTML file next to the YAML and point at it:
 
@@ -47,8 +68,6 @@ components:
       required: true
 ```
 
-Then:
-
 ```zsh
 pairit config lint experiment.yaml
 pairit config upload experiment.yaml --config-id my-exp
@@ -56,55 +75,60 @@ pairit config upload experiment.yaml --config-id my-exp
 
 Lint checks the file. Upload attaches it and includes it in the config checksum. Compile does not attach the file.
 
-## How data moves
+### Read keys on load
 
-Two stores: `session_state` (answers you reuse later) and the event log (a record of what happened).
+List incoming keys in `read`. Get them in `pairit.ready`:
 
-1. YAML lists which keys go in and out: `read` and `write`.
-2. On load, Pairit copies the `read` keys from `session_state` and sends them **once**. Your file sees them as `pairit.state`, and on the `pairit:init` event.
-3. When the participant finishes, your file calls `pairit.setState({ rating: 4 })`.
-4. Pairit keeps only keys listed in `write`. Extra keys are dropped. Then it saves to the session.
-5. Later pages can show the value with `{{session_state.rating}}`.
-6. `pairit.done()` means “this task is finished.” It unlocks Next if `required: true`. It does not save data — call `setState` first.
-7. `pairit.event(...)` writes to the event log only. It does not change `session_state`.
-
-If something else changes `session_state` after load, the iframe does not hear about it.
-
-## What gets saved
-
-| Call | `session_state` | Event log | Notes |
-|------|-----------------|-----------|-------|
-| `pairit.setState({ rating: 4, extra: 1 })` | Only keys in `write` | `onState` | `extra` is dropped if it is not in `write` |
-| `pairit.event('slider_move', { x: 2 })` | No | Yes, as that event name | Use for traces you do not need later |
-| `pairit.done()` | No | `onDone` | Unlock Next / run `action` |
-
-Rules:
-
-- Keys not in `read` are never sent into the iframe.
-- Keys not in `write` are never saved. There is no error — they are dropped.
-- A key in `read` that is not in `session_state` yet is omitted from `pairit.state`.
-- `setState` with no allowed keys is ignored. `onState` does not fire.
-- Listen for `pairit:init` **and** check `pairit.state` on startup. Either can win the race.
-
-## Talking to Pairit
-
-Pairit injects a `pairit` helper. That name is reserved.
-
-```js
-pairit.state          // snapshot of the read keys, set on load
-pairit.setState({ rating: 4, rt_ms: 1200 })
-pairit.event('onResponse', { extra: 1 })
-pairit.done()
+```yaml
+props:
+  src: slider.html
+  read: [treatment]
 ```
 
-Typical submit handler:
+```js
+pairit.ready(function (state) {
+  if (state.treatment) {
+    label.textContent = "Condition " + state.treatment;
+  }
+});
+```
+
+### Write answers
+
+List outgoing keys in `write`. Save them with `pairit.setState`. Later pages can use `{{session_state.rating}}`.
+
+```yaml
+props:
+  src: slider.html
+  write: [rating, rt_ms]
+```
 
 ```js
 pairit.setState({ rating: Number(slider.value), rt_ms: Date.now() - start });
 pairit.done();
 ```
 
-If `required` is true and the participant clicks Next before `pairit.done()`, they see "Complete the task above to continue."
+Call `setState` before `done`. `done` does not save data.
+
+### Require completion
+
+Set `required: true` to block Next until the embed calls `pairit.done()`. If the participant clicks Next first, they see "Complete the task above to continue."
+
+```yaml
+props:
+  src: slider.html
+  required: true
+```
+
+Use `action` to navigate when the embed calls `done`, instead of waiting for a button.
+
+### Log extra events
+
+Use `pairit.event` for traces you do not need later. They go to the event log only.
+
+```js
+pairit.event("slider_move", { x: 2 });
+```
 
 ## Styling
 
@@ -130,7 +154,7 @@ A pre-built React (or Vue, Svelte) app works if it is one self-contained HTML fi
 
 First-party React widgets shipped in the lab app may come later. For your own UI, use this HTML component.
 
-## Full example
+## Example
 
 Condition is assigned on the intro page, sent into the slider, then shown on the thanks page.
 
@@ -210,20 +234,12 @@ pages:
     value.textContent = slider.value;
   });
 
-  function applyTreatment(state) {
-    const treatment = state && state.treatment;
-    if (treatment) {
+  pairit.ready(function (state) {
+    if (state.treatment) {
       label.textContent =
-        "Condition " + treatment + ": How do you feel about this?";
+        "Condition " + state.treatment + ": How do you feel about this?";
     }
-  }
-
-  window.addEventListener("pairit:init", function (event) {
-    applyTreatment(event.detail);
   });
-  if (window.pairit && window.pairit.state) {
-    applyTreatment(window.pairit.state);
-  }
 
   document.getElementById("submit").addEventListener("click", function () {
     pairit.setState({

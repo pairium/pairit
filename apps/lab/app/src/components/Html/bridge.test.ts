@@ -1,5 +1,38 @@
-import { describe, expect, test } from "vitest";
-import { filterWritePayload, parseEmbedMessage, pickKeys } from "./bridge";
+import { afterEach, describe, expect, test } from "vitest";
+import {
+	filterWritePayload,
+	PAIRIT_HELPER_SCRIPT,
+	parseEmbedMessage,
+	pickKeys,
+} from "./bridge";
+
+type PairitApi = {
+	state: Record<string, unknown>;
+	ready: (fn: (state: Record<string, unknown>) => void) => void;
+};
+
+const helperFrames: HTMLIFrameElement[] = [];
+
+function loadHelper() {
+	const iframe = document.createElement("iframe");
+	document.body.appendChild(iframe);
+	helperFrames.push(iframe);
+	const win = iframe.contentWindow;
+	if (!win) throw new Error("missing iframe window");
+	win.eval(PAIRIT_HELPER_SCRIPT);
+	return {
+		win,
+		pairit: (win as unknown as { pairit: PairitApi }).pairit,
+	};
+}
+
+function sendInit(win: Window, state: Record<string, unknown>) {
+	win.dispatchEvent(
+		new MessageEvent("message", {
+			data: { type: "pairit:init", state },
+		}),
+	);
+}
 
 describe("pickKeys", () => {
 	test("returns only listed keys", () => {
@@ -77,5 +110,45 @@ describe("parseEmbedMessage", () => {
 			parseEmbedMessage({ source, data: { type: "hack" } }, source),
 		).toBeNull();
 		expect(parseEmbedMessage({ source, data: "done" }, source)).toBeNull();
+	});
+});
+
+describe("pairit.ready", () => {
+	afterEach(() => {
+		for (const iframe of helperFrames) iframe.remove();
+		helperFrames.length = 0;
+	});
+
+	test("runs after init arrives", () => {
+		const { win, pairit } = loadHelper();
+		const seen: Array<Record<string, unknown>> = [];
+		pairit.ready((state) => {
+			seen.push(state);
+		});
+		expect(seen).toEqual([]);
+		sendInit(win, { treatment: "A" });
+		expect(seen).toEqual([{ treatment: "A" }]);
+		expect(pairit.state).toEqual({ treatment: "A" });
+	});
+
+	test("runs immediately if init already happened", () => {
+		const { win, pairit } = loadHelper();
+		sendInit(win, { treatment: "B" });
+		const seen: Array<Record<string, unknown>> = [];
+		pairit.ready((state) => {
+			seen.push(state);
+		});
+		expect(seen).toEqual([{ treatment: "B" }]);
+	});
+
+	test("fires each ready callback once", () => {
+		const { win, pairit } = loadHelper();
+		const seen: Array<Record<string, unknown>> = [];
+		pairit.ready((state) => {
+			seen.push(state);
+		});
+		sendInit(win, { treatment: "A" });
+		sendInit(win, { treatment: "C" });
+		expect(seen).toEqual([{ treatment: "A" }]);
 	});
 });

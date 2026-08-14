@@ -64,7 +64,7 @@ async function executeOnEnter(
 
 export default function App() {
 	const { experimentId } = useParams({ from: "/$experimentId" });
-	const { data: session, isPending: authLoading } = useSession();
+	const { data: session } = useSession();
 	const isAuthenticated = !!session?.user;
 	const [compiledConfig, setCompiledConfig] = useState<CompiledConfig | null>(
 		null,
@@ -82,8 +82,6 @@ export default function App() {
 	useEffect(() => {
 		let canceled = false;
 		async function bootstrap() {
-			if (authLoading) return;
-
 			const searchParams = new URLSearchParams(window.location.search);
 			const prolificPid = searchParams.get("PROLIFIC_PID");
 			const studyId = searchParams.get("STUDY_ID");
@@ -155,7 +153,7 @@ export default function App() {
 		return () => {
 			canceled = true;
 		};
-	}, [experimentId, authLoading]);
+	}, [experimentId]);
 
 	// Connect SSE when session is available
 	useEffect(() => {

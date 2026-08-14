@@ -3,6 +3,11 @@ export const HTML_CSP =
 
 export const PAIRIT_HELPER_SCRIPT = `(function(){
   var state = {};
+  var ready = false;
+  var readyFns = [];
+  function runReady(fn) {
+    try { fn(state); } catch (err) { console.error(err); }
+  }
   window.pairit = {
     get state() { return state; },
     setState: function(data) {
@@ -13,12 +18,24 @@ export const PAIRIT_HELPER_SCRIPT = `(function(){
     },
     done: function() {
       parent.postMessage({ type: "pairit:done" }, "*");
+    },
+    ready: function(fn) {
+      if (typeof fn !== "function") return;
+      if (ready) {
+        runReady(fn);
+        return;
+      }
+      readyFns.push(fn);
     }
   };
   window.addEventListener("message", function(event) {
     if (!event.data || event.data.type !== "pairit:init") return;
     state = event.data.state || {};
+    ready = true;
+    var fns = readyFns;
+    readyFns = [];
     window.dispatchEvent(new CustomEvent("pairit:init", { detail: state }));
+    for (var i = 0; i < fns.length; i++) runReady(fns[i]);
   });
 })();`;
 
