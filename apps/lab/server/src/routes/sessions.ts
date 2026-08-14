@@ -22,8 +22,6 @@ import type {
 	SessionDocument,
 } from "../types";
 
-const FORCE_AUTH = process.env.FORCE_AUTH === "true";
-
 function isPage(value: unknown): value is Page {
 	if (!value || typeof value !== "object") return false;
 	const page = value as Record<string, unknown>;
@@ -63,9 +61,11 @@ function coerceConfig(raw: unknown): Config | null {
 	return { initialPageId, pages };
 }
 
-async function loadConfig(
-	configId: string,
-): Promise<{ config: Session["config"]; allowRetake: boolean } | null> {
+async function loadConfig(configId: string): Promise<{
+	config: Session["config"];
+	allowRetake: boolean;
+	requireAuth: boolean;
+} | null> {
 	const collection = await getConfigsCollection();
 	const data = await collection.findOne({ configId });
 	if (data && typeof data.config !== "undefined") {
@@ -74,6 +74,7 @@ async function loadConfig(
 			return {
 				config: data.config as Session["config"],
 				allowRetake: data.allowRetake ?? false,
+				requireAuth: data.requireAuth ?? true,
 			};
 		}
 	}
@@ -197,25 +198,30 @@ async function checkIdempotency(key: string): Promise<{ duplicate: boolean }> {
 }
 
 export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
-	.derive(({ request, params }) => deriveAuthContext({ request, params }))
+	.derive(({ request, params, body }) =>
+		deriveAuthContext({ request, params, body }),
+	)
 	.post(
 		"/start",
-		async ({ body, set, requireAuth, user }) => {
+		async ({ body, set, user }) => {
 			// Enforce auth requirement (FORCE_AUTH=true bypasses config check for testing)
 			// Prolific participants are identified by their params — skip OAuth for them
 			const hasProlific = body.prolific?.prolificPid;
-			if ((requireAuth || FORCE_AUTH) && !user && !hasProlific) {
-				set.status = 401;
-				return { error: "authentication_required" };
-			}
-
 			const loaded = await loadConfig(body.configId);
 			if (!loaded) {
 				set.status = 404;
 				return { error: "config_not_found" };
 			}
 
-			const { config, allowRetake } = loaded;
+			const { config, allowRetake, requireAuth } = loaded;
+			if (
+				(requireAuth || process.env.FORCE_AUTH === "true") &&
+				!user &&
+				!hasProlific
+			) {
+				set.status = 401;
+				return { error: "authentication_required" };
+			}
 
 			const userId = user ? user.id : null;
 			const prolificPid = body.prolific?.prolificPid ?? null;
