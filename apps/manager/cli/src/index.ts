@@ -8,6 +8,12 @@ import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import YAML from "yaml";
 import { getAuthHeaders, login } from "./auth.js";
+import {
+	attachHtmlToCompiledConfig,
+	formatBytes,
+	type HtmlSourceInfo,
+	inspectHtmlSources,
+} from "./html-assets.js";
 
 type ExperimentPage = {
 	id: string;
@@ -53,8 +59,13 @@ configCommand
 	.description("Run minimal validation on a config file")
 	.action(async (configPath: string) => {
 		try {
-			await lintConfig(configPath);
+			const htmlFiles = await lintConfig(configPath);
 			console.log(`✓ ${configPath} passed lint checks`);
+			for (const file of htmlFiles) {
+				console.log(
+					`  html ${file.componentId} ← ${file.src} (${formatBytes(file.bytes)})`,
+				);
+			}
 		} catch (error) {
 			if (error instanceof Error) {
 				console.error(`Lint failed: ${error.message}`);
@@ -93,7 +104,7 @@ configCommand
 	.description("Compile and upload config via Pairit Functions")
 	.action(async (configPath: string, options: UploadOptions) => {
 		try {
-			const { payload, checksum } = await buildUploadPayload(
+			const { payload, checksum, attachments } = await buildUploadPayload(
 				configPath,
 				options,
 			);
@@ -103,6 +114,11 @@ configCommand
 				headers: { "Content-Type": "application/json" },
 			});
 
+			for (const file of attachments) {
+				console.log(
+					`✓ Attached ${path.basename(file.src)} (${formatBytes(file.bytes)})`,
+				);
+			}
 			console.log(`✓ Uploaded ${payload.configId} (${checksum})`);
 			const labUrl = getLabUrl();
 			console.log(`Survey Link: ${labUrl}/${payload.configId}`);
@@ -428,7 +444,7 @@ type DataExportOptions = {
 	out: string;
 };
 
-async function lintConfig(configPath: string): Promise<void> {
+async function lintConfig(configPath: string): Promise<HtmlSourceInfo[]> {
 	const config = await loadConfig(configPath);
 
 	const errors: string[] = [];
@@ -452,6 +468,8 @@ async function lintConfig(configPath: string): Promise<void> {
 	if (errors.length) {
 		throw new Error(errors.join(", "));
 	}
+
+	return inspectHtmlSources(configPath, config);
 }
 
 type MatchmakingPoolConfig = {
@@ -559,7 +577,11 @@ type UploadPayload = {
 async function buildUploadPayload(
 	configPath: string,
 	options: UploadOptions,
-): Promise<{ payload: UploadPayload; checksum: string }> {
+): Promise<{
+	payload: UploadPayload;
+	checksum: string;
+	attachments: HtmlSourceInfo[];
+}> {
 	// Load source YAML to read top-level flags (not preserved in compiled output)
 	const sourceConfig = await loadConfig(configPath);
 	const allowRetake = sourceConfig.allowRetake === true;
@@ -567,9 +589,12 @@ async function buildUploadPayload(
 
 	const compiledPath = await compileConfig(configPath);
 	const compiledContent = await readFile(compiledPath, "utf8");
-	const hashBuffer = createHash("sha256").update(compiledContent).digest();
+	const parsed = JSON.parse(compiledContent) as { pages?: unknown };
+	const attachments = await attachHtmlToCompiledConfig(configPath, parsed);
+	const hashBuffer = createHash("sha256")
+		.update(JSON.stringify(parsed))
+		.digest();
 	const checksum = hashBuffer.toString("hex");
-	const parsed = JSON.parse(compiledContent) as unknown;
 
 	const configId = options.configId ?? toBase64Url(hashBuffer.subarray(0, 12));
 
@@ -600,6 +625,7 @@ async function buildUploadPayload(
 			...(requireAuth !== undefined && { requireAuth }),
 		},
 		checksum,
+		attachments,
 	};
 }
 

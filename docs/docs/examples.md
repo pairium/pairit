@@ -123,6 +123,18 @@ AI-assisted document editing with a split-panel layout.
 
 <div class="card" markdown>
 
+### HTML
+
+Custom slider UI uploaded with the config and shown in a locked-down frame.
+
+<div class="card-links">
+<a href="https://github.com/pairium/pairit/blob/main/configs/html-demo.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
+</div>
+
+</div>
+
+<div class="card" markdown>
+
 ### Timer
 
 Countdown timer with warning state and auto-navigation on expiry.

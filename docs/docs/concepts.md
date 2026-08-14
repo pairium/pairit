@@ -187,6 +187,7 @@ components:
 - **Matchmaking**: `onRequestStart`, `onMatchFound`, `onTimeout`, `onCancel` - matchmaking lifecycle
 - **Chat**: `onMessageSend`, `onMessageReceive`, `onTypingStart`, `onTypingStop` - chat interactions
 - **Form**: `onSubmit`, `onFieldChange` - form submissions and field updates
+- **HTML**: `onLoad`, `onState`, `onDone` - custom embed load, state writes, and completion
 
 #### Event Data Field
 
@@ -198,6 +199,7 @@ The `data` field is flexible and component-specific:
 - **Matchmaking events**: Contains `pool_id`, `group_size`, `wait_duration_seconds`
 - **Chat events**: Contains `chat_group_id`, `message_id`, `sender_type`
 - **Form events**: Contains `form_id`, `field_values`, `field_id` (on change)
+- **HTML events**: Contains `event` plus any data the embed sent through `pairit.setState` or `pairit.event`
 
 #### Storage
 

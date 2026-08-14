@@ -69,6 +69,7 @@ Component instance shapes:
 - Built-in survey: `{ type: "survey", props: { items: [{ id, text, answer, choices? }] } }`
 - Built-in matchmaking: `{ type: "matchmaking", props: { poolId: string } }`
 - Built-in chat: `{ type: "chat", props: { agents?: string[] } }`
+- Built-in html: `{ type: "html", props: { src: string, read?: string[], write?: string[], height?: number, required?: bool } }`
 - Custom component host: `{ type: "component", props: { component: string, props: object, unknownEvents?: "error" | "warn" | "ignore" } }`
 
 All component instances also accept an optional `when` field to conditionally render based on `session_state` (see [Expressions](#expressions)).

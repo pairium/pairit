@@ -21,6 +21,7 @@ nav:
       - Timer: components/timer.md
       - Workspace: components/workspace.md
       - Media: components/media.md
+      - HTML: components/html.md
       - Form: components/form.md
       - Custom Components: components/custom.md
   - Guides:

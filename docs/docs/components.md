@@ -48,6 +48,7 @@ Components without `when` always render. See [Expressions](configuration.md#expr
 | [Media](components/media.md) | Images, videos, and audio |
 | [Timer](components/timer.md) | Countdown timer with auto-navigation |
 | [Workspace](components/workspace.md) | Collaborative workspaces |
+| [HTML](components/html.md) | Upload a custom UI in a locked-down frame |
 | [Custom](components/custom.md) | Mount custom React components |
 
 ## Event Hooks
@@ -63,6 +64,7 @@ Every interactive component can emit structured events. Use the `events` key in 
 | chat | `onMessageSend`, `onMessageReceive` |
 | timer | `onStart`, `onWarning`, `onExpiry` |
 | live-workspace | `onEdit` |
+| html | `onLoad`, `onState`, `onDone` |
 
 ## Runtime adapters
 

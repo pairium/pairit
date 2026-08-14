@@ -1,5 +1,9 @@
 # Custom Components
 
+For experimenter-authored UI, use the [HTML](html.md) component. Upload a self-contained HTML file (including a pre-built React bundle) with `pairit config upload`. Pairit does not compile JSX.
+
+The registry below is a future path for first-party React components shipped in the lab app.
+
 Mount registered custom components with validated props and events.
 
 Registry entries (author-time)
