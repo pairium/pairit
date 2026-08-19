@@ -18,6 +18,7 @@ import {
 	RadioGroupItem,
 	RadioGroupScaleItem,
 } from "@components/ui/RadioGroup";
+import { Select } from "@components/ui/Select";
 import { Textarea } from "@components/ui/Textarea";
 import { type AnyFieldApi, useForm } from "@tanstack/react-form";
 import type { ReactElement } from "react";
@@ -315,6 +316,25 @@ function renderAnswerInput({
 						))}
 					</FieldSet>
 				</RadioGroup>
+			);
+		}
+
+		case "dropdown": {
+			const value =
+				typeof field.state.value === "string" ? field.state.value : "";
+			return (
+				<Select
+					{...commonProps}
+					value={value}
+					onChange={(event) => field.handleChange(event.target.value)}
+				>
+					<option value="">{answer.placeholder ?? "Select an option"}</option>
+					{answer.choices?.map((choice) => (
+						<option key={choice.value} value={choice.value}>
+							{choice.label}
+						</option>
+					))}
+				</Select>
 			);
 		}
 
@@ -620,6 +640,26 @@ function normalizeSurveyAnswer(
 			};
 		}
 
+		case "dropdown":
+		case "select": {
+			const choices =
+				normalizeSurveyChoices(
+					(numericBoundsSource as { choices?: unknown }).choices,
+				) ?? normalizeSurveyChoices((record as { choices?: unknown }).choices);
+
+			if (!choices) return null;
+
+			return {
+				type: "dropdown",
+				required,
+				choices,
+				placeholder:
+					typeof placeholderCandidate === "string"
+						? placeholderCandidate
+						: undefined,
+			};
+		}
+
 		case "checkbox":
 		case "multi_select": {
 			const choices =
@@ -784,6 +824,7 @@ function coerceInitialValue(item: SurveyItemDefinition, raw: unknown): unknown {
 		}
 
 		case "multiple_choice":
+		case "dropdown":
 		case "likert5":
 		case "likert7": {
 			if (typeof raw !== "string") return undefined;
@@ -838,6 +879,7 @@ function buildFormSchema(items: SurveyItemDefinition[]): {
 				defaults[item.id] = "";
 				break;
 			case "multiple_choice":
+			case "dropdown":
 			case "likert5":
 			case "likert7":
 				shape[item.id] = buildChoiceSchema(answer);

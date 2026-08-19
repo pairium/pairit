@@ -28,6 +28,7 @@ Event Data
 - `text`: accepts arbitrary text input.
 - `numeric`: accepts numbers with optional min, max, and step.
 - `multiple_choice`: accepts a list of options and renders radio buttons (single select).
+- `dropdown`: accepts a list of options and renders a compact select menu (single select).
 - `multi_select`: accepts a list of options and renders checkboxes (multi select).
 - `likert5` and `likert7`: predefined radio scales with consistent labeling.
 - You can extend answer types with custom components. Provide `component` and any `props` the renderer requires.
@@ -67,6 +68,14 @@ pages:
               - Starter
               - Pro
               - Enterprise
+      - id: country
+        text: "Where do you live?"
+        answer:
+          dropdown:
+            choices:
+              - United States
+              - Canada
+              - Other
       - id: features
         text: "Select the features you care about most"
         answer:
