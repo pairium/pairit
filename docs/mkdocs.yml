@@ -38,6 +38,7 @@ nav:
       - Deployment: dev/deployment.md
 theme:
   name: shadcn
+  custom_dir: overrides
   show_title: true
   show_stargazers: false
   pygments_style:

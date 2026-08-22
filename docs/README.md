@@ -1,6 +1,6 @@
 # Pairit Documentation
 
-For full documentation visit [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/).
+Live site: [pairium.github.io/pairit](https://pairium.github.io/pairit/).
 
 ## Commands
 
@@ -12,11 +12,15 @@ For full documentation visit [Material for MkDocs](https://squidfunk.github.io/m
 ## Project layout
 
     mkdocs.yml    # The configuration file.
+    overrides/    # Theme overrides (footer).
     docs/
         index.md  # The documentation homepage.
         ...       # Other markdown pages, images and other files.
 
 ## Deployment
 
-1. Run `mkdocs build`.
-2. Then `firebase deploy --only hosting`.
+Pushes to `docs/**` on `main` deploy to GitHub Pages (`.github/workflows/docs.yml`). Manual: `gh workflow run docs.yml`.
+
+## Theme
+
+[mkdocs-shadcn](https://github.com/asiffer/mkdocs-shadcn) by [@asiffer](https://github.com/asiffer).
