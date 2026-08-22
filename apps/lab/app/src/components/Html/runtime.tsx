@@ -28,7 +28,10 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 	renderer: ({ component, context }) => {
 		const html =
 			typeof component.props.html === "string" ? component.props.html : "";
-		const readKeys = stringList(component.props.read);
+		const readKeys = useMemo(
+			() => stringList(component.props.read),
+			[component.props.read],
+		);
 		const writeKeys = stringList(component.props.write);
 		const height =
 			typeof component.props.height === "number" && component.props.height > 0
@@ -38,6 +41,8 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 		const action = component.props.action;
 
 		const iframeRef = useRef<HTMLIFrameElement>(null);
+		const iframeLoadedRef = useRef(false);
+		const lastPostedStateRef = useRef<string | null>(null);
 		const doneRef = useRef(false);
 		const [done, setDone] = useState(false);
 		const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
@@ -62,6 +67,18 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 				return false;
 			});
 		}, [required, registerNavigationGuard]);
+
+		useEffect(() => {
+			if (!iframeLoadedRef.current) return;
+			const state = pickKeys(context.sessionState, readKeys);
+			const serialized = JSON.stringify(state);
+			if (serialized === lastPostedStateRef.current) return;
+			lastPostedStateRef.current = serialized;
+			iframeRef.current?.contentWindow?.postMessage(
+				{ type: "pairit:state", state },
+				"*",
+			);
+		}, [context.sessionState, readKeys]);
 
 		useEffect(() => {
 			const onMessage = (event: MessageEvent) => {
@@ -143,6 +160,9 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 					onLoad={() => {
 						emitHtmlEvent("onLoad", component, context);
 						const state = pickKeys(context.sessionState, readKeys);
+						const serialized = JSON.stringify(state);
+						lastPostedStateRef.current = serialized;
+						iframeLoadedRef.current = true;
 						iframeRef.current?.contentWindow?.postMessage(
 							{ type: "pairit:init", state },
 							"*",

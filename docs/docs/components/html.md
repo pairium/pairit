@@ -9,7 +9,7 @@ The file is uploaded with the config. Pairit only exchanges the `session_state` 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `src` | string | — | Path to a local `.html` file, relative to the YAML (required) |
-| `read` | string[] | `[]` | `session_state` keys sent into the embed on load |
+| `read` | string[] | `[]` | `session_state` keys sent into the embed |
 | `write` | string[] | `[]` | `session_state` keys the embed is allowed to write |
 | `height` | number | `400` | Frame height in pixels |
 | `required` | boolean | `false` | Block Next until the embed calls `pairit.done()` |
@@ -32,17 +32,18 @@ Pairit injects a `pairit` helper. That name is reserved.
 | Call | Direction | Writes | Description |
 |------|-----------|--------|-------------|
 | `pairit.ready(fn)` | In | — | Runs once with the `read` keys after load. Safe to call late. |
+| `pairit.onState(fn)` | In | — | Runs on every `read` snapshot, including the first. Safe to call late. |
 | `pairit.setState(data)` | Out | `session_state`, `onState` | Saves keys listed in `write`. Extra keys are dropped. |
 | `pairit.event(name, data)` | Out | Event log | Logs a custom event. Does not change `session_state`. |
 | `pairit.done()` | Out | `onDone` | Marks the task finished. Unlocks Next if `required`. Does not save data. |
 
-`pairit.state` is the same snapshot `ready` receives.
+`pairit.state` is the latest `read` snapshot.
 
 - Keys not in `read` are never sent into the iframe.
 - Keys not in `write` are never saved. There is no error — they are dropped.
 - A key in `read` that is not in `session_state` yet is omitted from `pairit.state`.
 - `setState` with no allowed keys is ignored. `onState` does not fire.
-- Incoming keys are sent once on load. Later `session_state` changes do not reach the iframe.
+- Later changes to `read` keys are pushed in. Use `pairit.onState` to update the UI.
 
 ## Usage
 
@@ -75,9 +76,9 @@ pairit config upload experiment.yaml --config-id my-exp
 
 Lint checks the file. Upload attaches it and includes it in the config checksum. Compile does not attach the file.
 
-### Read keys on load
+### Read keys
 
-List incoming keys in `read`. Get them in `pairit.ready`:
+List incoming keys in `read`. Use `pairit.ready` for the first snapshot, or `pairit.onState` if the value can change while the page is open:
 
 ```yaml
 props:
@@ -86,7 +87,7 @@ props:
 ```
 
 ```js
-pairit.ready(function (state) {
+pairit.onState(function (state) {
   if (state.treatment) {
     label.textContent = "Condition " + state.treatment;
   }

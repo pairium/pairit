@@ -9,9 +9,15 @@ import {
 type PairitApi = {
 	state: Record<string, unknown>;
 	ready: (fn: (state: Record<string, unknown>) => void) => void;
+	onState: (fn: (state: Record<string, unknown>) => void) => void;
 };
 
 const helperFrames: HTMLIFrameElement[] = [];
+
+afterEach(() => {
+	for (const iframe of helperFrames) iframe.remove();
+	helperFrames.length = 0;
+});
 
 function loadHelper() {
 	const iframe = document.createElement("iframe");
@@ -33,6 +39,14 @@ function sendInit(win: Window, state: Record<string, unknown>) {
 	win.dispatchEvent(
 		new MessageEvent("message", {
 			data: { type: "pairit:init", state },
+		}),
+	);
+}
+
+function sendState(win: Window, state: Record<string, unknown>) {
+	win.dispatchEvent(
+		new MessageEvent("message", {
+			data: { type: "pairit:state", state },
 		}),
 	);
 }
@@ -117,11 +131,6 @@ describe("parseEmbedMessage", () => {
 });
 
 describe("pairit.ready", () => {
-	afterEach(() => {
-		for (const iframe of helperFrames) iframe.remove();
-		helperFrames.length = 0;
-	});
-
 	test("runs after init arrives", () => {
 		const { win, pairit } = loadHelper();
 		const seen: Array<Record<string, unknown>> = [];
@@ -151,7 +160,33 @@ describe("pairit.ready", () => {
 			seen.push(state);
 		});
 		sendInit(win, { treatment: "A" });
-		sendInit(win, { treatment: "C" });
+		sendState(win, { treatment: "C" });
 		expect(seen).toEqual([{ treatment: "A" }]);
+	});
+});
+
+describe("pairit.onState", () => {
+	test("runs on init and on later state updates", () => {
+		const { win, pairit } = loadHelper();
+		const seen: Array<Record<string, unknown>> = [];
+		pairit.onState((state) => {
+			seen.push(state);
+		});
+		sendInit(win, { treatment: "A" });
+		sendState(win, { treatment: "B" });
+		expect(seen).toEqual([{ treatment: "A" }, { treatment: "B" }]);
+		expect(pairit.state).toEqual({ treatment: "B" });
+	});
+
+	test("runs immediately if init already happened", () => {
+		const { win, pairit } = loadHelper();
+		sendInit(win, { treatment: "A" });
+		const seen: Array<Record<string, unknown>> = [];
+		pairit.onState((state) => {
+			seen.push(state);
+		});
+		expect(seen).toEqual([{ treatment: "A" }]);
+		sendState(win, { treatment: "C" });
+		expect(seen).toEqual([{ treatment: "A" }, { treatment: "C" }]);
 	});
 });

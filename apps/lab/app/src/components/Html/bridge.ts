@@ -5,8 +5,20 @@ export const PAIRIT_HELPER_SCRIPT = `(function(){
   var state = {};
   var ready = false;
   var readyFns = [];
-  function runReady(fn) {
+  var stateFns = [];
+  function runCallback(fn) {
     try { fn(state); } catch (err) { console.error(err); }
+  }
+  function applyState(nextState, isInit) {
+    state = nextState || {};
+    if (isInit) {
+      ready = true;
+      var fns = readyFns;
+      readyFns = [];
+      window.dispatchEvent(new CustomEvent("pairit:init", { detail: state }));
+      for (var i = 0; i < fns.length; i++) runCallback(fns[i]);
+    }
+    for (var j = 0; j < stateFns.length; j++) runCallback(stateFns[j]);
   }
   window.pairit = {
     get state() { return state; },
@@ -22,27 +34,30 @@ export const PAIRIT_HELPER_SCRIPT = `(function(){
     ready: function(fn) {
       if (typeof fn !== "function") return;
       if (ready) {
-        runReady(fn);
+        runCallback(fn);
         return;
       }
       readyFns.push(fn);
+    },
+    onState: function(fn) {
+      if (typeof fn !== "function") return;
+      stateFns.push(fn);
+      if (ready) {
+        runCallback(fn);
+      }
     }
   };
   window.addEventListener("message", function(event) {
-    if (!event.data || event.data.type !== "pairit:init") return;
-    state = event.data.state || {};
-    ready = true;
-    var fns = readyFns;
-    readyFns = [];
-    window.dispatchEvent(new CustomEvent("pairit:init", { detail: state }));
-    for (var i = 0; i < fns.length; i++) runReady(fns[i]);
+    if (!event.data) return;
+    if (event.data.type === "pairit:init") {
+      applyState(event.data.state, true);
+      return;
+    }
+    if (event.data.type === "pairit:state") {
+      applyState(event.data.state, false);
+    }
   });
 })();`;
-
-export type PairitInitMessage = {
-	type: "pairit:init";
-	state: Record<string, unknown>;
-};
 
 export type PairitSetStateMessage = {
 	type: "pairit:setState";
