@@ -379,7 +379,7 @@ app
                     <span class="label">Sign in to the CLI</span>
                     <span class="arrow" aria-hidden="true">→</span>
                 </a>
-                <a href="https://pairium.github.io/pairit/" class="action" target="_blank" rel="noopener">
+                <a href="https://docs.pairium.ai/pairit/" class="action" target="_blank" rel="noopener">
                     <span class="label">Documentation</span>
                     <span class="arrow" aria-hidden="true">→</span>
                 </a>

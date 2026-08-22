@@ -276,7 +276,7 @@ export default function App() {
 										variant="ghost"
 										onClick={() => {
 											window.location.href =
-												"https://pairium.github.io/pairit/examples/";
+												"https://docs.pairium.ai/pairit/examples/";
 										}}
 									>
 										Back to examples
@@ -304,7 +304,7 @@ export default function App() {
 										variant="ghost"
 										onClick={() => {
 											window.location.href =
-												"https://pairium.github.io/pairit/examples/";
+												"https://docs.pairium.ai/pairit/examples/";
 										}}
 									>
 										Back to examples

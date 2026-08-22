@@ -25,7 +25,7 @@
     "url": "https://github.com/pairium/pairit.git",
     "directory": "apps/manager/cli"
   },
-  "homepage": "https://pairium.github.io/pairit/",
+  "homepage": "https://docs.pairium.ai/pairit/",
   "license": "MIT",
   "optionalDependencies": {
     "keytar": "^7.9.0"

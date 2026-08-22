@@ -27,7 +27,7 @@ This monorepo hosts the Pairit stack.
 
 ### Experimenters
 
-1. Review the experimenter docs in `docs/` or at [pairium.github.io/pairit](https://pairium.github.io/pairit/), starting with `docs/docs/quickstart.md` for a YAML template.
+1. Review the experimenter docs in `docs/` or at [docs.pairium.ai/pairit](https://docs.pairium.ai/pairit/), starting with `docs/docs/quickstart.md` for a YAML template.
 2. Use the CLI to validate or publish your config (see `apps/manager/cli/README.md`):
 
    ```bash

@@ -84,7 +84,7 @@ Do not also `bun install -g pairit`. Two copies end up on PATH (`~/.local/bin` v
 
 ## Documentation
 
-Docs are at https://pairium.github.io/pairit/ (GitHub Pages + MkDocs).
+Docs are at https://docs.pairium.ai/pairit/ (GitHub Pages + MkDocs).
 
 ```bash
 gh workflow run docs.yml          # Manually deploy docs
