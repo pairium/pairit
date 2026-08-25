@@ -53,7 +53,6 @@ export type GetResponse = {
 	session_state?: Record<string, unknown>;
 };
 
-export type AdvanceResponse = GetResponse;
 export type SubmitEventResponse = { eventId: string };
 
 export type ChatAvatar = {
@@ -181,7 +180,7 @@ export class LabClient {
 		return r.json();
 	}
 
-	async advance(sessionId: string, target: string): Promise<AdvanceResponse> {
+	async advance(sessionId: string, target: string): Promise<GetResponse> {
 		const r = await this.jsonRequest(`/sessions/${sessionId}/advance`, {
 			target,
 			idempotencyKey: crypto.randomUUID(),

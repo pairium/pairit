@@ -5,7 +5,6 @@ import {
 	NotAMemberError,
 	SessionBlockedError,
 } from "./client";
-import { SSEClient } from "./sse";
 
 const originalFetch = globalThis.fetch;
 
@@ -92,14 +91,5 @@ describe("LabClient", () => {
 		await expect(
 			client.sendChatMessage("g1", "s1", "hi"),
 		).rejects.toBeInstanceOf(NotAMemberError);
-	});
-});
-
-describe("SSEClient", () => {
-	test("stores constructor baseUrl and updates on connect override", () => {
-		const sse = new SSEClient({ baseUrl: "http://lab.test" });
-		expect(sse.getBaseUrl()).toBe("http://lab.test");
-		expect(sse.getSessionId()).toBeNull();
-		expect(sse.isConnected()).toBe(false);
 	});
 });

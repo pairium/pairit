@@ -15,11 +15,8 @@ export type ButtonAction = {
 };
 
 export type {
-	ComponentEventDefinition,
 	ComponentEventsConfig,
 	ComponentInstance,
-	EventMetadata,
-	EventPayload,
 	OnEnterAction,
 	Page,
 } from "@pairit/client/types";

@@ -52,12 +52,6 @@ export type Page = {
 	components?: ComponentInstance[];
 };
 
-export type EventMetadata = {
-	sessionId: string;
-	configId: string;
-	pageId: string;
-};
-
 export type EventPayload<
 	TType extends string = string,
 	TData extends Record<string, unknown> = Record<string, unknown>,

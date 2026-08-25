@@ -1,8 +1,3 @@
-/**
- * SSE client for Lab Server session streams.
- * Configurable so browser and headless simulator can share the same class.
- */
-
 type EventListener = (data: unknown) => void;
 
 export type SSEClientOptions = {
@@ -26,15 +21,7 @@ export class SSEClient {
 		this.withCredentials = options.withCredentials ?? true;
 	}
 
-	/**
-	 * Connect to the SSE stream for a session
-	 */
-	connect(sessionId: string, baseUrl?: string): void {
-		if (baseUrl !== undefined) {
-			this.baseUrl = baseUrl;
-		}
-
-		// If already connected to this session, skip
+	connect(sessionId: string): void {
 		if (
 			this.sessionId === sessionId &&
 			this.eventSource?.readyState === EventSource.OPEN
@@ -42,7 +29,6 @@ export class SSEClient {
 			return;
 		}
 
-		// Disconnect from any existing connection
 		this.disconnect();
 
 		this.sessionId = sessionId;
@@ -75,46 +61,23 @@ export class SSEClient {
 			}
 		};
 
-		// Listen for all known event types
-		this.eventSource.addEventListener("connected", (event) => {
-			this.dispatchEvent("connected", JSON.parse(event.data));
-		});
-
-		this.eventSource.addEventListener("heartbeat", (event) => {
-			this.dispatchEvent("heartbeat", JSON.parse(event.data));
-		});
-
-		this.eventSource.addEventListener("chat_message", (event) => {
-			this.dispatchEvent("chat_message", JSON.parse(event.data));
-		});
-
-		this.eventSource.addEventListener("chat_ended", (event) => {
-			this.dispatchEvent("chat_ended", JSON.parse(event.data));
-		});
-
-		this.eventSource.addEventListener("state_updated", (event) => {
-			this.dispatchEvent("state_updated", JSON.parse(event.data));
-		});
-
-		this.eventSource.addEventListener("chat_message_delta", (event) => {
-			this.dispatchEvent("chat_message_delta", JSON.parse(event.data));
-		});
-
-		this.eventSource.addEventListener("match_found", (event) => {
-			this.dispatchEvent("match_found", JSON.parse(event.data));
-		});
-
-		this.eventSource.addEventListener("match_timeout", (event) => {
-			this.dispatchEvent("match_timeout", JSON.parse(event.data));
-		});
-
-		this.eventSource.addEventListener("workspace_updated", (event) => {
-			this.dispatchEvent("workspace_updated", JSON.parse(event.data));
-		});
-
-		this.eventSource.addEventListener("chat_stream_end", (event) => {
-			this.dispatchEvent("chat_stream_end", JSON.parse(event.data));
-		});
+		const events = [
+			"connected",
+			"heartbeat",
+			"chat_message",
+			"chat_ended",
+			"state_updated",
+			"chat_message_delta",
+			"match_found",
+			"match_timeout",
+			"workspace_updated",
+			"chat_stream_end",
+		] as const;
+		for (const type of events) {
+			this.eventSource.addEventListener(type, (event) => {
+				this.dispatchEvent(type, JSON.parse(event.data));
+			});
+		}
 	}
 
 	private handleDisconnect(): void {
@@ -135,9 +98,6 @@ export class SSEClient {
 		}, delay);
 	}
 
-	/**
-	 * Disconnect from the SSE stream
-	 */
 	disconnect(): void {
 		if (this.reconnectTimer) {
 			clearTimeout(this.reconnectTimer);
@@ -153,10 +113,6 @@ export class SSEClient {
 		this.sessionId = null;
 	}
 
-	/**
-	 * Subscribe to an event type
-	 * @returns Unsubscribe function
-	 */
 	on(event: string, listener: EventListener): () => void {
 		let eventListeners = this.listeners.get(event);
 		if (!eventListeners) {
@@ -165,7 +121,6 @@ export class SSEClient {
 		}
 		eventListeners.add(listener);
 
-		// Return unsubscribe function
 		return () => {
 			eventListeners?.delete(listener);
 			if (eventListeners?.size === 0) {
@@ -187,23 +142,11 @@ export class SSEClient {
 		}
 	}
 
-	/**
-	 * Check if currently connected
-	 */
 	isConnected(): boolean {
-		// EventSource.OPEN === 1; use the numeric value so this works
-		// in environments (e.g. Bun tests) where EventSource is missing.
 		return this.eventSource?.readyState === 1;
 	}
 
-	/**
-	 * Get current session ID
-	 */
 	getSessionId(): string | null {
 		return this.sessionId;
-	}
-
-	getBaseUrl(): string {
-		return this.baseUrl;
 	}
 }
