@@ -14,6 +14,7 @@ import {
 	getIdempotencyCollection,
 	getSessionsCollection,
 } from "../lib/db";
+import { resolveSimulationFields } from "../lib/simulation";
 import type {
 	Config,
 	Page,
@@ -123,6 +124,9 @@ export async function loadSession(sessionId: string): Promise<Session | null> {
 		session_state: data.session_state,
 		prolific: data.prolific ?? null,
 		endedAt: data.endedAt ?? undefined,
+		simulated: data.simulated,
+		simulationRunId: data.simulationRunId,
+		personaId: data.personaId,
 		createdAt: data.createdAt,
 		updatedAt: data.updatedAt,
 	};
@@ -142,6 +146,11 @@ async function createSession(
 		prolific: session.prolific ?? null,
 		endedAt: session.endedAt ?? null,
 		userId: session.userId ?? null,
+		...(session.simulated === true ? { simulated: true } : {}),
+		...(session.simulationRunId
+			? { simulationRunId: session.simulationRunId }
+			: {}),
+		...(session.personaId ? { personaId: session.personaId } : {}),
 		createdAt: session.createdAt ?? now,
 		updatedAt: now,
 	};
@@ -272,6 +281,12 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 
 			// Create new session
 			const prolific: ProlificParams | null = body.prolific ?? null;
+			const simulation = resolveSimulationFields({
+				simulated: body.simulated,
+				simulationRunId: body.simulationRunId,
+				personaId: body.personaId,
+				prolificPid,
+			});
 
 			const id = uid();
 			const session: Session & { userId?: string | null } = {
@@ -282,6 +297,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				session_state: {},
 				prolific,
 				userId,
+				...simulation,
 			};
 			await createSession(session);
 			const page = config.pages[session.currentPageId];
@@ -306,6 +322,9 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 						sessionId: t.String(),
 					}),
 				),
+				simulated: t.Optional(t.Boolean()),
+				simulationRunId: t.Optional(t.String()),
+				personaId: t.Optional(t.String()),
 			}),
 		},
 	)
