@@ -1,0 +1,15 @@
+{
+	"name": "@pairit/client",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./index.ts",
+		"./types": "./types.ts",
+		"./browser": "./browser.ts"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.1.13",
+		"typescript": "^5.9.3"
+	}
+}
