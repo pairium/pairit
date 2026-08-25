@@ -14,6 +14,7 @@
       "name": "@pairit/lab-app",
       "version": "0.1.0",
       "dependencies": {
+        "@pairit/client": "workspace:*",
         "@tailwindcss/typography": "^0.5.19",
         "@tailwindcss/vite": "^4.0.6",
         "@tanstack/react-devtools": "^0.7.0",
@@ -104,6 +105,14 @@
         "better-auth": "^1.4.7",
         "mongodb": "^6.12.0",
       },
+      "devDependencies": {
+        "@types/bun": "^1.1.13",
+        "typescript": "^5.9.3",
+      },
+    },
+    "packages/client": {
+      "name": "@pairit/client",
+      "version": "0.1.0",
       "devDependencies": {
         "@types/bun": "^1.1.13",
         "typescript": "^5.9.3",
@@ -305,6 +314,8 @@
     "@noble/hashes": ["@noble/hashes@2.0.1", "", {}, "sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw=="],
 
     "@pairit/auth": ["@pairit/auth@workspace:packages/auth"],
+
+    "@pairit/client": ["@pairit/client@workspace:packages/client"],
 
     "@pairit/db": ["@pairit/db@workspace:packages/db"],
 
