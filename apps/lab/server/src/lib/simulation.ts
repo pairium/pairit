@@ -1,4 +1,4 @@
-export type SimulationFields = {
+type SimulationFields = {
 	simulated?: boolean;
 	simulationRunId?: string;
 	personaId?: string;
@@ -11,8 +11,7 @@ export function resolveSimulationFields(input: {
 	prolificPid?: string | null;
 }): SimulationFields {
 	const simulated =
-		input.simulated === true ||
-		(input.prolificPid?.startsWith("sim-") ?? false);
+		input.simulated === true || input.prolificPid?.startsWith("sim-") === true;
 	if (!simulated) return {};
 	return {
 		simulated: true,

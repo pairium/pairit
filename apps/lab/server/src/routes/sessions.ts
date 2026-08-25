@@ -146,11 +146,12 @@ async function createSession(
 		prolific: session.prolific ?? null,
 		endedAt: session.endedAt ?? null,
 		userId: session.userId ?? null,
-		...(session.simulated === true ? { simulated: true } : {}),
-		...(session.simulationRunId
-			? { simulationRunId: session.simulationRunId }
-			: {}),
-		...(session.personaId ? { personaId: session.personaId } : {}),
+		...resolveSimulationFields({
+			simulated: session.simulated,
+			simulationRunId: session.simulationRunId,
+			personaId: session.personaId,
+			prolificPid: session.prolific?.prolificPid,
+		}),
 		createdAt: session.createdAt ?? now,
 		updatedAt: now,
 	};
