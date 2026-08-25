@@ -89,6 +89,7 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 				balanceKey,
 				conditions,
 				assignmentType,
+				session.simulated === true,
 			);
 
 			await sessionsCollection.updateMany(
@@ -114,6 +115,7 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 			balanceKey,
 			conditions,
 			assignmentType,
+			session.simulated === true,
 		);
 
 		// Persist treatment to session

@@ -32,13 +32,19 @@ export const matchmakingRoutes = new Elysia({ prefix: "/sessions" })
 				conditions,
 			} = body;
 
-			const result = await enqueueSession(id, session.configId, poolId, {
-				numUsers: num_users,
-				timeoutSeconds,
-				timeoutTarget,
-				assignmentType,
-				conditions,
-			});
+			const result = await enqueueSession(
+				id,
+				session.configId,
+				poolId,
+				{
+					numUsers: num_users,
+					timeoutSeconds,
+					timeoutTarget,
+					assignmentType,
+					conditions,
+				},
+				session.simulated === true,
+			);
 
 			if (result.status === "waiting") {
 				set.status = 202;
