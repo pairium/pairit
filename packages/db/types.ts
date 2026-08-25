@@ -44,6 +44,9 @@ export type SessionDocument = {
 	prolific?: ProlificParams | null;
 	endedAt: string | null;
 	userId?: string | null;
+	simulated?: boolean;
+	simulationRunId?: string;
+	personaId?: string;
 	createdAt: Date;
 	updatedAt: Date;
 };

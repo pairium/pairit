@@ -52,6 +52,9 @@ export type Session = {
 	session_state: Record<string, unknown>;
 	prolific?: _ProlificParams | null;
 	endedAt?: string;
+	simulated?: boolean;
+	simulationRunId?: string;
+	personaId?: string;
 	createdAt?: Date;
 	updatedAt?: Date;
 };
