@@ -18,6 +18,19 @@ const blockPositions = new Map<string, number>();
 // Track which balance keys have been initialized from DB
 const initialized = new Set<string>();
 
+export function getEffectiveBalanceKey(
+	balanceKey: string,
+	simulated = false,
+): string {
+	return simulated ? `${balanceKey}:sim` : balanceKey;
+}
+
+export function sessionBalanceFilter(
+	simulated: boolean,
+): Record<string, unknown> {
+	return simulated ? { simulated: true } : { simulated: { $ne: true } };
+}
+
 /**
  * Rebuild condition counts and block positions from existing sessions.
  * Called once per balance key on first use after server start.
@@ -26,9 +39,11 @@ const initialized = new Set<string>();
 async function rebuildFromSessions(
 	balanceKey: string,
 	conditions: string[],
+	simulated: boolean,
 ): Promise<void> {
-	if (initialized.has(balanceKey)) return;
-	initialized.add(balanceKey);
+	const effectiveKey = getEffectiveBalanceKey(balanceKey, simulated);
+	if (initialized.has(effectiveKey)) return;
+	initialized.add(effectiveKey);
 
 	const [configId, stateKey] = balanceKey.split(":");
 	if (!configId || !stateKey) return;
@@ -36,7 +51,11 @@ async function rebuildFromSessions(
 	const collection = await getSessionsCollection();
 	const sessions = await collection
 		.find(
-			{ configId, [`session_state.${stateKey}`]: { $exists: true } },
+			{
+				configId,
+				[`session_state.${stateKey}`]: { $exists: true },
+				...sessionBalanceFilter(simulated),
+			},
 			{ projection: { [`session_state.${stateKey}`]: 1 } },
 		)
 		.toArray();
@@ -49,8 +68,8 @@ async function rebuildFromSessions(
 		}
 	}
 
-	conditionCounts.set(balanceKey, counts);
-	blockPositions.set(balanceKey, sessions.length);
+	conditionCounts.set(effectiveKey, counts);
+	blockPositions.set(effectiveKey, sessions.length);
 }
 
 /**
@@ -58,12 +77,15 @@ async function rebuildFromSessions(
  * @param balanceKey - Key to track balance across (e.g., "configId:stateKey")
  * @param conditions - Array of condition names (defaults to ["control", "treatment"])
  * @param assignmentType - Strategy: "random", "balanced_random", or "block"
+ * @param simulated - When true, counts against other sim sessions only
  */
 export async function assignTreatment(
 	balanceKey: string,
 	conditions: string[],
 	assignmentType: AssignmentType = "random",
+	simulated = false,
 ): Promise<string> {
+	const effectiveKey = getEffectiveBalanceKey(balanceKey, simulated);
 	const opts = conditions.length ? conditions : ["control", "treatment"];
 
 	if (assignmentType === "random") {
@@ -71,14 +93,14 @@ export async function assignTreatment(
 	}
 
 	// Rebuild counts from DB on first use
-	await rebuildFromSessions(balanceKey, opts);
+	await rebuildFromSessions(balanceKey, opts, simulated);
 
 	if (assignmentType === "balanced_random") {
 		// Pick condition with lowest count
-		let counts = conditionCounts.get(balanceKey);
+		let counts = conditionCounts.get(effectiveKey);
 		if (!counts) {
 			counts = new Map(opts.map((c) => [c, 0]));
-			conditionCounts.set(balanceKey, counts);
+			conditionCounts.set(effectiveKey, counts);
 		}
 		const minCount = Math.min(...opts.map((c) => counts.get(c) ?? 0));
 		const candidates = opts.filter((c) => (counts.get(c) ?? 0) === minCount);
@@ -89,9 +111,9 @@ export async function assignTreatment(
 
 	if (assignmentType === "block") {
 		// Round-robin through conditions in order
-		const pos = blockPositions.get(balanceKey) ?? 0;
+		const pos = blockPositions.get(effectiveKey) ?? 0;
 		const chosen = opts[pos % opts.length];
-		blockPositions.set(balanceKey, pos + 1);
+		blockPositions.set(effectiveKey, pos + 1);
 		return chosen;
 	}
 

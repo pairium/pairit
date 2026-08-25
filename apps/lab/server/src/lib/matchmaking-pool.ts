@@ -19,6 +19,7 @@ export type WaitingEntry = {
 	sessionId: string;
 	configId: string;
 	poolId: string;
+	simulated: boolean;
 	enqueuedAt: number;
 	timeoutTimer: ReturnType<typeof setTimeout>;
 	poolConfig: PoolConfig;
@@ -28,14 +29,18 @@ export type EnqueueResult =
 	| { status: "waiting"; position: number }
 	| { status: "matched"; groupId: string; treatment: string };
 
-// Map<poolKey, WaitingEntry[]> where poolKey = `${configId}:${poolId}`
+// Map<poolKey, WaitingEntry[]> where poolKey = `${configId}:${poolId}` (+ `:sim`)
 const pools = new Map<string, WaitingEntry[]>();
 
 // Track session -> poolKey for disconnect cleanup
 const sessionPools = new Map<string, string>();
 
-function getPoolKey(configId: string, poolId: string): string {
-	return `${configId}:${poolId}`;
+function getPoolKey(
+	configId: string,
+	poolId: string,
+	simulated = false,
+): string {
+	return simulated ? `${configId}:${poolId}:sim` : `${configId}:${poolId}`;
 }
 
 /**
@@ -46,8 +51,9 @@ export async function enqueueSession(
 	configId: string,
 	poolId: string,
 	poolConfig: PoolConfig,
+	simulated = false,
 ): Promise<EnqueueResult> {
-	const poolKey = getPoolKey(configId, poolId);
+	const poolKey = getPoolKey(configId, poolId, simulated);
 
 	// Get or create pool
 	let pool = pools.get(poolKey);
@@ -73,6 +79,7 @@ export async function enqueueSession(
 		sessionId,
 		configId,
 		poolId,
+		simulated,
 		enqueuedAt: Date.now(),
 		timeoutTimer,
 		poolConfig,
@@ -202,13 +209,14 @@ async function formGroup(
 
 	// Generate group ID and treatment
 	const groupId = crypto.randomUUID();
-	const treatment = await assignTreatment(
-		poolKey,
-		poolConfig.conditions ?? [],
-		poolConfig.assignmentType ?? "random",
-	);
 	const configId = matchedEntries[0].configId;
 	const poolId = matchedEntries[0].poolId;
+	const treatment = await assignTreatment(
+		`${configId}:${poolId}`,
+		poolConfig.conditions ?? [],
+		poolConfig.assignmentType ?? "random",
+		matchedEntries[0].simulated,
+	);
 	const memberSessionIds = matchedEntries.map((e) => e.sessionId);
 
 	console.log(
