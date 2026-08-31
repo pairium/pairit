@@ -1,7 +1,7 @@
 import { Login } from "@components/Auth/Login";
 import { Button } from "@components/ui/Button";
 import { useParams } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Header from "./components/Header";
 import {
 	AuthRequiredError,
@@ -62,6 +62,24 @@ async function executeOnEnter(
 	return stateUpdates;
 }
 
+function PageSkeleton() {
+	return (
+		<output className="flex justify-center not-italic" aria-label="Loading">
+			<div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm sm:p-10">
+				<div className="animate-pulse space-y-6">
+					<div className="h-7 w-2/3 rounded-md bg-slate-200" />
+					<div className="space-y-3">
+						<div className="h-4 w-full rounded bg-slate-200" />
+						<div className="h-4 w-5/6 rounded bg-slate-200" />
+						<div className="h-4 w-4/6 rounded bg-slate-200" />
+					</div>
+					<div className="h-11 w-28 rounded-lg bg-slate-200" />
+				</div>
+			</div>
+		</output>
+	);
+}
+
 export default function App() {
 	const { experimentId } = useParams({ from: "/$experimentId" });
 	const { data: session } = useSession();
@@ -74,7 +92,9 @@ export default function App() {
 	const [endedAt, setEndedAt] = useState<string | null>(null);
 	const [endRedirectUrl, setEndRedirectUrl] = useState<string | null>(null);
 	const [sessionState, setSessionState] = useState<Record<string, unknown>>({});
-	const [loading, setLoading] = useState(false);
+	const [bootstrapping, setBootstrapping] = useState(true);
+	const [transitioning, setTransitioning] = useState(false);
+	const transitioningRef = useRef(false);
 	const [error, setError] = useState<string | null>(null);
 	const [authRequired, setAuthRequired] = useState(false);
 	const [sessionBlocked, setSessionBlocked] = useState(false);
@@ -97,6 +117,7 @@ export default function App() {
 
 			if (!experimentId) {
 				setError("Missing experiment ID");
+				setBootstrapping(false);
 				return;
 			}
 
@@ -109,7 +130,7 @@ export default function App() {
 			setSessionState({});
 			setAuthRequired(false);
 			setSessionBlocked(false);
-			setLoading(true);
+			setBootstrapping(true);
 			setError(null);
 
 			try {
@@ -134,19 +155,19 @@ export default function App() {
 
 				if (e instanceof AuthRequiredError) {
 					setAuthRequired(true);
-					setLoading(false);
+					setBootstrapping(false);
 					return;
 				}
 
 				if (e instanceof SessionBlockedError) {
 					setSessionBlocked(true);
-					setLoading(false);
+					setBootstrapping(false);
 					return;
 				}
 
 				setError(e instanceof Error ? e.message : "Failed to start");
 			} finally {
-				if (!canceled) setLoading(false);
+				if (!canceled) setBootstrapping(false);
 			}
 		}
 		bootstrap();
@@ -178,6 +199,7 @@ export default function App() {
 
 	async function onAction(a: ButtonAction) {
 		if (!a.target || !sessionId || !compiledConfig) return;
+		if (transitioningRef.current) return;
 
 		const target = a.target;
 		const nextPage = compiledConfig.pages[target];
@@ -186,7 +208,8 @@ export default function App() {
 			return;
 		}
 
-		setLoading(true);
+		transitioningRef.current = true;
+		setTransitioning(true);
 		setError(null);
 		try {
 			const r = await advance(sessionId, target);
@@ -204,7 +227,8 @@ export default function App() {
 		} catch (error: unknown) {
 			setError(error instanceof Error ? error.message : "Failed to advance");
 		} finally {
-			setLoading(false);
+			transitioningRef.current = false;
+			setTransitioning(false);
 		}
 	}
 
@@ -219,13 +243,9 @@ export default function App() {
 					</div>
 				)}
 
-				{loading && (
-					<div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-						Loading…
-					</div>
-				)}
+				{bootstrapping && !page && <PageSkeleton />}
 
-				{!loading && authRequired && !isAuthenticated && (
+				{!bootstrapping && authRequired && !isAuthenticated && (
 					<div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-8 text-center">
 						<div className="text-lg font-medium">Sign in to continue</div>
 						<div className="text-sm text-slate-500">
@@ -237,7 +257,7 @@ export default function App() {
 					</div>
 				)}
 
-				{!loading && sessionBlocked && (
+				{!bootstrapping && sessionBlocked && (
 					<div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-8 text-center">
 						<div className="text-lg font-medium">
 							Experiment Already Completed
@@ -248,20 +268,26 @@ export default function App() {
 					</div>
 				)}
 
-				{!loading && page && !endedAt && (
-					<PageRenderer
-						page={page}
-						onAction={onAction}
-						sessionId={sessionId}
-						sessionState={sessionState}
-						compiledConfig={compiledConfig}
-						onSessionStateChange={(updates) =>
-							setSessionState((prev) => mergeNestedUpdates(prev, updates))
-						}
-					/>
+				{page && !endedAt && (
+					<div
+						aria-busy={transitioning}
+						className={transitioning ? "pointer-events-none" : undefined}
+					>
+						<PageRenderer
+							page={page}
+							onAction={onAction}
+							sessionId={sessionId}
+							sessionState={sessionState}
+							compiledConfig={compiledConfig}
+							isNavigating={transitioning}
+							onSessionStateChange={(updates) =>
+								setSessionState((prev) => mergeNestedUpdates(prev, updates))
+							}
+						/>
+					</div>
 				)}
 
-				{!loading && endedAt && (
+				{!bootstrapping && endedAt && (
 					<div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-8 text-center">
 						{endRedirectUrl ? (
 							<>

@@ -44,6 +44,7 @@ export const ButtonsRuntime = defineRuntimeComponent<
 							key={button.id}
 							type="button"
 							variant={isHighlighted ? "highlighted" : "default"}
+							disabled={context.isNavigating}
 							onClick={() =>
 								void handleButtonClick(button, component.id, context)
 							}
