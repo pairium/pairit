@@ -363,6 +363,7 @@ function renderAnswerInput({
 							>
 								<Checkbox
 									id={inputId}
+									className="m-0 shrink-0"
 									checked={checked}
 									onChange={(event) => {
 										const next = new Set(currentValue);
@@ -376,7 +377,9 @@ function renderAnswerInput({
 									onBlur={field.handleBlur}
 									name={item.id}
 								/>
-								<span className="text-sm text-slate-900">{choice.label}</span>
+								<span className="min-w-0 text-sm leading-5 text-slate-900">
+									{choice.label}
+								</span>
 							</label>
 						);
 					})}

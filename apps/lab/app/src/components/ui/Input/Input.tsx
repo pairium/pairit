@@ -4,7 +4,7 @@ import type { ComponentPropsWithoutRef, ElementRef } from "react";
 import { forwardRef } from "react";
 
 const inputClasses =
-	"flex h-11 w-full rounded-lg border border-slate-300 bg-white px-4 text-base text-slate-900 shadow-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:cursor-not-allowed disabled:opacity-50";
+	"flex h-11 w-full items-center rounded-lg border border-slate-300 bg-white px-4 text-base leading-none text-slate-900 shadow-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:cursor-not-allowed disabled:opacity-50";
 
 export const Input = forwardRef<
 	ElementRef<"input">,

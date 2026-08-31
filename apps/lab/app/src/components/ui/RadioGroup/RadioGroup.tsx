@@ -68,7 +68,7 @@ export const RadioGroupItem = forwardRef<
 	return (
 		<label
 			className={cn(
-				"flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 transition-colors hover:border-slate-300 hover:bg-slate-50",
+				"flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 transition-colors hover:border-slate-300 hover:bg-slate-50",
 				{
 					"border-slate-900 bg-slate-900/5": checked,
 					"cursor-not-allowed opacity-60": isDisabled,
@@ -76,11 +76,11 @@ export const RadioGroupItem = forwardRef<
 				className,
 			)}
 		>
-			<span className="mt-1 inline-flex h-5 w-5 items-center justify-center">
+			<span className="flex size-4 shrink-0 items-center justify-center">
 				<input
 					ref={ref}
 					type="radio"
-					className="h-4 w-4 rounded-full border border-slate-400 text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+					className="m-0 size-4 accent-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
 					name={context.name}
 					value={value}
 					checked={checked}
@@ -89,10 +89,14 @@ export const RadioGroupItem = forwardRef<
 					{...props}
 				/>
 			</span>
-			<span className="flex flex-col gap-1 text-left">
-				<span className="text-sm font-medium text-slate-900">{label}</span>
+			<span className="flex min-w-0 flex-col justify-center gap-1 text-left">
+				<span className="text-sm leading-5 font-medium text-slate-900">
+					{label}
+				</span>
 				{description ? (
-					<span className="text-xs text-slate-500">{description}</span>
+					<span className="text-xs leading-4 text-slate-500">
+						{description}
+					</span>
 				) : null}
 			</span>
 		</label>
@@ -134,7 +138,7 @@ export const RadioGroupScaleItem = forwardRef<
 				<input
 					ref={ref}
 					type="radio"
-					className="h-4 w-4 rounded-full border border-slate-400 text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+					className="m-0 size-4 accent-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
 					name={context.name}
 					value={value}
 					checked={checked}
@@ -143,7 +147,9 @@ export const RadioGroupScaleItem = forwardRef<
 					{...props}
 				/>
 			</span>
-			<span className="mt-2 text-center text-xs text-slate-600">{label}</span>
+			<span className="mt-2 text-center text-xs leading-4 text-slate-600">
+				{label}
+			</span>
 		</label>
 	);
 });
