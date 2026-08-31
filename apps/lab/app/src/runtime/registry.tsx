@@ -16,6 +16,7 @@ export interface RuntimeComponentContext {
 	onSessionStateChange?: (updates: Record<string, unknown>) => void;
 	pageId?: string;
 	compiledConfig?: CompiledConfig | null;
+	isNavigating?: boolean;
 }
 
 export type RuntimeComponentRenderer<

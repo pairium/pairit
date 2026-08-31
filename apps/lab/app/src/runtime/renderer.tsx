@@ -64,6 +64,7 @@ interface PageRendererProps {
 	sessionState?: Record<string, unknown>;
 	onSessionStateChange?: (updates: Record<string, unknown>) => void;
 	compiledConfig?: import("./config").CompiledConfig | null;
+	isNavigating?: boolean;
 }
 
 export function PageRenderer({
@@ -73,6 +74,7 @@ export function PageRenderer({
 	sessionState,
 	onSessionStateChange,
 	compiledConfig,
+	isNavigating,
 }: PageRendererProps) {
 	const guardsRef = useRef<Set<NavigationGuard>>(new Set());
 	const sessionStateRef = useRef<Record<string, unknown>>(sessionState ?? {});
@@ -137,6 +139,7 @@ export function PageRenderer({
 			onSessionStateChange: wrappedOnSessionStateChange,
 			pageId: page.id,
 			compiledConfig,
+			isNavigating,
 		}),
 		[
 			guardedAction,
@@ -146,6 +149,7 @@ export function PageRenderer({
 			wrappedOnSessionStateChange,
 			page.id,
 			compiledConfig,
+			isNavigating,
 		],
 	);
 
