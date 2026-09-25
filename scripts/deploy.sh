@@ -3,7 +3,11 @@ set -e
 
 # deploy.sh
 # Deploys Pairit services to Google Cloud Run using Artifact Registry
-# Usage: ./deploy.sh [PROJECT_ID] [REGION]
+# Usage: ./scripts/deploy.sh staging|production [REGION]
+#
+# staging    loads .env.staging    (database name must contain "staging")
+# production loads .env.production (database name must not contain "staging")
+# Local dev keeps using .env. This script never sources .env.
 
 # Resolve script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -12,20 +16,29 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 echo "📂 Project Root: $PROJECT_ROOT"
 cd "$PROJECT_ROOT"
 
-# Read vars from .env (PROJECT_ID and secrets come from here)
-if [ -f .env ]; then
-    echo "📜 Sourcing .env..."
-    set -a
-    source .env
-    set +a
-else
-    echo "❌ No .env file found in $PROJECT_ROOT"
+TARGET=${1:-}
+REGION_ARG=${2:-}
+
+if [ "$TARGET" != "staging" ] && [ "$TARGET" != "production" ]; then
+    echo "❌ Say which environment to deploy."
+    echo "Usage: ./scripts/deploy.sh staging|production [REGION]"
     exit 1
 fi
 
-# Configuration (args override .env)
-PROJECT_ID=${1:-$PROJECT_ID}
-REGION=${2:-${REGION:-us-central1}}
+ENV_FILE=".env.$TARGET"
+if [ ! -f "$ENV_FILE" ]; then
+    echo "❌ Missing $ENV_FILE in $PROJECT_ROOT"
+    echo "Copy env.template to $ENV_FILE and fill in that environment's project, database, and OAuth keys."
+    exit 1
+fi
+
+echo "📜 Sourcing $ENV_FILE..."
+set -a
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+set +a
+
+REGION=${REGION_ARG:-${REGION:-us-central1}}
 REPO_NAME="pairit-repo"
 
 # Service names
@@ -33,12 +46,93 @@ MANAGER_SERVICE="manager"
 LAB_SERVICE="lab"
 
 if [ -z "$PROJECT_ID" ]; then
-    echo "❌ PROJECT_ID not set in .env and not provided as argument"
-    echo "Usage: ./deploy.sh [PROJECT_ID] [REGION]"
+    echo "❌ PROJECT_ID is not set in $ENV_FILE"
     exit 1
 fi
 
-echo "🚀 Deploying to Project: $PROJECT_ID, Region: $REGION"
+if [ -z "$MONGODB_URI" ]; then
+    echo "❌ MONGODB_URI is not set in $ENV_FILE"
+    exit 1
+fi
+
+if [ -z "$STORAGE_PATH" ]; then
+    echo "❌ STORAGE_PATH is not set in $ENV_FILE"
+    echo "Each environment needs its own media bucket name."
+    exit 1
+fi
+
+# Same database-name rule as packages/db: the path on the Mongo address.
+DB_NAME=$(bun -e 'const u = new URL(process.argv[1]); const name = decodeURIComponent(u.pathname.replace(/^\//, "")); if (!name) process.exit(2); console.log(name);' "$MONGODB_URI") || {
+    echo "❌ Could not read the database name from MONGODB_URI in $ENV_FILE"
+    exit 1
+}
+
+if [ "$TARGET" = "staging" ]; then
+    case "$DB_NAME" in
+        *staging*) ;;
+        *)
+            echo "❌ Staging deploy refused. Database is '$DB_NAME'."
+            echo "Staging must use a database whose name contains 'staging' (pairit-staging)."
+            exit 1
+            ;;
+    esac
+else
+    case "$DB_NAME" in
+        *staging*)
+            echo "❌ Production deploy refused. Database is '$DB_NAME'."
+            echo "Production must not use the staging database."
+            exit 1
+            ;;
+    esac
+fi
+
+# Last KEY=value in a file. Allows a leading "export", spaces around "=", and quotes.
+env_value() {
+    local file=$1
+    local key=$2
+    local raw
+    raw=$(grep -E "^[[:space:]]*(export[[:space:]]+)?${key}[[:space:]]*=" "$file" | tail -1 | cut -d= -f2- || true)
+    raw="${raw#"${raw%%[![:space:]]*}"}"
+    raw="${raw%"${raw##*[![:space:]]}"}"
+    raw="${raw#\"}"
+    raw="${raw%\"}"
+    raw="${raw#\'}"
+    raw="${raw%\'}"
+    printf '%s\n' "$raw"
+}
+
+OTHER_FILE=".env.production"
+if [ "$TARGET" = "production" ]; then
+    OTHER_FILE=".env.staging"
+fi
+if [ -f "$OTHER_FILE" ]; then
+    OTHER_PROJECT=$(env_value "$OTHER_FILE" PROJECT_ID)
+    OTHER_URI=$(env_value "$OTHER_FILE" MONGODB_URI)
+    OTHER_BUCKET=$(env_value "$OTHER_FILE" STORAGE_PATH)
+    if [ -n "$OTHER_PROJECT" ] && [ "$OTHER_PROJECT" = "$PROJECT_ID" ]; then
+        echo "❌ $ENV_FILE and $OTHER_FILE use the same PROJECT_ID ($PROJECT_ID)."
+        echo "Staging and production must be different Google projects."
+        exit 1
+    fi
+    if [ -n "$OTHER_URI" ]; then
+        OTHER_DB=$(bun -e 'const u = new URL(process.argv[1]); console.log(decodeURIComponent(u.pathname.replace(/^\//, "")));' "$OTHER_URI" 2>/dev/null || true)
+        if [ -n "$OTHER_DB" ] && [ "$OTHER_DB" = "$DB_NAME" ]; then
+            echo "❌ $ENV_FILE and $OTHER_FILE use the same database ($DB_NAME)."
+            exit 1
+        fi
+    fi
+    if [ -n "$OTHER_BUCKET" ] && [ "$OTHER_BUCKET" = "$STORAGE_PATH" ]; then
+        echo "❌ $ENV_FILE and $OTHER_FILE use the same media bucket ($STORAGE_PATH)."
+        echo "Staging and production must use different buckets."
+        exit 1
+    fi
+fi
+
+echo "🚀 Deploying $TARGET"
+echo "   Project: $PROJECT_ID"
+echo "   Region:  $REGION"
+echo "   Database: $DB_NAME"
+echo "   Bucket:  $STORAGE_PATH"
 
 # Get project number to compute deterministic Cloud Run URLs
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
@@ -54,12 +148,7 @@ LAB_SERVICE_URL="https://${LAB_SERVICE}-${PROJECT_NUMBER}.${REGION}.run.app"
 echo "📍 Manager URL: $MANAGER_SERVICE_URL"
 echo "📍 Lab URL: $LAB_SERVICE_URL"
 
-# Check MONGODB_URI is set
-if [ -n "$MONGODB_URI" ]; then
-    echo "✅ MONGODB_URI is set"
-else
-    echo "❌ MONGODB_URI is NOT set in the deployment shell!"
-fi
+echo "✅ MONGODB_URI is set (database: $DB_NAME)"
 
 # 0. Setup Artifact Registry
 echo "🔧 Checking Artifact Registry..."
@@ -78,7 +167,7 @@ else
 fi
 
 # 0b. Setup media bucket (public-read for participant-facing assets)
-MEDIA_BUCKET="${STORAGE_PATH:-pairit-lab-media}"
+MEDIA_BUCKET="$STORAGE_PATH"
 echo "🔧 Checking media bucket gs://$MEDIA_BUCKET..."
 if ! gcloud storage buckets describe "gs://$MEDIA_BUCKET" --project "$PROJECT_ID" &>/dev/null; then
     echo "🪣 Creating bucket gs://$MEDIA_BUCKET..."
@@ -105,7 +194,7 @@ MANAGER_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/pairit-manager"
 MANAGER_ENV="NODE_ENV=production"
 MANAGER_ENV="$MANAGER_ENV++MONGODB_URI=$MONGODB_URI"
 MANAGER_ENV="$MANAGER_ENV++STORAGE_BACKEND=gcs"
-MANAGER_ENV="$MANAGER_ENV++STORAGE_PATH=${STORAGE_PATH:-pairit-lab-media}"
+MANAGER_ENV="$MANAGER_ENV++STORAGE_PATH=$STORAGE_PATH"
 MANAGER_ENV="$MANAGER_ENV++GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"
 MANAGER_ENV="$MANAGER_ENV++GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET"
 MANAGER_ENV="$MANAGER_ENV++AUTH_SECRET=$AUTH_SECRET"
@@ -119,7 +208,7 @@ MANAGER_ENV="$MANAGER_ENV++MANAGER_ADMIN_CONTACT_EMAIL=${MANAGER_ADMIN_CONTACT_E
 LAB_ENV="NODE_ENV=production"
 LAB_ENV="$LAB_ENV++MONGODB_URI=$MONGODB_URI"
 LAB_ENV="$LAB_ENV++STORAGE_BACKEND=gcs"
-LAB_ENV="$LAB_ENV++STORAGE_PATH=${STORAGE_PATH:-pairit-lab-media}"
+LAB_ENV="$LAB_ENV++STORAGE_PATH=$STORAGE_PATH"
 LAB_ENV="$LAB_ENV++GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"
 LAB_ENV="$LAB_ENV++GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET"
 LAB_ENV="$LAB_ENV++AUTH_SECRET=$AUTH_SECRET"

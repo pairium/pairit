@@ -22,7 +22,10 @@ bun run build                   # Build all packages
 bun run test                    # Run tests (bun test for packages, vitest for lab-app)
 biome check                     # Lint and format
 tsc --noEmit                    # Type check
-bash scripts/deploy.sh          # Deploy to Google Cloud Run (requires gcloud auth)
+bash scripts/deploy.sh staging      # Deploy staging (loads .env.staging)
+bash scripts/deploy.sh production   # Deploy production (loads .env.production)
+bash scripts/test.sh staging        # Health + integration tests against staging
+bash scripts/test.sh production     # Health + integration tests against production
 ```
 
 Filter by package: `bun run --filter lab-app dev`
@@ -91,6 +94,26 @@ gh workflow run docs.yml          # Manually deploy docs
 ```
 
 Auto-deploys on push to `docs/**`.
+
+## Deploy
+
+Two cloud environments. Local dev still uses `.env`. The deploy script never sources `.env`. Details are in `docs/docs/dev/deployment.md`.
+
+| | Staging | Production |
+|---|---|---|
+| Command | `bash scripts/deploy.sh staging` | `bash scripts/deploy.sh production` |
+| Env file | `.env.staging` | `.env.production` |
+| Google project | `pairit-lab-staging` | `pairit-lab` |
+| Database | `pairit-staging` | `pairit` |
+| Media bucket | `pairit-lab-media-staging` | `pairit-lab-media` |
+| Lab | https://lab-823036187164.us-central1.run.app | https://lab-pdxzcarxcq-uc.a.run.app |
+| Manager | https://manager-823036187164.us-central1.run.app | https://manager-pdxzcarxcq-uc.a.run.app |
+
+- Staging and production must use different `PROJECT_ID` values, OAuth clients, and buckets. The script stops if the two env files share a project, a database, or a media bucket.
+- A staging deploy refuses a database whose name does not contain `staging`. A production deploy refuses a database whose name contains `staging`.
+- `bash scripts/test.sh staging` and `bash scripts/test.sh production` check the Cloud Run services named `manager` and `lab`.
+- Deploy staging before production.
+- The published `pairit` CLI talks to production. To use staging, set `PAIRIT_API_URL` to the staging manager and `PAIRIT_LAB_URL` to the staging lab, then run `pairit login`. That login replaces the saved production login. Run `pairit login` again with those variables unset to switch back.
 
 ## Conventions
 
