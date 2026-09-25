@@ -113,6 +113,7 @@ Two cloud environments. Local dev still uses `.env`. The deploy script never sou
 - A staging deploy refuses a database whose name does not contain `staging`. A production deploy refuses a database whose name contains `staging`.
 - `bash scripts/test.sh staging` and `bash scripts/test.sh production` check the Cloud Run services named `manager` and `lab`.
 - Deploy staging before production.
+- The published `pairit` CLI talks to production. To use staging, set `PAIRIT_API_URL` to the staging manager and `PAIRIT_LAB_URL` to the staging lab, then run `pairit login`. That login replaces the saved production login. Run `pairit login` again with those variables unset to switch back.
 
 ## Conventions
 

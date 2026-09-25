@@ -20,6 +20,14 @@ Staging and production are separate Google projects, separate OAuth apps, and se
 
 Try a change on staging first. Deploy production only after staging looks right.
 
+The published `pairit` CLI talks to production. Point it at staging by setting both URLs, then log in again. That login replaces the saved production login. Run `pairit login` with those variables unset to switch back.
+
+```bash
+PAIRIT_API_URL=https://manager-823036187164.us-central1.run.app \
+PAIRIT_LAB_URL=https://lab-823036187164.us-central1.run.app \
+pairit login
+```
+
 ## Prerequisites
 
 - **Google Cloud SDK (`gcloud`)** installed and authenticated.
