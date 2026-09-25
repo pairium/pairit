@@ -86,13 +86,29 @@ else
     esac
 fi
 
+# Last KEY=value in a file. Allows a leading "export", spaces around "=", and quotes.
+env_value() {
+    local file=$1
+    local key=$2
+    local raw
+    raw=$(grep -E "^[[:space:]]*(export[[:space:]]+)?${key}[[:space:]]*=" "$file" | tail -1 | cut -d= -f2- || true)
+    raw="${raw#"${raw%%[![:space:]]*}"}"
+    raw="${raw%"${raw##*[![:space:]]}"}"
+    raw="${raw#\"}"
+    raw="${raw%\"}"
+    raw="${raw#\'}"
+    raw="${raw%\'}"
+    printf '%s\n' "$raw"
+}
+
 OTHER_FILE=".env.production"
 if [ "$TARGET" = "production" ]; then
     OTHER_FILE=".env.staging"
 fi
 if [ -f "$OTHER_FILE" ]; then
-    OTHER_PROJECT=$(grep -E '^PROJECT_ID=' "$OTHER_FILE" | tail -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
-    OTHER_URI=$(grep -E '^MONGODB_URI=' "$OTHER_FILE" | tail -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
+    OTHER_PROJECT=$(env_value "$OTHER_FILE" PROJECT_ID)
+    OTHER_URI=$(env_value "$OTHER_FILE" MONGODB_URI)
+    OTHER_BUCKET=$(env_value "$OTHER_FILE" STORAGE_PATH)
     if [ -n "$OTHER_PROJECT" ] && [ "$OTHER_PROJECT" = "$PROJECT_ID" ]; then
         echo "❌ $ENV_FILE and $OTHER_FILE use the same PROJECT_ID ($PROJECT_ID)."
         echo "Staging and production must be different Google projects."
@@ -104,6 +120,11 @@ if [ -f "$OTHER_FILE" ]; then
             echo "❌ $ENV_FILE and $OTHER_FILE use the same database ($DB_NAME)."
             exit 1
         fi
+    fi
+    if [ -n "$OTHER_BUCKET" ] && [ "$OTHER_BUCKET" = "$STORAGE_PATH" ]; then
+        echo "❌ $ENV_FILE and $OTHER_FILE use the same media bucket ($STORAGE_PATH)."
+        echo "Staging and production must use different buckets."
+        exit 1
     fi
 fi
 

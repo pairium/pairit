@@ -109,7 +109,7 @@ Two cloud environments. Local dev still uses `.env`. The deploy script never sou
 | Lab | https://lab-823036187164.us-central1.run.app | https://lab-pdxzcarxcq-uc.a.run.app |
 | Manager | https://manager-823036187164.us-central1.run.app | https://manager-pdxzcarxcq-uc.a.run.app |
 
-- Staging and production must use different `PROJECT_ID` values, OAuth clients, and buckets. The script stops if the two env files share a project or a database.
+- Staging and production must use different `PROJECT_ID` values, OAuth clients, and buckets. The script stops if the two env files share a project, a database, or a media bucket.
 - A staging deploy refuses a database whose name does not contain `staging`. A production deploy refuses a database whose name contains `staging`.
 - `bash scripts/test.sh staging` and `bash scripts/test.sh production` check the Cloud Run services named `manager` and `lab`.
 - Deploy staging before production.

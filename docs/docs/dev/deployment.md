@@ -81,7 +81,7 @@ Optional second argument is the region (default `us-central1`).
 
 This script will:
 1.  Source `.env.staging` or `.env.production`. It never sources `.env`.
-2.  Refuse to run if staging would use the live database, or production would use the staging database. It also refuses if the two env files share a `PROJECT_ID` or a database name.
+2.  Refuse to run if staging would use the live database, or production would use the staging database. It also refuses if the two env files share a `PROJECT_ID`, a database name, or a media bucket.
 3.  Enable Artifact Registry.
 4.  Build Docker images using Cloud Build.
 5.  Deploy the `manager` and `lab` services to Cloud Run.
