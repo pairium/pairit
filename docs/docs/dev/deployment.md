@@ -2,6 +2,24 @@
 
 This guide describes how to deploy the Pairit application (Lab Server and Manager Server) to Google Cloud Platform (Cloud Run).
 
+## Staging and production
+
+Local dev uses `.env`. Cloud deploys never read that file.
+
+| | Staging | Production |
+|---|---|---|
+| Command | `./scripts/deploy.sh staging` | `./scripts/deploy.sh production` |
+| Env file | `.env.staging` | `.env.production` |
+| Google project | `pairit-lab-staging` | `pairit-lab` |
+| Database | `pairit-staging` | `pairit` |
+| Media bucket | `pairit-lab-media-staging` | `pairit-lab-media` |
+| Lab | https://lab-823036187164.us-central1.run.app | https://lab-pdxzcarxcq-uc.a.run.app |
+| Manager | https://manager-823036187164.us-central1.run.app | https://manager-pdxzcarxcq-uc.a.run.app |
+
+Staging and production are separate Google projects, separate OAuth apps, and separate media buckets. They share one Atlas cluster, with different database names. The deploy script refuses to run if a staging deploy would use `pairit`, or a production deploy would use a database whose name contains `staging`.
+
+Try a change on staging first. Deploy production only after staging looks right.
+
 ## Prerequisites
 
 - **Google Cloud SDK (`gcloud`)** installed and authenticated.

@@ -97,13 +97,22 @@ Auto-deploys on push to `docs/**`.
 
 ## Deploy
 
-Two cloud environments. Local dev still uses `.env`. The deploy script never sources `.env`.
+Two cloud environments. Local dev still uses `.env`. The deploy script never sources `.env`. Details are in `docs/docs/dev/deployment.md`.
 
-- `bash scripts/deploy.sh staging` loads `.env.staging`. The database name must contain `staging` (Atlas database `pairit-staging`). Staging has its own Google project, OAuth client, and media bucket.
-- `bash scripts/deploy.sh production` loads `.env.production`. The live database is `pairit`. A production deploy refuses a database whose name contains `staging`.
-- Staging and production must use different `PROJECT_ID` values and different database names. The script stops if the two env files match.
-- `STORAGE_PATH` is required in each env file. Do not share the media bucket.
-- `bash scripts/test.sh staging` and `bash scripts/test.sh production` check the Cloud Run services named `manager` and `lab` in that environment's project.
+| | Staging | Production |
+|---|---|---|
+| Command | `bash scripts/deploy.sh staging` | `bash scripts/deploy.sh production` |
+| Env file | `.env.staging` | `.env.production` |
+| Google project | `pairit-lab-staging` | `pairit-lab` |
+| Database | `pairit-staging` | `pairit` |
+| Media bucket | `pairit-lab-media-staging` | `pairit-lab-media` |
+| Lab | https://lab-823036187164.us-central1.run.app | https://lab-pdxzcarxcq-uc.a.run.app |
+| Manager | https://manager-823036187164.us-central1.run.app | https://manager-pdxzcarxcq-uc.a.run.app |
+
+- Staging and production must use different `PROJECT_ID` values, OAuth clients, and buckets. The script stops if the two env files share a project or a database.
+- A staging deploy refuses a database whose name does not contain `staging`. A production deploy refuses a database whose name contains `staging`.
+- `bash scripts/test.sh staging` and `bash scripts/test.sh production` check the Cloud Run services named `manager` and `lab`.
+- Deploy staging before production.
 
 ## Conventions
 
