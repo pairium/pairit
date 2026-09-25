@@ -10,6 +10,23 @@ body {
 	-moz-osx-font-smoothing: grayscale;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+	.page-enter {
+		animation: page-enter 180ms ease-out;
+	}
+}
+
+@keyframes page-enter {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
 code {
 	font-family:
 		source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;

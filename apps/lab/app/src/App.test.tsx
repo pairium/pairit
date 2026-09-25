@@ -11,7 +11,7 @@ import {
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import App from "./App.tsx";
-import { advance, startSession } from "./lib/api";
+import { advance, randomize, startSession } from "./lib/api";
 import type { CompiledConfig } from "./runtime/config";
 import type { Page } from "./runtime/types";
 
@@ -42,6 +42,7 @@ vi.mock("./lib/auth-client", () => ({
 
 const startSessionMock = vi.mocked(startSession);
 const advanceMock = vi.mocked(advance);
+const randomizeMock = vi.mocked(randomize);
 
 function deferred<T>() {
 	let resolve!: (value: T) => void;
@@ -80,6 +81,40 @@ const thanksPage: Page = {
 			type: "text",
 			props: { text: "All done." },
 		},
+		{
+			type: "buttons",
+			props: {
+				buttons: [
+					{
+						id: "again",
+						text: "Again",
+						action: { type: "go_to", target: "intro" },
+					},
+				],
+			},
+		},
+	],
+};
+
+const assignedPage: Page = {
+	id: "assigned",
+	onEnter: [{ type: "randomize", stateKey: "treatment" }],
+	components: [
+		{
+			type: "text",
+			props: { text: "You are assigned." },
+		},
+	],
+};
+
+const endPage: Page = {
+	id: "end",
+	end: true,
+	components: [
+		{
+			type: "text",
+			props: { text: "All done." },
+		},
 	],
 };
 
@@ -88,8 +123,20 @@ const compiledConfig: CompiledConfig = {
 	pages: {
 		intro: introPage,
 		thanks: thanksPage,
+		assigned: assignedPage,
+		end: endPage,
 	},
 };
+
+function startOnIntro() {
+	startSessionMock.mockResolvedValue({
+		sessionId: "sess-1",
+		configId: "test-experiment",
+		config: compiledConfig,
+		currentPageId: "intro",
+		page: introPage,
+	});
+}
 
 function renderApp() {
 	const rootRoute = createRootRoute({
@@ -116,6 +163,7 @@ describe("App", () => {
 	beforeEach(() => {
 		startSessionMock.mockReset();
 		advanceMock.mockReset();
+		randomizeMock.mockReset();
 	});
 
 	test("shows a skeleton while the session starts", async () => {
@@ -131,34 +179,22 @@ describe("App", () => {
 		expect(screen.queryByText("Welcome to the study.")).toBeNull();
 	});
 
-	test("keeps the current page visible while advancing", async () => {
-		startSessionMock.mockResolvedValue({
-			sessionId: "sess-1",
-			configId: "test-experiment",
-			config: compiledConfig,
-			currentPageId: "intro",
-			page: introPage,
-		});
-
+	test("shows the next page before advance resolves", async () => {
+		startOnIntro();
 		const pendingAdvance = deferred<Awaited<ReturnType<typeof advance>>>();
 		advanceMock.mockReturnValue(pendingAdvance.promise);
 
 		renderApp();
-
 		expect(await screen.findByText("Welcome to the study.")).toBeDefined();
 
 		fireEvent.click(screen.getByRole("button", { name: "Continue" }));
 
-		await waitFor(() => {
-			expect(advanceMock).toHaveBeenCalledWith("sess-1", "thanks");
-		});
-
-		expect(screen.getByText("Welcome to the study.")).toBeDefined();
-		expect(screen.queryByText("Loading…")).toBeNull();
-		expect(screen.queryByRole("status", { name: "Loading" })).toBeNull();
-		expect(screen.getByRole("button", { name: "Continue" })).toHaveProperty(
-			"disabled",
-			true,
+		expect(await screen.findByText("All done.")).toBeDefined();
+		expect(screen.queryByText("Welcome to the study.")).toBeNull();
+		expect(advanceMock).toHaveBeenCalledWith(
+			"sess-1",
+			"thanks",
+			expect.any(String),
 		);
 
 		pendingAdvance.resolve({
@@ -169,6 +205,176 @@ describe("App", () => {
 		});
 
 		expect(await screen.findByText("All done.")).toBeDefined();
+	});
+
+	test("retries a failed advance once, then restores the previous page", async () => {
+		startOnIntro();
+		advanceMock.mockRejectedValue(new Error("Failed to advance"));
+
+		renderApp();
+		expect(await screen.findByText("Welcome to the study.")).toBeDefined();
+
+		fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+		expect(await screen.findByText("Failed to advance")).toBeDefined();
+		expect(screen.getByText("Welcome to the study.")).toBeDefined();
+		expect(screen.queryByText("All done.")).toBeNull();
+		expect(advanceMock).toHaveBeenCalledTimes(2);
+		expect(advanceMock.mock.calls[0]?.[2]).toBe(advanceMock.mock.calls[1]?.[2]);
+	});
+
+	test("keeps a page with onEnter hidden until randomize finishes", async () => {
+		startOnIntro();
+		const introToAssigned: Page = {
+			...introPage,
+			components: [
+				introPage.components?.[0] ?? {
+					type: "text",
+					props: { text: "Welcome to the study." },
+				},
+				{
+					type: "buttons",
+					props: {
+						buttons: [
+							{
+								id: "next",
+								text: "Continue",
+								action: { type: "go_to", target: "assigned" },
+							},
+						],
+					},
+				},
+			],
+		};
+		startSessionMock.mockResolvedValue({
+			sessionId: "sess-1",
+			configId: "test-experiment",
+			config: {
+				...compiledConfig,
+				pages: { ...compiledConfig.pages, intro: introToAssigned },
+			},
+			currentPageId: "intro",
+			page: introToAssigned,
+		});
+
+		const pendingAdvance = deferred<Awaited<ReturnType<typeof advance>>>();
+		const pendingRandomize = deferred<Awaited<ReturnType<typeof randomize>>>();
+		advanceMock.mockReturnValue(pendingAdvance.promise);
+		randomizeMock.mockReturnValue(pendingRandomize.promise);
+
+		renderApp();
+		expect(await screen.findByText("Welcome to the study.")).toBeDefined();
+
+		fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+		await waitFor(() => {
+			expect(advanceMock).toHaveBeenCalledWith("sess-1", "assigned");
+		});
+		expect(screen.getByText("Welcome to the study.")).toBeDefined();
+		expect(screen.queryByText("You are assigned.")).toBeNull();
+		expect(screen.getByRole("button", { name: "Continue" })).toHaveProperty(
+			"disabled",
+			true,
+		);
+
+		pendingAdvance.resolve({
+			sessionId: "sess-1",
+			currentPageId: "assigned",
+			page: assignedPage,
+			endedAt: null,
+		});
+
+		await waitFor(() => {
+			expect(randomizeMock).toHaveBeenCalled();
+		});
+		expect(screen.queryByText("You are assigned.")).toBeNull();
+
+		pendingRandomize.resolve({ condition: "control", existing: false });
+
+		expect(await screen.findByText("You are assigned.")).toBeDefined();
 		expect(screen.queryByText("Welcome to the study.")).toBeNull();
+	});
+
+	test("waits for the server before showing an end page", async () => {
+		const introToEnd: Page = {
+			...introPage,
+			components: [
+				introPage.components?.[0] ?? {
+					type: "text",
+					props: { text: "Welcome to the study." },
+				},
+				{
+					type: "buttons",
+					props: {
+						buttons: [
+							{
+								id: "next",
+								text: "Continue",
+								action: { type: "go_to", target: "end" },
+							},
+						],
+					},
+				},
+			],
+		};
+		startSessionMock.mockResolvedValue({
+			sessionId: "sess-1",
+			configId: "test-experiment",
+			config: {
+				...compiledConfig,
+				pages: { ...compiledConfig.pages, intro: introToEnd },
+			},
+			currentPageId: "intro",
+			page: introToEnd,
+		});
+
+		const pendingAdvance = deferred<Awaited<ReturnType<typeof advance>>>();
+		advanceMock.mockReturnValue(pendingAdvance.promise);
+
+		renderApp();
+		expect(await screen.findByText("Welcome to the study.")).toBeDefined();
+
+		fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+		await waitFor(() => {
+			expect(advanceMock).toHaveBeenCalledWith("sess-1", "end");
+		});
+		expect(screen.getByText("Welcome to the study.")).toBeDefined();
+		expect(screen.queryByText("Thanks, that's it.")).toBeNull();
+
+		pendingAdvance.resolve({
+			sessionId: "sess-1",
+			currentPageId: "end",
+			page: endPage,
+			endedAt: "2026-09-25T00:00:00.000Z",
+		});
+
+		expect(await screen.findByText("Thanks, that's it.")).toBeDefined();
+		expect(screen.queryByText("Welcome to the study.")).toBeNull();
+	});
+
+	test("ignores a second click while advance is in flight", async () => {
+		startOnIntro();
+		const pendingAdvance = deferred<Awaited<ReturnType<typeof advance>>>();
+		advanceMock.mockReturnValue(pendingAdvance.promise);
+
+		renderApp();
+		expect(await screen.findByText("Welcome to the study.")).toBeDefined();
+
+		fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+		expect(await screen.findByRole("button", { name: "Again" })).toBeDefined();
+
+		fireEvent.click(screen.getByRole("button", { name: "Again" }));
+
+		expect(advanceMock).toHaveBeenCalledTimes(1);
+
+		pendingAdvance.resolve({
+			sessionId: "sess-1",
+			currentPageId: "thanks",
+			page: thanksPage,
+			endedAt: null,
+		});
+
+		expect(await screen.findByText("All done.")).toBeDefined();
 	});
 });
