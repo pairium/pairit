@@ -169,7 +169,7 @@ export function PageRenderer({
 		);
 
 		return (
-			<div className="flex justify-center">
+			<div key={page.id} className="page-enter flex justify-center">
 				<div className="w-full max-w-6xl space-y-4">
 					<div className="grid h-[calc(100vh-14rem)] grid-cols-2 gap-4">
 						<Card className="overflow-hidden">
@@ -218,7 +218,7 @@ export function PageRenderer({
 		[];
 
 	return (
-		<div className="flex justify-center">
+		<div key={page.id} className="page-enter flex justify-center">
 			<Card className="w-full max-w-3xl">
 				<CardContent className="space-y-8">
 					{visibleComponents.length ? (
