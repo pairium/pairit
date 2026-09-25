@@ -7,7 +7,7 @@ This guide describes how to deploy the Pairit application (Lab Server and Manage
 - **Google Cloud SDK (`gcloud`)** installed and authenticated.
 - **Bun** runtime installed locally.
 - **Docker** installed (for Cloud Build only, not needed for local dev).
-- Access to the GCP project (`pairit-lab-staging`).
+- Access to the staging and production GCP projects. They are separate projects.
 
 ## Directory Structure
 Key deployment files are organized as follows:
@@ -26,7 +26,10 @@ Key deployment files are organized as follows:
 ## Configuration
 
 1.  **Environment Variables**:
-    *   Copy `env.template` to `.env` and fill in values (local defaults work as-is; set real values for production).
+    *   Local dev: copy `env.template` to `.env`.
+    *   Cloud: copy `env.template` to `.env.staging` and `.env.production`. These files stay on your machine (they are gitignored).
+    *   Staging and production each need their own Google project, OAuth client, `AUTH_SECRET`, `CREDENTIALS_ENCRYPTION_KEY`, and `STORAGE_PATH` (media bucket). Do not share those.
+    *   Staging `MONGODB_URI` must name a database that contains `staging` (Atlas database `pairit-staging`). Production uses the `pairit` database.
     *   Required variables (see references):
         *   `NODE_ENV`: `development` or `production`. Controls CORS and debug endpoints.
         *   `PROJECT_ID`: GCP Project ID.
@@ -44,25 +47,27 @@ Key deployment files are organized as follows:
 To deploy both services to Cloud Run:
 
 ```bash
-./scripts/deploy.sh [PROJECT_ID] [REGION]
+./scripts/deploy.sh staging
+./scripts/deploy.sh production
 ```
 
+Optional second argument is the region (default `us-central1`).
+
 This script will:
-1.  Source variables from `.env`.
-2.  Enable Artifact Registry.
-3.  Build Docker images using Cloud Build.
-4.  Deploy services to Cloud Run.
+1.  Source `.env.staging` or `.env.production`. It never sources `.env`.
+2.  Refuse to run if staging would use the live database, or production would use the staging database. It also refuses if the two env files share a `PROJECT_ID` or a database name.
+3.  Enable Artifact Registry.
+4.  Build Docker images using Cloud Build.
+5.  Deploy the `manager` and `lab` services to Cloud Run.
 
 ## Verification
 
 After deployment, verify the services are healthy and run integration tests using the unified runner:
 
 ```bash
-# Verify Cloud Deployment
-./scripts/test.sh cloud
-
-# Verify Local Deployment
 ./scripts/test.sh local
+./scripts/test.sh staging
+./scripts/test.sh production
 ```
 
 
@@ -82,16 +87,17 @@ We use **Google Cloud Build** (`cloudbuild.yaml` files) instead of simple `docke
 ### 3. Google OAuth Configuration Details
 When configuring the OAuth Consent Screen and Credentials:
 - **Application Type**: Web Application.
-- **Authorized Origins**: The actual Cloud Run URLs (e.g., `https://pairit-lab-[PROJECT_HASH].us-central1.run.app`).
+- **Authorized Origins**: The Cloud Run URLs (`https://manager-<projectNumber>.<region>.run.app` and `https://lab-<projectNumber>.<region>.run.app`).
 - **Authorized Redirect URIs**: Must include the callback path: `/api/auth/callback/google`.
 - **Note**: If you re-deploy to a new URL, you **MUST** update these URIs in the Google Cloud Console.
 
 ## Deployment Script Internals (`deploy.sh`)
 
 The `scripts/deploy.sh` script automates several manual steps:
-1.  **Context Switching**: It changes directory to the project root to run builds, ensuring the full monorepo context is available.
-2.  **Artifact Registry**: Checks for and creates the `pairit-repo` repository if it doesn't exist.
-3.  **Dynamic Envs**: It injects the *actual* Cloud Run URLs into `AUTH_BASE_URL` environment variables during deployment. This prevents the "redirect mismatch" errors common with authentication.
+1.  **Environment file**: `staging` loads `.env.staging`. `production` loads `.env.production`. The database name is read from the Mongo address the same way `packages/db` reads it.
+2.  **Context Switching**: It changes directory to the project root to run builds, ensuring the full monorepo context is available.
+3.  **Artifact Registry**: Checks for and creates the `pairit-repo` repository if it doesn't exist.
+4.  **Dynamic Envs**: It injects the *actual* Cloud Run URLs into `AUTH_BASE_URL` environment variables during deployment. This prevents the "redirect mismatch" errors common with authentication.
 
 ## Troubleshooting
 

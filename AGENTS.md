@@ -22,7 +22,10 @@ bun run build                   # Build all packages
 bun run test                    # Run tests (bun test for packages, vitest for lab-app)
 biome check                     # Lint and format
 tsc --noEmit                    # Type check
-bash scripts/deploy.sh          # Deploy to Google Cloud Run (requires gcloud auth)
+bash scripts/deploy.sh staging      # Deploy staging (loads .env.staging)
+bash scripts/deploy.sh production   # Deploy production (loads .env.production)
+bash scripts/test.sh staging        # Health + integration tests against staging
+bash scripts/test.sh production     # Health + integration tests against production
 ```
 
 Filter by package: `bun run --filter lab-app dev`
@@ -91,6 +94,16 @@ gh workflow run docs.yml          # Manually deploy docs
 ```
 
 Auto-deploys on push to `docs/**`.
+
+## Deploy
+
+Two cloud environments. Local dev still uses `.env`. The deploy script never sources `.env`.
+
+- `bash scripts/deploy.sh staging` loads `.env.staging`. The database name must contain `staging` (Atlas database `pairit-staging`). Staging has its own Google project, OAuth client, and media bucket.
+- `bash scripts/deploy.sh production` loads `.env.production`. The live database is `pairit`. A production deploy refuses a database whose name contains `staging`.
+- Staging and production must use different `PROJECT_ID` values and different database names. The script stops if the two env files match.
+- `STORAGE_PATH` is required in each env file. Do not share the media bucket.
+- `bash scripts/test.sh staging` and `bash scripts/test.sh production` check the Cloud Run services named `manager` and `lab` in that environment's project.
 
 ## Conventions
 

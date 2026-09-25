@@ -135,11 +135,13 @@ We use Google Cloud Run for a serverless, scalable deployment.
 ### Deployment & Testing
 
 **Deployment**
-- **Cloud**: `./scripts/deploy.sh [PROJECT_ID] [REGION]` (deploys to Cloud Run)
+- **Staging**: `./scripts/deploy.sh staging` (loads `.env.staging`, deploys to Cloud Run)
+- **Production**: `./scripts/deploy.sh production` (loads `.env.production`, deploys to Cloud Run)
 
 **Testing**
 - **Local**: `./scripts/test.sh local` (verifies health + runs integration tests)
-- **Cloud**: `./scripts/test.sh cloud` (discovers URLs + runs integration tests against prod)
+- **Staging**: `./scripts/test.sh staging`
+- **Production**: `./scripts/test.sh production`
 
 ---
 

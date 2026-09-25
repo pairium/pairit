@@ -3,8 +3,11 @@ set -e
 
 # scripts/test.sh
 # Unified test runner for Pairit
-# Usage: ./scripts/test.sh [env]
-# env options: local, cloud (default: local)
+# Usage: ./scripts/test.sh [local|staging|production]
+# default: local
+#
+# staging    loads .env.staging    and checks the staging Cloud Run services
+# production loads .env.production and checks the production Cloud Run services
 
 ENV=${1:-local}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -29,40 +32,45 @@ if [ "$ENV" == "local" ]; then
         export PAIRIT_LAB_URL="http://localhost:3001"
     fi
 
-elif [ "$ENV" == "cloud" ]; then
+elif [ "$ENV" == "staging" ] || [ "$ENV" == "production" ]; then
     # --- Cloud Setup ---
-    # Load project ID from standard .env if available
-    if [ -f "$PROJECT_ROOT/.env" ]; then
-        set -a
-        source "$PROJECT_ROOT/.env"
-        set +a
+    ENV_FILE="$PROJECT_ROOT/.env.$ENV"
+    if [ ! -f "$ENV_FILE" ]; then
+        echo -e "${RED}❌ Missing .env.$ENV${NC}"
+        exit 1
     fi
-    
-    PROJECT_ID=${PROJECT_ID:-"pairit-lab-staging"}
+    set -a
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    set +a
+
+    if [ -z "$PROJECT_ID" ]; then
+        echo -e "${RED}❌ PROJECT_ID is not set in .env.$ENV${NC}"
+        exit 1
+    fi
     REGION=${REGION:-"us-central1"}
-    
-    echo "☁️  Targeting Cloud Project: $PROJECT_ID ($REGION)"
-    
-    # Discover URLs
+
+    echo "☁️  Targeting $ENV: $PROJECT_ID ($REGION)"
+
     echo "🔍 Discovering Service URLs..."
-    
-    MANAGER_URL=$(gcloud run services list --filter="SERVICE:pairit-manager" --project "$PROJECT_ID" --region "$REGION" --format="value(URL)" | head -n1)
-    LAB_URL=$(gcloud run services list --filter="SERVICE:pairit-lab" --project "$PROJECT_ID" --region "$REGION" --format="value(URL)" | head -n1)
-    
+
+    MANAGER_URL=$(gcloud run services describe manager --project "$PROJECT_ID" --region "$REGION" --format='value(status.url)')
+    LAB_URL=$(gcloud run services describe lab --project "$PROJECT_ID" --region "$REGION" --format='value(status.url)')
+
     if [ -z "$MANAGER_URL" ] || [ -z "$LAB_URL" ]; then
         echo -e "${RED}❌ Could not discover service URLs. Are services deployed?${NC}"
         exit 1
     fi
-    
+
     echo "   Manager: $MANAGER_URL"
     echo "   Lab:     $LAB_URL"
-    
+
     export PAIRIT_API_URL="$MANAGER_URL"
     export PAIRIT_LAB_URL="$LAB_URL"
-    
+
 else
     echo "Unknown environment: $ENV"
-    echo "Usage: ./scripts/test.sh [local|cloud]"
+    echo "Usage: ./scripts/test.sh [local|staging|production]"
     exit 1
 fi
 
