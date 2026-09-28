@@ -42,6 +42,23 @@ function mergeNestedUpdates(
 	return next;
 }
 
+function canSwapOptimistically(nextPage: Page): boolean {
+	return !nextPage.onEnter?.length && !nextPage.end;
+}
+
+async function confirmAdvance(sessionId: string, target: string) {
+	const idempotencyKey = crypto.randomUUID();
+	try {
+		return await advance(sessionId, target, idempotencyKey);
+	} catch (error) {
+		try {
+			return await advance(sessionId, target, idempotencyKey);
+		} catch {
+			throw error;
+		}
+	}
+}
+
 async function executeOnEnter(
 	sessionId: string,
 	actions: OnEnterAction[],
@@ -208,11 +225,22 @@ export default function App() {
 			return;
 		}
 
+		const optimistic = canSwapOptimistically(nextPage);
+		const previousPage = page;
+
 		transitioningRef.current = true;
-		setTransitioning(true);
+		if (!optimistic) setTransitioning(true);
 		setError(null);
+
+		if (optimistic && previousPage) {
+			setPage(nextPage);
+			setEndRedirectUrl(nextPage.endRedirectUrl ?? null);
+		}
+
 		try {
-			const r = await advance(sessionId, target);
+			const r = optimistic
+				? await confirmAdvance(sessionId, target)
+				: await advance(sessionId, target);
 			if (r.session_state) setSessionState(r.session_state);
 
 			// Execute onEnter actions before showing the page
@@ -225,6 +253,10 @@ export default function App() {
 			setEndRedirectUrl(nextPage.endRedirectUrl ?? null);
 			setEndedAt(r.endedAt ?? null);
 		} catch (error: unknown) {
+			if (optimistic && previousPage) {
+				setPage(previousPage);
+				setEndRedirectUrl(previousPage.endRedirectUrl ?? null);
+			}
 			setError(error instanceof Error ? error.message : "Failed to advance");
 		} finally {
 			transitioningRef.current = false;

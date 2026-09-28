@@ -180,10 +180,14 @@ export class LabClient {
 		return r.json();
 	}
 
-	async advance(sessionId: string, target: string): Promise<GetResponse> {
+	async advance(
+		sessionId: string,
+		target: string,
+		idempotencyKey?: string,
+	): Promise<GetResponse> {
 		const r = await this.jsonRequest(`/sessions/${sessionId}/advance`, {
 			target,
-			idempotencyKey: crypto.randomUUID(),
+			idempotencyKey: idempotencyKey ?? crypto.randomUUID(),
 		});
 		if (!r.ok) throw new Error("Failed to advance");
 		return r.json();
