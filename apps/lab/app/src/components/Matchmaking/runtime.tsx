@@ -45,6 +45,8 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 		const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 		const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 		const hasJoinedRef = useRef(false);
+		const statusRef = useRef<MatchmakingStatus>("connecting");
+		statusRef.current = status;
 
 		// Apply defaults for optional props
 		const poolId = component.props.poolId ?? "default";
@@ -205,6 +207,54 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 				unsubscribeTimeout();
 			};
 		}, [sessionId, handleMatchFound, handleMatchTimeout]);
+
+		// Rejoin when the stream reconnects while waiting. The server may have
+		// dropped us from the pool (restart, long disconnect) or matched us while
+		// the stream was down, in which case match_found was never delivered.
+		useEffect(() => {
+			if (!sessionId) return;
+			const currentSessionId = sessionId;
+
+			return sseClient.on("connected", () => {
+				if (statusRef.current !== "waiting") return;
+				const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+				const remaining = timeoutSeconds - elapsed;
+				if (remaining <= 0) return;
+
+				joinMatchmaking(currentSessionId, {
+					poolId,
+					num_users: targetCount,
+					timeoutSeconds: remaining,
+					timeoutTarget,
+					assignmentType,
+					conditions,
+				})
+					.then((result) => {
+						if (statusRef.current !== "waiting") return;
+						if (result.status === "matched") {
+							handleMatchFound({
+								groupId: result.groupId,
+								treatment: result.treatment,
+								memberCount: targetCount,
+							});
+						} else {
+							setCurrentCount(result.position);
+						}
+					})
+					.catch((error) => {
+						console.error("[Matchmaking] Failed to rejoin:", error);
+					});
+			});
+		}, [
+			sessionId,
+			poolId,
+			targetCount,
+			timeoutSeconds,
+			timeoutTarget,
+			assignmentType,
+			conditions,
+			handleMatchFound,
+		]);
 
 		// Handle cancel
 		const handleCancel = useCallback(async () => {

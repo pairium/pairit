@@ -4,7 +4,7 @@
  */
 
 import { getGroupsCollection, getSessionsCollection } from "./db";
-import { broadcastToSession } from "./sse";
+import { broadcastToSession, getConnectionCount } from "./sse";
 import { assignTreatment } from "./treatment-assignment";
 
 export type PoolConfig = {
@@ -143,17 +143,28 @@ export function removeSession(
 	return { status: "cancelled" };
 }
 
+// How long a waiting session may stay disconnected before leaving its pool.
+// EventSource reconnects within seconds, so brief drops keep the spot.
+export const DISCONNECT_GRACE_MS = 30_000;
+
 /**
- * Handle SSE disconnect - clean up session from any pools
+ * Handle SSE disconnect - remove the session from its pool unless it
+ * reconnects within the grace period
  */
-export function handleDisconnect(sessionId: string): void {
-	const poolKey = sessionPools.get(sessionId);
-	if (poolKey) {
-		removeSession(sessionId);
-		console.log(
-			`[Matchmaking] Session ${sessionId} disconnected, removed from pool`,
-		);
-	}
+export function handleDisconnect(
+	sessionId: string,
+	graceMs = DISCONNECT_GRACE_MS,
+): void {
+	if (!sessionPools.has(sessionId)) return;
+
+	setTimeout(() => {
+		if (getConnectionCount(sessionId) > 0) return;
+		if (removeSession(sessionId).status === "cancelled") {
+			console.log(
+				`[Matchmaking] Session ${sessionId} disconnected, removed from pool`,
+			);
+		}
+	}, graceMs);
 }
 
 /**

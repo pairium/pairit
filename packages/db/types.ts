@@ -88,6 +88,8 @@ export type GroupDocument = {
 	poolId: string;
 	memberSessionIds: string[];
 	treatment: string;
+	// Group-scoped randomization results, keyed by stateKey (first writer wins)
+	assignments?: Record<string, string>;
 	matchedAt: Date;
 	status: "active" | "completed";
 };

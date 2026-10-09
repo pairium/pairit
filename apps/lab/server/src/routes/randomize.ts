@@ -4,7 +4,7 @@
  */
 
 import { Elysia, t } from "elysia";
-import { getSessionsCollection } from "../lib/db";
+import { getGroupsCollection, getSessionsCollection } from "../lib/db";
 import { assignTreatment } from "../lib/treatment-assignment";
 import { loadSession } from "./sessions";
 
@@ -85,12 +85,27 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 
 			// No member has an assignment yet — assign and propagate to all members
 			const balanceKey = `${session.configId}:${stateKey}:group`;
-			const treatment = await assignTreatment(
+			const candidate = await assignTreatment(
 				balanceKey,
 				conditions,
 				assignmentType,
 				session.simulated === true,
 			);
+
+			// Claim the assignment on the group document so members randomizing
+			// at the same time all end up with the first writer's condition
+			const assignmentPath = `assignments.${stateKey}`;
+			const groupsCollection = await getGroupsCollection();
+			await groupsCollection.updateOne(
+				{ groupId, [assignmentPath]: { $exists: false } },
+				{ $set: { [assignmentPath]: candidate } },
+			);
+			const group = await groupsCollection.findOne(
+				{ groupId },
+				{ projection: { assignments: 1 } },
+			);
+			// Groups always exist after matchmaking; fall back if one is missing
+			const treatment = group?.assignments?.[stateKey] ?? candidate;
 
 			await sessionsCollection.updateMany(
 				{ "session_state.group_id": groupId },

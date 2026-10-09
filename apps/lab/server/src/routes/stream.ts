@@ -14,7 +14,7 @@ import {
 } from "../lib/sse";
 import { loadSession } from "./sessions";
 
-const HEARTBEAT_INTERVAL = 30000; // 30 seconds
+const HEARTBEAT_INTERVAL = 15000; // 15 seconds — keeps idle proxies from closing the stream
 
 function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));

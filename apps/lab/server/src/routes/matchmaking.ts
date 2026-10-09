@@ -5,6 +5,7 @@
  */
 
 import { Elysia, t } from "elysia";
+import { getGroupsCollection } from "../lib/db";
 import {
 	enqueueSession,
 	getPoolStatus,
@@ -31,6 +32,22 @@ export const matchmakingRoutes = new Elysia({ prefix: "/sessions" })
 				assignmentType,
 				conditions,
 			} = body;
+
+			// Already grouped in this pool (e.g. a rejoin after a dropped stream
+			// missed match_found) — report the match instead of re-queueing
+			const groupsCollection = await getGroupsCollection();
+			const existingGroup = await groupsCollection.findOne({
+				configId: session.configId,
+				poolId,
+				memberSessionIds: id,
+			});
+			if (existingGroup) {
+				return {
+					status: "matched",
+					groupId: existingGroup.groupId,
+					treatment: existingGroup.treatment,
+				};
+			}
 
 			const result = await enqueueSession(
 				id,

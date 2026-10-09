@@ -105,6 +105,7 @@ export async function ensureIndexes(): Promise<void> {
 	await database
 		.collection("groups")
 		.createIndex({ configId: 1, matchedAt: 1, _id: 1 });
+	await database.collection("groups").createIndex({ memberSessionIds: 1 });
 
 	await database
 		.collection("sessions")
