@@ -244,7 +244,13 @@ function RuntimeComponentWrapper({
 	context: RuntimeComponentContext;
 }) {
 	const renderer = getComponentRenderer(component.type);
-	return <>{renderer({ component, context })}</>;
+	// A component written without a `props:` block compiles with no props;
+	// renderers read component.props.* directly
+	const withProps = useMemo(
+		() => (component.props ? component : { ...component, props: {} }),
+		[component],
+	) as ComponentInstance;
+	return <>{renderer({ component: withProps, context })}</>;
 }
 
 function renderComponentInstance(
