@@ -1,6 +1,6 @@
 # Running Large Studies
 
-Pairit handles about **100 participants active at the same time**. Total participants per study are not limited. What counts is how many people are mid-experiment at once.
+Pairit handles about **150 participants active at the same time**. Total participants per study are not limited. What counts is how many people are mid-experiment at once.
 
 Above that, pages may load slowly. Matchmaking and chat are the most sensitive to it. If you plan a study with more concurrent participants, contact the Pairit team before you launch.
 
