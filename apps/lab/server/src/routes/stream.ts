@@ -20,7 +20,7 @@ const HEARTBEAT_INTERVAL = 15000; // 15 seconds — keeps idle proxies from clos
 // disconnects, so the server never sees the client leave. End every stream
 // after this long; EventSource reconnects within seconds. Without a cap,
 // abandoned streams hold a concurrency slot until the request timeout.
-const MAX_STREAM_DURATION = 5 * 60 * 1000;
+const MAX_STREAM_DURATION = 2 * 60 * 1000;
 
 function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
