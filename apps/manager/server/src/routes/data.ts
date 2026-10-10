@@ -22,6 +22,7 @@ import {
 	getSessionsCollection,
 	getWorkspaceDocumentsCollection,
 } from "../lib/db";
+import { toSessionExport } from "../lib/session-export";
 
 const paginationQuerySchema = t.Object({
 	since: t.Optional(t.String()),
@@ -85,18 +86,7 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				.limit(limit)
 				.toArray();
 
-			const exportData = sessions.map((session) => ({
-				sessionId: session.id,
-				configId: session.configId,
-				currentPageId: session.currentPageId,
-				status: session.endedAt ? "completed" : "in_progress",
-				session_state: session.session_state ?? {},
-				prolific: session.prolific ?? null,
-				userId: session.userId ?? null,
-				createdAt: session.createdAt?.toISOString() ?? null,
-				updatedAt: session.updatedAt?.toISOString() ?? null,
-				endedAt: session.endedAt ?? null,
-			}));
+			const exportData = sessions.map(toSessionExport);
 
 			const last = sessions.at(-1);
 			const nextCursor =

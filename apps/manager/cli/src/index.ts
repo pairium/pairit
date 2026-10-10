@@ -24,6 +24,7 @@ type ExperimentPage = {
 
 type ExperimentConfig = {
 	schema_version?: string;
+	name?: string;
 	initialPageId?: string;
 	pages?: ExperimentPage[];
 	agents?: unknown[];
@@ -37,7 +38,7 @@ const program = new Command();
 program
 	.name("pairit")
 	.description("CLI for Pairit experiment configs")
-	.version("0.2.0")
+	.version("0.3.0")
 	.option(
 		"--env <name>",
 		"Target environment: staging or production",
@@ -113,7 +114,14 @@ configCommand
 configCommand
 	.command("upload")
 	.argument("<config>", "Path to YAML config")
-	.option("--config-id <configId>", "Config id (defaults to hash)")
+	.option(
+		"--name <name>",
+		"Config name (defaults to the YAML name field, then the file name)",
+	)
+	.option(
+		"--config-id <configId>",
+		"Update an existing config by id (configs created before names)",
+	)
 	.option("--metadata <json>", "Optional metadata JSON string")
 	.option("--openai-api-key <key>", "OpenAI API key for this experiment")
 	.option("--anthropic-api-key <key>", "Anthropic API key for this experiment")
@@ -135,10 +143,36 @@ configCommand
 					`✓ Attached ${path.basename(file.src)} (${formatBytes(file.bytes)})`,
 				);
 			}
-			console.log(`✓ Uploaded ${payload.configId} (${checksum})`);
+			const result = response as UploadResponse;
+			const label = result.name
+				? `${result.name} (${result.configId})`
+				: result.configId;
+			if (result.created) {
+				console.log(`✓ Created ${label}, revision ${result.revision}`);
+			} else if (result.previousRevision != null) {
+				console.log(
+					`✓ Uploaded ${label}, revision ${result.previousRevision} → ${result.revision}`,
+				);
+			} else {
+				console.log(
+					`✓ Uploaded ${label}, revision ${result.revision} (config unchanged)`,
+				);
+			}
+			console.log(`  checksum ${checksum}`);
+			if (
+				result.previousRevision != null &&
+				result.previousRevisionSessionCount > 0
+			) {
+				const n = result.previousRevisionSessionCount;
+				console.warn(
+					`⚠ ${n} participant${n === 1 ? "" : "s"} ran revision ${result.previousRevision}. New participants will get revision ${result.revision}.`,
+				);
+				console.warn(
+					"  Exports record each session's configRevision. For a different study, upload under a new --name instead.",
+				);
+			}
 			const labUrl = getLabUrl();
-			console.log(`Survey Link: ${labUrl}/${payload.configId}`);
-			console.log(JSON.stringify(response, null, 2));
+			console.log(`Survey Link: ${labUrl}/${result.configId}`);
 		} catch (error) {
 			reportCliError("Upload failed", error);
 		}
@@ -166,12 +200,67 @@ configCommand
 				const filename = metadata?.originalFilename
 					? ` | file=${metadata.originalFilename}`
 					: "";
+				const name = config.name ? `name=${config.name} | ` : "";
+				const revision =
+					config.revision != null ? ` | revision=${config.revision}` : "";
 				console.log(
-					`configId=${config.configId} | owner=${config.owner} | checksum=${config.checksum}${filename} | updated=${config.updatedAt ?? "n/a"}`,
+					`${name}configId=${config.configId}${revision} | owner=${config.owner} | checksum=${config.checksum}${filename} | updated=${config.updatedAt ?? "n/a"}`,
 				);
 			});
 		} catch (error) {
 			reportCliError("List failed", error);
+		}
+	});
+
+configCommand
+	.command("history")
+	.argument("<configId>", "Config id")
+	.option("--revision <n>", "Download one revision's compiled config")
+	.option("--out <file>", "With --revision, write the config to this file")
+	.description("List a config's revisions, or download one")
+	.action(async (configId: string, options: HistoryOptions) => {
+		try {
+			const base = `/configs/${encodeURIComponent(configId)}/revisions`;
+			if (options.revision) {
+				const revision = (await callFunctions(
+					`${base}/${encodeURIComponent(options.revision)}`,
+					{ method: "GET" },
+				)) as { config?: unknown };
+				const json = JSON.stringify(revision.config, null, 2);
+				if (options.out) {
+					await writeFile(options.out, json, "utf8");
+					console.log(`✓ Wrote revision ${options.revision} to ${options.out}`);
+				} else {
+					console.log(json);
+				}
+				return;
+			}
+
+			const history = (await callFunctions(base, { method: "GET" })) as {
+				name: string | null;
+				currentRevision: number | null;
+				revisions: {
+					revision: number;
+					checksum: string | null;
+					createdAt: string | null;
+					sessionCount: number;
+				}[];
+			};
+			if (!history.revisions.length) {
+				console.log(
+					"No revisions recorded yet. They start with the next upload.",
+				);
+				return;
+			}
+			for (const r of history.revisions) {
+				const current =
+					r.revision === history.currentRevision ? " (current)" : "";
+				console.log(
+					`revision=${r.revision}${current} | sessions=${r.sessionCount} | uploaded=${r.createdAt ?? "n/a"} | checksum=${r.checksum ?? "n/a"}`,
+				);
+			}
+		} catch (error) {
+			reportCliError("History failed", error);
 		}
 	});
 
@@ -394,6 +483,7 @@ program.parseAsync(process.argv).catch((err) => {
 });
 
 type UploadOptions = {
+	name?: string;
 	configId?: string;
 	metadata?: string;
 	openaiApiKey?: string;
@@ -401,6 +491,20 @@ type UploadOptions = {
 };
 
 type ListOptions = Record<string, never>;
+
+type HistoryOptions = {
+	revision?: string;
+	out?: string;
+};
+
+type UploadResponse = {
+	configId: string;
+	name: string | null;
+	revision: number;
+	created: boolean;
+	previousRevision: number | null;
+	previousRevisionSessionCount: number;
+};
 
 type DeleteOptions = {
 	force?: boolean;
@@ -423,6 +527,8 @@ type AllowlistEntry = {
 
 type ConfigListEntry = {
 	configId: string;
+	name?: string | null;
+	revision?: number | null;
 	owner: string;
 	checksum: string;
 	updatedAt?: string | null;
@@ -466,6 +572,12 @@ async function lintConfig(configPath: string): Promise<HtmlSourceInfo[]> {
 	const errors: string[] = [];
 	if (!config.schema_version) {
 		errors.push("missing schema_version");
+	}
+	if (
+		config.name !== undefined &&
+		(typeof config.name !== "string" || !config.name.trim())
+	) {
+		errors.push("name must be a non-empty string");
 	}
 	if (!config.initialPageId) {
 		errors.push("missing initialPageId");
@@ -578,7 +690,8 @@ async function compileConfig(configPath: string): Promise<string> {
 }
 
 type UploadPayload = {
-	configId: string;
+	name?: string;
+	configId?: string;
 	checksum: string;
 	metadata?: Record<string, unknown> | null;
 	config: unknown;
@@ -612,7 +725,12 @@ async function buildUploadPayload(
 		.digest();
 	const checksum = hashBuffer.toString("hex");
 
-	const configId = options.configId ?? toBase64Url(hashBuffer.subarray(0, 12));
+	// New configs are created by name; --config-id only updates an existing
+	// config, and then a name is sent only when set explicitly.
+	const explicitName = options.name ?? sourceConfig.name;
+	const name = options.configId
+		? explicitName
+		: (explicitName ?? path.basename(configPath, path.extname(configPath)));
 
 	const metadata = options.metadata
 		? (JSON.parse(options.metadata) as Record<string, unknown>)
@@ -632,7 +750,8 @@ async function buildUploadPayload(
 
 	return {
 		payload: {
-			configId,
+			...(name && { name }),
+			...(options.configId && { configId: options.configId }),
 			checksum,
 			metadata: metadata ?? null,
 			config: parsed,
@@ -961,6 +1080,10 @@ type SessionExport = {
 	session_state: Record<string, unknown>;
 	prolific: { prolificPid: string; studyId: string; sessionId: string } | null;
 	userId: string | null;
+	configRevision: number | null;
+	configChecksum: string | null;
+	labVersion: string | null;
+	labRevision: string | null;
 	createdAt: string | null;
 	updatedAt: string | null;
 	endedAt: string | null;

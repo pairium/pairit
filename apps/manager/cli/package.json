@@ -1,6 +1,6 @@
 {
   "name": "pairit",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "CLI for the Pairit behavioral science experiment platform",
   "type": "module",
   "bin": {
@@ -22,7 +22,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/pairium/pairit.git",
+    "url": "git+https://github.com/pairium/pairit.git",
     "directory": "apps/manager/cli"
   },
   "homepage": "https://docs.pairium.ai/pairit/",

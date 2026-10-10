@@ -14,6 +14,7 @@ import {
 	getIdempotencyCollection,
 	getSessionsCollection,
 } from "../lib/db";
+import { buildProvenance, type Provenance } from "../lib/provenance";
 import { hasOverlappingPaths } from "../lib/session-state";
 import { resolveSimulationFields } from "../lib/simulation";
 import type {
@@ -67,6 +68,7 @@ async function loadConfig(configId: string): Promise<{
 	config: Session["config"];
 	allowRetake: boolean;
 	requireAuth: boolean;
+	provenance: Provenance;
 } | null> {
 	const collection = await getConfigsCollection();
 	const data = await collection.findOne({ configId });
@@ -77,6 +79,7 @@ async function loadConfig(configId: string): Promise<{
 				config: data.config as Session["config"],
 				allowRetake: data.allowRetake ?? false,
 				requireAuth: data.requireAuth ?? true,
+				provenance: buildProvenance(data),
 			};
 		}
 	}
@@ -128,6 +131,10 @@ export async function loadSession(sessionId: string): Promise<Session | null> {
 		simulated: data.simulated,
 		simulationRunId: data.simulationRunId,
 		personaId: data.personaId,
+		configRevision: data.configRevision ?? null,
+		configChecksum: data.configChecksum ?? null,
+		labVersion: data.labVersion ?? null,
+		labRevision: data.labRevision ?? null,
 		createdAt: data.createdAt,
 		updatedAt: data.updatedAt,
 	};
@@ -153,6 +160,10 @@ async function createSession(
 			personaId: session.personaId,
 			prolificPid: session.prolific?.prolificPid,
 		}),
+		configRevision: session.configRevision ?? null,
+		configChecksum: session.configChecksum ?? null,
+		labVersion: session.labVersion ?? null,
+		labRevision: session.labRevision ?? null,
 		createdAt: session.createdAt ?? now,
 		updatedAt: now,
 	};
@@ -250,7 +261,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				return { error: "config_not_found" };
 			}
 
-			const { config, allowRetake, requireAuth } = loaded;
+			const { config, allowRetake, requireAuth, provenance } = loaded;
 			// Public configs never look up the signed-in user.
 			const user = requireAuth ? await getAuthUser(request) : null;
 			if (
@@ -274,15 +285,20 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 
 			if (existingSession) {
 				const isCompleted = !!existingSession.endedAt;
+				// A returning participant keeps the config revision they started
+				// on, even if the researcher re-uploaded since.
+				const sessionConfig = coerceConfig(existingSession.config)
+					? existingSession.config
+					: config;
 
 				if (!isCompleted) {
 					// Session in progress → resume
-					const page = config.pages[existingSession.currentPageId];
+					const page = sessionConfig.pages[existingSession.currentPageId];
 					return {
 						status: "resumed" as const,
 						sessionId: existingSession.id,
 						configId: body.configId,
-						config,
+						config: sessionConfig,
 						currentPageId: existingSession.currentPageId,
 						page,
 						session_state: existingSession.session_state,
@@ -297,9 +313,9 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 						status: "blocked" as const,
 						sessionId: existingSession.id,
 						configId: body.configId,
-						config,
+						config: sessionConfig,
 						currentPageId: existingSession.currentPageId,
-						page: config.pages[existingSession.currentPageId],
+						page: sessionConfig.pages[existingSession.currentPageId],
 						endedAt: existingSession.endedAt,
 						error: "session_completed",
 						message: "You have already completed this experiment.",
@@ -328,6 +344,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				prolific,
 				userId,
 				...simulation,
+				...provenance,
 			};
 			await createSession(session);
 			const page = config.pages[session.currentPageId];

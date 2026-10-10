@@ -23,6 +23,13 @@ if [ -z "$PAIRIT_API_URL" ]; then
     exit 1
 fi
 
+# Test the CLI in this checkout, not the published one, so a deploy can be
+# verified before the matching CLI is on npm.
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+pairit() {
+    bun run "$REPO_ROOT/apps/manager/cli/src/index.ts" "$@"
+}
+
 # Wrapper function to handle 401s
 run_pairit() {
     local output
@@ -76,11 +83,11 @@ log_success "✓ Created $TEST_MEDIA"
 log_info "---------------------------------------------------"
 log_info "2. Testing Config Management..."
 
-CONFIG_FILE="$WORK_DIR/survey-only.yaml"
-cp "$PROJECT_ROOT/configs/survey-only.yaml" "$CONFIG_FILE"
+CONFIG_FILE="$WORK_DIR/hello-world.yaml"
+cp "$PROJECT_ROOT/configs/hello-world.yaml" "$CONFIG_FILE"
 
-# Generate unique config ID for this test run to avoid ownership conflicts
-TEST_CONFIG_ID="test-$(date +%s)-$(head -c 4 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 8)"
+# Unique config name for this test run; the server assigns the config ID
+TEST_CONFIG_NAME="test-$(date +%s)-$(head -c 4 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 8)"
 
 log_info "> Linting..."
 run_pairit pairit config lint "$CONFIG_FILE" > /dev/null
@@ -90,9 +97,9 @@ log_info "> Compiling..."
 run_pairit pairit config compile "$CONFIG_FILE" > /dev/null
 log_success "✓ Compile passed"
 
-log_info "> Uploading config with ID: $TEST_CONFIG_ID..."
+log_info "> Uploading config named: $TEST_CONFIG_NAME..."
 set +e
-UPLOAD_OUT=$(run_pairit pairit config upload "$CONFIG_FILE" --config-id "$TEST_CONFIG_ID")
+UPLOAD_OUT=$(run_pairit pairit config upload "$CONFIG_FILE" --name "$TEST_CONFIG_NAME")
 UPLOAD_STATUS=$?
 set -e
 
@@ -103,9 +110,9 @@ if [ $UPLOAD_STATUS -ne 0 ]; then
 fi
 echo "$UPLOAD_OUT"
 
-# Parse Config ID
-# Expect format: ✓ Uploaded <ID> (...)
-CONFIG_ID=$(echo "$UPLOAD_OUT" | grep "Uploaded" | awk '{print $3}')
+# Parse Config ID from the last path segment of the link
+# Expect format: Survey Link: <labUrl>/<ID>
+CONFIG_ID=$(echo "$UPLOAD_OUT" | grep "Survey Link:" | sed 's#.*/##')
 
 if [ -z "$CONFIG_ID" ]; then
     log_error "Error: Could not extract Config ID from upload output."
