@@ -118,18 +118,17 @@ Notes:
 - `{configId}-events.{format}` — session ID, event type, component info, payload, timestamps
 - `{configId}-chat-messages.{format}` — group ID, session ID, sender, content, timestamps
 
-All hosted commands require the manager service to be reachable (Cloud Run deployment or local server). By default the CLI talks to the deployed manager. Override via shell environment variables when needed:
-
-- `PAIRIT_API_URL` — manager base URL. Default is production. Use `http://localhost:3002` for local dev, or the staging manager URL to talk to staging.
-- `PAIRIT_LAB_URL` — lab base URL used to print the survey link after `config upload`. Set this to the staging lab URL when `PAIRIT_API_URL` points at staging.
-
-A staging login replaces the saved production login. Run `pairit login` again with those variables unset to switch back.
+All hosted commands require the manager service to be reachable. By default the CLI talks to production (`https://pairit-api.pairium.ai`). Add `--env staging` to use staging; each environment keeps its own saved login.
 
 ```bash
-PAIRIT_API_URL=https://manager-823036187164.us-central1.run.app \
-PAIRIT_LAB_URL=https://lab-823036187164.us-central1.run.app \
-pairit login
+pairit --env staging login
 ```
+
+Override via shell environment variables when needed:
+
+- `PAIRIT_ENV` — `production` (default) or `staging`, same as `--env`
+- `PAIRIT_API_URL` — manager base URL. Use `http://localhost:3002` for local dev.
+- `PAIRIT_LAB_URL` — lab base URL used to print the survey link after `config upload`
 - `PAIRIT_CREDENTIALS_BACKEND` — `keychain` (default when available) or `file`
 - `PAIRIT_MAX_INLINE_MEDIA_BYTES` — switch to signed-URL upload above this size (default 5 MiB)
 

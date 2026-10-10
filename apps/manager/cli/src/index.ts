@@ -5,9 +5,10 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { Command } from "commander";
+import { Command, InvalidArgumentError } from "commander";
 import YAML from "yaml";
 import { getAuthHeaders, login } from "./auth.js";
+import { getApiUrl, getLabUrl, parseEnvName, setEnv } from "./env.js";
 import {
 	attachHtmlToCompiledConfig,
 	formatBytes,
@@ -36,7 +37,22 @@ const program = new Command();
 program
 	.name("pairit")
 	.description("CLI for Pairit experiment configs")
-	.version("0.1.9");
+	.version("0.2.0")
+	.option(
+		"--env <name>",
+		"Target environment: staging or production",
+		(value) => {
+			try {
+				return parseEnvName(value);
+			} catch (error) {
+				throw new InvalidArgumentError((error as Error).message);
+			}
+		},
+	)
+	.hook("preAction", (command) => {
+		const name = command.optsWithGlobals().env;
+		if (name) setEnv(name);
+	});
 
 program
 	.command("login")
@@ -793,7 +809,7 @@ async function callFunctions(
 	pathname: string,
 	init: RequestInit = {},
 ): Promise<unknown> {
-	const baseUrl = getFunctionsBaseUrl();
+	const baseUrl = getApiUrl();
 	const url = new URL(pathname, baseUrl).toString();
 
 	// Inject auth headers
@@ -820,20 +836,6 @@ async function callFunctions(
 	} catch (_error) {
 		throw new Error(`Invalid JSON response: ${text}`);
 	}
-}
-
-function getFunctionsBaseUrl(): string {
-	if (process.env.PAIRIT_API_URL) {
-		return process.env.PAIRIT_API_URL;
-	}
-	return "https://manager-432501290611.us-central1.run.app";
-}
-
-function getLabUrl(): string {
-	if (process.env.PAIRIT_LAB_URL) {
-		return process.env.PAIRIT_LAB_URL;
-	}
-	return "https://lab-432501290611.us-central1.run.app";
 }
 
 function getInlineMediaLimit(): number {

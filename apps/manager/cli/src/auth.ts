@@ -1,24 +1,29 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { getApiUrl, getCredentialKey } from "./env.js";
 
 const CONFIG_DIR = join(homedir(), ".pairit");
-const CREDENTIALS_FILE = join(CONFIG_DIR, "credentials.json");
+
+function getCredentialsFile(): string {
+	const key = getCredentialKey();
+	return join(
+		CONFIG_DIR,
+		key === "default"
+			? "credentials.json"
+			: `credentials-${key.replace(/[^a-zA-Z0-9.-]/g, "_")}.json`,
+	);
+}
 const CREDENTIALS_BACKEND =
 	process.env.PAIRIT_CREDENTIALS_BACKEND || "keychain";
 const KEYCHAIN_SERVICE = "pairit-cli";
-const KEYCHAIN_ACCOUNT = "default";
 const KEYTAR_MODULE_SPECIFIER = "keytar";
-
-const BASE_URL =
-	process.env.PAIRIT_API_URL ||
-	"https://manager-432501290611.us-central1.run.app";
 
 /**
  * Exchange an authorization code for a session token
  */
 async function exchangeCodeForToken(code: string): Promise<string> {
-	const response = await fetch(`${BASE_URL}/api/cli/exchange`, {
+	const response = await fetch(`${getApiUrl()}/api/cli/exchange`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ code }),
@@ -41,9 +46,9 @@ async function exchangeCodeForToken(code: string): Promise<string> {
 }
 
 export async function login() {
-	console.log("Initiating login...");
+	console.log(`Initiating login to ${getApiUrl()}...`);
 
-	const loginUrl = `${BASE_URL}/login`;
+	const loginUrl = `${getApiUrl()}/login`;
 	const manualLoginUrl = `${loginUrl}?manual=1`;
 
 	// Try automated loopback flow when a local browser is likely available
@@ -163,7 +168,7 @@ async function saveCredentials(creds: { token?: string; cookie?: string }) {
 		if (keytar) {
 			await keytar.setPassword(
 				KEYCHAIN_SERVICE,
-				KEYCHAIN_ACCOUNT,
+				getCredentialKey(),
 				JSON.stringify(creds),
 			);
 			return;
@@ -171,7 +176,7 @@ async function saveCredentials(creds: { token?: string; cookie?: string }) {
 	}
 
 	await mkdir(CONFIG_DIR, { recursive: true });
-	await writeFile(CREDENTIALS_FILE, JSON.stringify(creds, null, 2), {
+	await writeFile(getCredentialsFile(), JSON.stringify(creds, null, 2), {
 		mode: 0o600,
 	});
 }
@@ -185,7 +190,7 @@ async function getCredentials(): Promise<{
 		if (keytar) {
 			const stored = await keytar.getPassword(
 				KEYCHAIN_SERVICE,
-				KEYCHAIN_ACCOUNT,
+				getCredentialKey(),
 			);
 			if (stored) {
 				try {
@@ -198,7 +203,7 @@ async function getCredentials(): Promise<{
 	}
 
 	try {
-		const data = await readFile(CREDENTIALS_FILE, "utf8");
+		const data = await readFile(getCredentialsFile(), "utf8");
 		return JSON.parse(data);
 	} catch {
 		return null;

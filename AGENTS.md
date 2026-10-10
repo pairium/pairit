@@ -106,14 +106,14 @@ Two cloud environments. Local dev still uses `.env`. The deploy script never sou
 | Google project | `pairit-lab-staging` | `pairit-lab` |
 | Database | `pairit-staging` | `pairit` |
 | Media bucket | `pairit-lab-media-staging` | `pairit-lab-media` |
-| Lab | https://lab-823036187164.us-central1.run.app | https://lab-pdxzcarxcq-uc.a.run.app |
-| Manager | https://manager-823036187164.us-central1.run.app | https://manager-pdxzcarxcq-uc.a.run.app |
+| Lab | https://pairit-staging.pairium.ai | https://pairit.pairium.ai |
+| Manager | https://pairit-api-staging.pairium.ai | https://pairit-api.pairium.ai |
 
 - Staging and production must use different `PROJECT_ID` values, OAuth clients, and buckets. The script stops if the two env files share a project, a database, or a media bucket.
 - A staging deploy refuses a database whose name does not contain `staging`. A production deploy refuses a database whose name contains `staging`.
 - `bash scripts/test.sh staging` and `bash scripts/test.sh production` check the Cloud Run services named `manager` and `lab`.
 - Deploy staging before production.
-- The published `pairit` CLI talks to production. To use staging, set `PAIRIT_API_URL` to the staging manager and `PAIRIT_LAB_URL` to the staging lab, then run `pairit login`. That login replaces the saved production login. Run `pairit login` again with those variables unset to switch back.
+- The published `pairit` CLI talks to production. Add `--env staging` to use staging (e.g. `pairit --env staging login`). Each environment keeps its own saved login.
 
 ## Conventions
 
