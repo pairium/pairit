@@ -111,7 +111,7 @@ Two cloud environments. Local dev still uses `.env`. The deploy script never sou
 
 - Staging and production must use different `PROJECT_ID` values, OAuth clients, and buckets. The script stops if the two env files share a project, a database, or a media bucket.
 - A staging deploy refuses a database whose name does not contain `staging`. A production deploy refuses a database whose name contains `staging`.
-- `bash scripts/test.sh staging` and `bash scripts/test.sh production` check the Cloud Run services named `manager` and `lab`.
+- `bash scripts/test.sh staging` and `bash scripts/test.sh production` test the public URLs. The integration step reuses your CLI login for that environment. Log in first with `bun run apps/manager/cli/src/index.ts --env staging login` (or `--env production`).
 - Deploy staging before production.
 - The published `pairit` CLI talks to production. Add `--env staging` to use staging (e.g. `pairit --env staging login`). Each environment keeps its own saved login.
 

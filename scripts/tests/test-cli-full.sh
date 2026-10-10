@@ -2,7 +2,13 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 source "$SCRIPT_DIR/../common.sh"
+
+# Run the CLI from source; the global `pairit` can be stale.
+pairit() {
+    bun run "$PROJECT_ROOT/apps/manager/cli/src/index.ts" "$@"
+}
 
 # Ensure CLI hits the configured API
 if [ -z "$PAIRIT_API_URL" ] && [ -f .env ]; then
@@ -64,12 +70,12 @@ run_pairit() {
 
 log_info "Starting full CLI verification..."
 
-# Resolve script directory for test artifacts
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 # 1. Setup
+# Work in a temp dir: compile writes JSON next to the YAML.
 log_info "1. Setup: Creating dummy files..."
-TEST_MEDIA="$SCRIPT_DIR/test-media-$(date +%s).txt"
+WORK_DIR=$(mktemp -d)
+trap 'rm -rf "$WORK_DIR"' EXIT
+TEST_MEDIA="$WORK_DIR/test-media-$(date +%s).txt"
 echo "Hello Pairit Integration Test" > "$TEST_MEDIA"
 log_success "✓ Created $TEST_MEDIA"
 
@@ -77,12 +83,8 @@ log_success "✓ Created $TEST_MEDIA"
 log_info "---------------------------------------------------"
 log_info "2. Testing Config Management..."
 
-CONFIG_FILE="configs/hello-world.yaml"
-
-if [ ! -f "$CONFIG_FILE" ]; then
-    log_error "Error: Config file $CONFIG_FILE not found."
-    exit 1
-fi
+CONFIG_FILE="$WORK_DIR/hello-world.yaml"
+cp "$PROJECT_ROOT/configs/hello-world.yaml" "$CONFIG_FILE"
 
 # Unique config name for this test run; the server assigns the config ID
 TEST_CONFIG_NAME="test-$(date +%s)-$(head -c 4 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 8)"
@@ -184,7 +186,6 @@ log_success "✓ Deleted $OBJECT_NAME"
 # 4. Cleanup
 log_info "---------------------------------------------------"
 log_info "4. Cleanup..."
-rm "$TEST_MEDIA"
-# JSON config is a tracked file, do not delete it.
+rm -rf "$WORK_DIR"
 
 log_success "✓ Full CLI verification completed successfully!"
