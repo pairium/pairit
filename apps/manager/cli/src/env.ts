@@ -4,12 +4,10 @@ export type EnvName = "production" | "staging";
 
 type EnvUrls = { api: string; lab: string };
 
-// Production still points at the original Cloud Run URLs until the
-// pairit.pairium.ai domains are live (then flip it to the entry below).
 export const ENVIRONMENTS: Record<EnvName, EnvUrls> = {
 	production: {
-		api: "https://manager-432501290611.us-central1.run.app",
-		lab: "https://lab-432501290611.us-central1.run.app",
+		api: "https://pairit-api.pairium.ai",
+		lab: "https://pairit.pairium.ai",
 	},
 	staging: {
 		api: "https://pairit-api-staging.pairium.ai",

@@ -13,8 +13,8 @@ Local dev uses `.env`. Cloud deploys never read that file.
 | Google project | `pairit-lab-staging` | `pairit-lab` |
 | Database | `pairit-staging` | `pairit` |
 | Media bucket | `pairit-lab-media-staging` | `pairit-lab-media` |
-| Lab | https://lab-823036187164.us-central1.run.app | https://lab-pdxzcarxcq-uc.a.run.app |
-| Manager | https://manager-823036187164.us-central1.run.app | https://manager-pdxzcarxcq-uc.a.run.app |
+| Lab | https://pairit-staging.pairium.ai | https://pairit.pairium.ai |
+| Manager | https://pairit-api-staging.pairium.ai | https://pairit-api.pairium.ai |
 
 Staging and production are separate Google projects, separate OAuth apps, and separate media buckets. They share one Atlas cluster, with different database names. The deploy script refuses to run if a staging deploy would use `pairit`, or a production deploy would use a database whose name contains `staging`.
 
@@ -122,7 +122,7 @@ We use **Google Cloud Build** (`cloudbuild.yaml` files) instead of simple `docke
 ### 3. Google OAuth Configuration Details
 When configuring the OAuth Consent Screen and Credentials:
 - **Application Type**: Web Application.
-- **Authorized Origins**: The Cloud Run URLs (`https://manager-<projectNumber>.<region>.run.app` and `https://lab-<projectNumber>.<region>.run.app`).
+- **Authorized Origins**: The public URLs (`MANAGER_PUBLIC_URL` and `LAB_PUBLIC_URL`, e.g. `https://pairit-api.pairium.ai` and `https://pairit.pairium.ai`).
 - **Authorized Redirect URIs**: Must include the callback path: `/api/auth/callback/google`.
 - **Note**: If you re-deploy to a new URL, you **MUST** update these URIs in the Google Cloud Console.
 

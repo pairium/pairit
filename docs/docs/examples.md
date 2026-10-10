@@ -11,7 +11,7 @@ Ready-to-use experiment templates. Click "Try it" to run the live demo.
 The simplest experiment: one question, one button.
 
 <div class="card-links">
-<a href="https://lab-432501290611.us-central1.run.app/hello-world" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
+<a href="https://pairit.pairium.ai/hello-world" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
 <a href="https://github.com/pairium/pairit/blob/main/configs/hello-world.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
 </div>
 
@@ -24,7 +24,7 @@ The simplest experiment: one question, one button.
 Render a diagram from a mermaid fence in a Text component.
 
 <div class="card-links">
-<a href="https://lab-432501290611.us-central1.run.app/mermaid-demo" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
+<a href="https://pairit.pairium.ai/mermaid-demo" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
 <a href="https://github.com/pairium/pairit/blob/main/configs/mermaid-demo.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
 </div>
 
@@ -37,7 +37,7 @@ Render a diagram from a mermaid fence in a Text component.
 Multi-page survey with different question types.
 
 <div class="card-links">
-<a href="https://lab-432501290611.us-central1.run.app/survey-only" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
+<a href="https://pairit.pairium.ai/survey-only" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
 <a href="https://github.com/pairium/pairit/blob/main/configs/survey-only.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
 </div>
 
@@ -50,7 +50,7 @@ Multi-page survey with different question types.
 Randomly assign participants to conditions using `onEnter` hooks.
 
 <div class="card-links">
-<a href="https://lab-432501290611.us-central1.run.app/randomization-demo" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
+<a href="https://pairit.pairium.ai/randomization-demo" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
 <a href="https://github.com/pairium/pairit/blob/main/configs/randomization-demo.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
 </div>
 
@@ -63,7 +63,7 @@ Randomly assign participants to conditions using `onEnter` hooks.
 One-on-one conversation with an AI agent.
 
 <div class="card-links">
-<a href="https://lab-432501290611.us-central1.run.app/ai-chat" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
+<a href="https://pairit.pairium.ai/ai-chat" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
 <a href="https://github.com/pairium/pairit/blob/main/configs/ai-chat.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
 </div>
 
@@ -76,7 +76,7 @@ One-on-one conversation with an AI agent.
 Share or isolate chat history across pages using `groupId`.
 
 <div class="card-links">
-<a href="https://lab-432501290611.us-central1.run.app/multi-chat" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
+<a href="https://pairit.pairium.ai/multi-chat" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
 <a href="https://github.com/pairium/pairit/blob/main/configs/multi-chat.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
 </div>
 
@@ -89,7 +89,7 @@ Share or isolate chat history across pages using `groupId`.
 Match 2 participants and let them chat together.
 
 <div class="card-links">
-<a href="https://lab-432501290611.us-central1.run.app/team-decision" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
+<a href="https://pairit.pairium.ai/team-decision" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
 <a href="https://github.com/pairium/pairit/blob/main/configs/team-decision.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
 </div>
 
@@ -102,7 +102,7 @@ Match 2 participants and let them chat together.
 Two participants chat with an AI facilitator observing and guiding.
 
 <div class="card-links">
-<a href="https://lab-432501290611.us-central1.run.app/ai-mediation" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
+<a href="https://pairit.pairium.ai/ai-mediation" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
 <a href="https://github.com/pairium/pairit/blob/main/configs/ai-mediation.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
 </div>
 
@@ -115,7 +115,7 @@ Two participants chat with an AI facilitator observing and guiding.
 AI-assisted document editing with a split-panel layout.
 
 <div class="card-links">
-<a href="https://lab-432501290611.us-central1.run.app/workspace" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
+<a href="https://pairit.pairium.ai/workspace" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
 <a href="https://github.com/pairium/pairit/blob/main/configs/workspace.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
 </div>
 
@@ -128,7 +128,7 @@ AI-assisted document editing with a split-panel layout.
 Custom slider UI uploaded with the config and shown in a locked-down frame.
 
 <div class="card-links">
-<a href="https://lab-432501290611.us-central1.run.app/html-demo" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
+<a href="https://pairit.pairium.ai/html-demo" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
 <a href="https://github.com/pairium/pairit/blob/main/configs/html-demo.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
 </div>
 
@@ -141,7 +141,7 @@ Custom slider UI uploaded with the config and shown in a locked-down frame.
 Countdown timer with warning state and auto-navigation on expiry.
 
 <div class="card-links">
-<a href="https://lab-432501290611.us-central1.run.app/timer-demo" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
+<a href="https://pairit.pairium.ai/timer-demo" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
 <a href="https://github.com/pairium/pairit/blob/main/configs/timer-demo.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
 </div>
 
@@ -154,7 +154,7 @@ Countdown timer with warning state and auto-navigation on expiry.
 Control when and whether agents reply using `trigger` and `replyCondition`.
 
 <div class="card-links">
-<a href="https://lab-432501290611.us-central1.run.app/agent-triggers" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
+<a href="https://pairit.pairium.ai/agent-triggers" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
 <a href="https://github.com/pairium/pairit/blob/main/configs/agent-triggers.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
 </div>
 
@@ -167,7 +167,7 @@ Control when and whether agents reply using `trigger` and `replyCondition`.
 Adapt agent prompts based on survey answers using conditional `prompts`.
 
 <div class="card-links">
-<a href="https://lab-432501290611.us-central1.run.app/conditional-agent" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
+<a href="https://pairit.pairium.ai/conditional-agent" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
 <a href="https://github.com/pairium/pairit/blob/main/configs/conditional-agent.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
 </div>
 
