@@ -9,6 +9,7 @@ import { Elysia, t } from "elysia";
 import { initAllowlist } from "./lib/allowlist-boot";
 import { getContactEmail } from "./lib/allowlist-hooks";
 import { auth } from "./lib/auth";
+import { ensureConfigIndexes } from "./lib/db";
 import { renderPage } from "./lib/html";
 import { adminRoutes } from "./routes/admin";
 import { configsRoutes } from "./routes/configs";
@@ -411,4 +412,8 @@ console.log(
 
 initAllowlist().catch((err) => {
 	console.error("[Allowlist] Initialization failed:", err);
+});
+
+ensureConfigIndexes().catch((err) => {
+	console.error("[Configs] Index creation failed:", err);
 });

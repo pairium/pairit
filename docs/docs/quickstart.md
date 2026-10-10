@@ -79,14 +79,15 @@ If a page uses an `html` component, keep the `.html` file next to the YAML (`src
 **3. Upload to the server:**
 
 ```bash
-pairit config upload my-experiment.yaml --config-id my-experiment
+pairit config upload my-experiment.yaml
 ```
+
+The file name becomes the config's name (`my-experiment`), or set `name:` in the YAML or pass `--name`. The first upload prints the participant link, e.g. `https://pairit.pairium.ai/my-experiment-k3f9x2m8q1`. Uploading again under the same name keeps that link and adds a new revision.
 
 If your experiment uses AI agents, include the provider key for that experiment when uploading:
 
 ```bash
 pairit config upload my-experiment.yaml \
-  --config-id my-experiment \
   --openai-api-key sk-...
 ```
 
@@ -94,20 +95,19 @@ or:
 
 ```bash
 pairit config upload my-experiment.yaml \
-  --config-id my-experiment \
   --anthropic-api-key sk-ant-...
 ```
 
 These keys are stored encrypted per experiment. Pairit does not use a shared platform provider key for experiment agent runs; if the required provider key is missing, the agent run fails.
 
-Re-uploading the same `configId` without a new key keeps the previously stored key for that experiment.
+Re-uploading the same config without a new key keeps the previously stored key for that experiment.
 
-**4. Share the experiment link** with participants: `https://lab.pairium.ai/my-experiment`
+**4. Share the experiment link** that the upload printed with participants.
 
 ## Export Data
 
 ```bash
-pairit data export my-experiment --format csv --output results.csv
+pairit data export <configId> --format csv --out ./results
 ```
 
 ## Next Steps

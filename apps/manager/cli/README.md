@@ -43,8 +43,8 @@ pairit login                                       # Authenticate (required firs
 
 pairit config lint path/to/config.yaml
 pairit config compile path/to/config.yaml
-pairit config upload configs/simple-survey-basic.yaml --config-id simple-survey-basic
-pairit config upload configs/agent-study.yaml --config-id agent-study --openai-api-key sk-...
+pairit config upload configs/simple-survey-basic.yaml --name simple-survey-basic
+pairit config upload configs/agent-study.yaml --name agent-study --openai-api-key sk-...
 pairit config list
 pairit config delete 2f3c4d5e...
 
@@ -66,8 +66,8 @@ Add `--private` if you need to keep an object private. Use `--bucket <name>` onl
 # Point at local manager (published CLI defaults to production)
 export PAIRIT_API_URL=http://localhost:3002
 
-bun run apps/manager/cli/src/index.ts config upload configs/simple-survey-basic.yaml --config-id simple-survey-basic
-bun run apps/manager/cli/src/index.ts config upload configs/agent-study.yaml --config-id agent-study --openai-api-key sk-...
+bun run apps/manager/cli/src/index.ts config upload configs/simple-survey-basic.yaml --name simple-survey-basic
+bun run apps/manager/cli/src/index.ts config upload configs/agent-study.yaml --name agent-study --openai-api-key sk-...
 bun run apps/manager/cli/src/index.ts config list
 bun run apps/manager/cli/src/index.ts config delete 2f3c4d5e... --force
 
@@ -76,7 +76,7 @@ bun run apps/manager/cli/src/index.ts media list
 bun run apps/manager/cli/src/index.ts media delete onboarding/logo.png --force
 ```
 
-`config compile` writes `configs/simple-survey-basic.json` next to the source YAML. `config upload` defaults the config id to a 16-character base64url string derived from the SHA-256 hash of the compiled JSON (unless `--config-id` overrides it).
+`config compile` writes `configs/simple-survey-basic.json` next to the source YAML. `config upload` creates or updates a config by name (`--name`, else the YAML `name:` field, else the file name). The server assigns the config id (`<name>-<10 random chars>`) on the first upload, and later uploads under the same name add revisions. `--config-id` updates an existing config by id. See `config history` for past revisions.
 
 ## Manager allowlist (admin)
 
@@ -101,8 +101,8 @@ Notes:
 If your config uses AI agents, attach provider credentials when uploading:
 
 ```bash
-pairit config upload path/to/config.yaml --config-id my-exp --openai-api-key sk-...
-pairit config upload path/to/config.yaml --config-id my-exp --anthropic-api-key sk-ant-...
+pairit config upload path/to/config.yaml --name my-exp --openai-api-key sk-...
+pairit config upload path/to/config.yaml --name my-exp --anthropic-api-key sk-ant-...
 ```
 
 Notes:

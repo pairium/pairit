@@ -55,6 +55,10 @@ export type Session = {
 	simulated?: boolean;
 	simulationRunId?: string;
 	personaId?: string;
+	configRevision?: number | null;
+	configChecksum?: string | null;
+	labVersion?: string | null;
+	labRevision?: string | null;
 	createdAt?: Date;
 	updatedAt?: Date;
 };

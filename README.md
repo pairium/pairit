@@ -37,14 +37,13 @@ This monorepo hosts the Pairit stack.
    # Manage configs
    pairit config lint your_experiment.yaml
    pairit config compile your_experiment.yaml
-   pairit config upload your_experiment.yaml --config-id your-experiment
+   pairit config upload your_experiment.yaml   # prints the participant link
    ```
 
    If your experiment uses AI agents, upload provider credentials with the config:
 
    ```bash
    pairit config upload your_experiment.yaml \
-     --config-id your-experiment \
      --openai-api-key sk-...
    ```
 
@@ -52,7 +51,6 @@ This monorepo hosts the Pairit stack.
 
    ```bash
    pairit config upload your_experiment.yaml \
-     --config-id your-experiment \
      --anthropic-api-key sk-ant-...
    ```
 

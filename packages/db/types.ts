@@ -19,6 +19,10 @@ export type ConfigLlmCredentials = {
 export type ConfigDocument = {
 	configId: string;
 	owner?: string;
+	// Researcher-chosen name, unique per owner. Legacy configs have none.
+	name?: string;
+	// Bumped when an upload changes the compiled config. Legacy configs have none.
+	revision?: number;
 	checksum?: string;
 	metadata?: Record<string, unknown> | null;
 	config: unknown;
@@ -27,6 +31,19 @@ export type ConfigDocument = {
 	allowRetake?: boolean;
 	createdAt?: Date | null;
 	updatedAt?: Date | null;
+};
+
+// Snapshot of a config at one revision. Credentials are never copied.
+export type ConfigRevisionDocument = {
+	configId: string;
+	revision: number;
+	checksum: string | null;
+	config: unknown;
+	metadata: Record<string, unknown> | null;
+	requireAuth: boolean;
+	allowRetake: boolean;
+	uploadedBy: string | null;
+	createdAt: Date;
 };
 
 export type ProlificParams = {
@@ -47,6 +64,11 @@ export type SessionDocument = {
 	simulated?: boolean;
 	simulationRunId?: string;
 	personaId?: string;
+	// Provenance: which config revision and lab build served this session
+	configRevision?: number | null;
+	configChecksum?: string | null;
+	labVersion?: string | null;
+	labRevision?: string | null;
 	createdAt: Date;
 	updatedAt: Date;
 };

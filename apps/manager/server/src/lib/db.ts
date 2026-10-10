@@ -8,6 +8,7 @@ import type { Collection } from "mongodb";
 import type {
 	ChatMessageDocument,
 	ConfigDocument,
+	ConfigRevisionDocument,
 	EventDocument,
 	GroupDocument,
 	SessionDocument,
@@ -21,6 +22,30 @@ export async function getConfigsCollection(): Promise<
 > {
 	const database = await connectDB();
 	return database.collection<ConfigDocument>("configs");
+}
+
+export async function getConfigRevisionsCollection(): Promise<
+	Collection<ConfigRevisionDocument>
+> {
+	const database = await connectDB();
+	return database.collection<ConfigRevisionDocument>("config_revisions");
+}
+
+/**
+ * Indexes for config names and revisions. The lab server owns the unique
+ * configs.configId index.
+ */
+export async function ensureConfigIndexes(): Promise<void> {
+	const database = await connectDB();
+	await database
+		.collection("configs")
+		.createIndex(
+			{ owner: 1, name: 1 },
+			{ unique: true, partialFilterExpression: { name: { $type: "string" } } },
+		);
+	await database
+		.collection("config_revisions")
+		.createIndex({ configId: 1, revision: 1 }, { unique: true });
 }
 
 export async function getSessionsCollection(): Promise<
