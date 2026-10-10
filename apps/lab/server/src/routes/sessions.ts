@@ -8,12 +8,13 @@
 import { randomUUID } from "node:crypto";
 import { Elysia, t } from "elysia";
 import { MongoServerError } from "mongodb";
-import { deriveAuthContext } from "../lib/auth-middleware";
+import { getAuthUser } from "../lib/auth-middleware";
 import {
 	getConfigsCollection,
 	getIdempotencyCollection,
 	getSessionsCollection,
 } from "../lib/db";
+import { hasOverlappingPaths } from "../lib/session-state";
 import { resolveSimulationFields } from "../lib/simulation";
 import type {
 	Config,
@@ -178,20 +179,49 @@ async function advanceSession(
 	);
 }
 
-export async function updateSessionState(
-	sessionId: string,
-	path: string,
-	value: unknown,
-): Promise<SessionDocument | null> {
-	const collection = await getSessionsCollection();
+function assertValidStatePath(path: string): void {
 	if (path.includes("$") || path.startsWith(".") || path.endsWith(".")) {
 		throw new Error(`Invalid session_state path: ${path}`);
 	}
-	return await collection.findOneAndUpdate(
+}
+
+/**
+ * Write session_state fields. Returns false if the session does not exist.
+ */
+export async function updateSessionState(
+	sessionId: string,
+	updates: Record<string, unknown>,
+): Promise<boolean> {
+	const collection = await getSessionsCollection();
+	const paths = Object.keys(updates);
+	for (const path of paths) assertValidStatePath(path);
+
+	if (paths.length > 1 && hasOverlappingPaths(paths)) {
+		// Apply in order, one field at a time, so later paths win.
+		for (const path of paths) {
+			const result = await collection.updateOne(
+				{ id: sessionId },
+				{
+					$set: {
+						[`session_state.${path}`]: updates[path],
+						updatedAt: new Date(),
+					},
+				},
+			);
+			if (result.matchedCount === 0) return false;
+		}
+		return true;
+	}
+
+	const setFields: Record<string, unknown> = { updatedAt: new Date() };
+	for (const path of paths) {
+		setFields[`session_state.${path}`] = updates[path];
+	}
+	const result = await collection.updateOne(
 		{ id: sessionId },
-		{ $set: { [`session_state.${path}`]: value, updatedAt: new Date() } },
-		{ returnDocument: "after" },
+		{ $set: setFields },
 	);
+	return result.matchedCount > 0;
 }
 
 async function checkIdempotency(key: string): Promise<{ duplicate: boolean }> {
@@ -208,12 +238,9 @@ async function checkIdempotency(key: string): Promise<{ duplicate: boolean }> {
 }
 
 export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
-	.derive(({ request, params, body }) =>
-		deriveAuthContext({ request, params, body }),
-	)
 	.post(
 		"/start",
-		async ({ body, set, user }) => {
+		async ({ body, set, request }) => {
 			// Enforce auth requirement (FORCE_AUTH=true bypasses config check for testing)
 			// Prolific participants are identified by their params — skip OAuth for them
 			const hasProlific = body.prolific?.prolificPid;
@@ -224,6 +251,8 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 			}
 
 			const { config, allowRetake, requireAuth } = loaded;
+			// Public configs never look up the signed-in user.
+			const user = requireAuth ? await getAuthUser(request) : null;
 			if (
 				(requireAuth || process.env.FORCE_AUTH === "true") &&
 				!user &&
@@ -365,15 +394,10 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				return { success: true };
 			}
 
-			const session = await loadSession(id);
-			if (!session) {
+			const found = await updateSessionState(id, body.updates);
+			if (!found) {
 				set.status = 404;
 				return { error: "not_found" };
-			}
-
-			// Update each field in session_state
-			for (const [path, value] of Object.entries(body.updates)) {
-				await updateSessionState(id, path, value);
 			}
 
 			return { success: true };
