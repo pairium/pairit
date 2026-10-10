@@ -25,6 +25,19 @@ if [ "$TARGET" != "staging" ] && [ "$TARGET" != "production" ]; then
     exit 1
 fi
 
+# Sessions record GIT_SHA as their lab version, so it must name the code
+# being deployed. ALLOW_DIRTY=1 deploys anyway and marks the version "-dirty".
+GIT_SHA=$(git rev-parse --short=12 HEAD)
+if [ -n "$(git status --porcelain)" ]; then
+    if [ "${ALLOW_DIRTY:-}" != "1" ]; then
+        echo "❌ Uncommitted changes. Commit or stash them so sessions record the exact code version."
+        echo "   To deploy anyway (version will end in -dirty): ALLOW_DIRTY=1 ./scripts/deploy.sh $TARGET"
+        exit 1
+    fi
+    GIT_SHA="${GIT_SHA}-dirty"
+fi
+echo "🔖 Version: $GIT_SHA"
+
 ENV_FILE=".env.$TARGET"
 if [ ! -f "$ENV_FILE" ]; then
     echo "❌ Missing $ENV_FILE in $PROJECT_ROOT"
@@ -212,6 +225,7 @@ MANAGER_ENV="$MANAGER_ENV++PAIRIT_LAB_URL=${LAB_PUBLIC_URL}"
 MANAGER_ENV="$MANAGER_ENV++CREDENTIALS_ENCRYPTION_KEY=$CREDENTIALS_ENCRYPTION_KEY"
 MANAGER_ENV="$MANAGER_ENV++MANAGER_BOOTSTRAP_ADMIN_EMAIL=${MANAGER_BOOTSTRAP_ADMIN_EMAIL:-harang@pairium.ai}"
 MANAGER_ENV="$MANAGER_ENV++MANAGER_ADMIN_CONTACT_EMAIL=${MANAGER_ADMIN_CONTACT_EMAIL:-harang@pairium.ai}"
+MANAGER_ENV="$MANAGER_ENV++GIT_SHA=$GIT_SHA"
 
 LAB_ENV="NODE_ENV=production"
 LAB_ENV="$LAB_ENV++MONGODB_URI=$MONGODB_URI"
@@ -224,6 +238,7 @@ LAB_ENV="$LAB_ENV++AUTH_BASE_URL=${LAB_PUBLIC_URL}"
 LAB_ENV="$LAB_ENV++AUTH_TRUSTED_ORIGINS=${LAB_PUBLIC_URL},${LAB_SERVICE_URL}"
 LAB_ENV="$LAB_ENV++OPENAI_API_KEY=${OPENAI_API_KEY}"
 LAB_ENV="$LAB_ENV++CREDENTIALS_ENCRYPTION_KEY=$CREDENTIALS_ENCRYPTION_KEY"
+LAB_ENV="$LAB_ENV++GIT_SHA=$GIT_SHA"
 
 # Create temp files for Cloud Build configs
 CLOUDBUILD_MANAGER=$(mktemp)

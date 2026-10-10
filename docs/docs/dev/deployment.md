@@ -83,6 +83,7 @@ To deploy both services to Cloud Run:
 Optional second argument is the region (default `us-central1`).
 
 This script will:
+1.  Refuse to run with uncommitted changes, and record the commit (`GIT_SHA`) on both services. Set `ALLOW_DIRTY=1` to deploy anyway; the version then ends in `-dirty`.
 1.  Source `.env.staging` or `.env.production`. It never sources `.env`.
 2.  Refuse to run if staging would use the live database, or production would use the staging database. It also refuses if the two env files share a `PROJECT_ID`, a database name, or a media bucket.
 3.  Enable Artifact Registry.
@@ -94,6 +95,10 @@ This script will:
 The lab service is deployed with `--max-instances 1`. Matchmaking pools and live updates (chat, match found, state changes) live in the server's memory. Two participants on different instances cannot be matched and do not see each other's messages. One instance with `--concurrency 1000`, 2 vCPU, and 1 GiB holds several hundred participants, since most of their connections are idle streams. The server ends each stream after 2 minutes and the browser reconnects. Cloud Run's proxy keeps a stream open on the server after the browser leaves, so without that cap, departed participants would fill the 1000-request limit. A load test on staging (Oct 2026) held 400 concurrent survey participants with flat latency and no errors, at about 520 open requests.
 
 Cloud Run can briefly run two instances while a new revision rolls out. Do not deploy while a multi-participant study is live.
+
+### Lab version on sessions
+
+Every session records `labVersion` (the deployed `GIT_SHA`) and `labRevision` (Cloud Run's `K_REVISION`). Both appear in the sessions data export, so researchers can tell which participants ran before and after a deploy. Local dev records `labVersion=dev`. The Docker images exclude `.git`, so the version comes only from this environment variable.
 
 ## Verification
 

@@ -6,6 +6,7 @@
 export type {
 	ChatMessageDocument,
 	ConfigDocument,
+	ConfigRevisionDocument,
 	EventDocument,
 	GroupDocument,
 	ProlificParams,
