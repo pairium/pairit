@@ -75,6 +75,18 @@ npm install -g pairit
 
 A 404 from `npm publish` is npm hiding an auth error. Check `npm whoami` — it should print `harangju`. Use `--otp` if 2FA is on.
 
+### Release notes
+
+Every published version gets a GitHub Release and a changelog entry.
+
+1. Tag the commit npm published from. `npm view pairit@X.Y.Z gitHead` prints it. Don't assume it is `main`.
+2. Create the release. The notes are for researchers: an upgrade command, what's new, and any change they must make (e.g. a renamed flag).
+   ```bash
+   gh release create cli-vX.Y.Z --target <gitHead> --title "Pairit CLI X.Y.Z" --notes-file notes.md
+   ```
+3. Add a `## CLI X.Y.Z` section at the top of `docs/docs/changelog.md`. It holds a short summary and a link to the release.
+4. To announce it, draft a plain-text email (Gmail has no code blocks) that links the release. Get recipients from `pairit admin list-users`. Leave out the admins and BCC everyone. The user sends it.
+
 ## Global install
 
 Use npm, not bun:
