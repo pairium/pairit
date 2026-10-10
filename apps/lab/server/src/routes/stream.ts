@@ -14,7 +14,13 @@ import {
 } from "../lib/sse";
 import { loadSession } from "./sessions";
 
-const HEARTBEAT_INTERVAL = 30000; // 30 seconds
+const HEARTBEAT_INTERVAL = 15000; // 15 seconds — keeps idle proxies from closing the stream
+
+// Cloud Run's proxy keeps the upstream request open after the browser
+// disconnects, so the server never sees the client leave. End every stream
+// after this long; EventSource reconnects within seconds. Without a cap,
+// abandoned streams hold a concurrency slot until the request timeout.
+const MAX_STREAM_DURATION = 2 * 60 * 1000;
 
 function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
@@ -23,7 +29,7 @@ function sleep(ms: number): Promise<void> {
 export const streamRoutes = new Elysia({ prefix: "/sessions" })
 	.get(
 		"/:id/stream",
-		async function* ({ params: { id }, set }) {
+		async function* ({ params: { id }, set, request }) {
 			// Verify session exists
 			const session = await loadSession(id);
 			if (!session) {
@@ -45,6 +51,13 @@ export const streamRoutes = new Elysia({ prefix: "/sessions" })
 			};
 
 			addConnection(id, controller);
+
+			const maxDurationTimer = setTimeout(
+				() => queue.close(),
+				MAX_STREAM_DURATION,
+			);
+			const onAbort = () => queue.close();
+			request.signal.addEventListener("abort", onAbort);
 
 			try {
 				// Send initial connected event
@@ -71,6 +84,8 @@ export const streamRoutes = new Elysia({ prefix: "/sessions" })
 
 				heartbeatActive = false;
 			} finally {
+				clearTimeout(maxDurationTimer);
+				request.signal.removeEventListener("abort", onAbort);
 				removeConnection(id, controller);
 				handleDisconnect(id);
 			}

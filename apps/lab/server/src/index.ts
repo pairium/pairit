@@ -136,7 +136,9 @@ if (!IS_DEV) {
 		});
 }
 
-app.listen(Number(process.env.PORT) || 3001);
+// idleTimeout: 0 — Bun's default idle timeout closes SSE streams after ~60s
+// between 30s heartbeats, which dropped participants from matchmaking pools.
+app.listen({ port: Number(process.env.PORT) || 3001, idleTimeout: 0 });
 
 console.log(
 	`🚀 Lab server running on ${app.server?.hostname}:${app.server?.port}`,

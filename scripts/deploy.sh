@@ -316,6 +316,11 @@ MANAGER_DEPLOY_PID=$!
         --region "$REGION" \
         --project "$PROJECT_ID" \
         --port 3001 \
+        --max-instances 1 \
+        --concurrency 1000 \
+        --timeout 3600 \
+        --cpu 2 \
+        --memory 1Gi \
         --set-env-vars "^++^$LAB_ENV" \
         --allow-unauthenticated > "$LAB_DEPLOY_LOG" 2>&1
 ) &

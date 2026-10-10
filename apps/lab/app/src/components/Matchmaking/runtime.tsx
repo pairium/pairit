@@ -42,9 +42,10 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 		const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
 		const startTimeRef = useRef<number>(Date.now());
-		const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 		const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 		const hasJoinedRef = useRef(false);
+		const statusRef = useRef<MatchmakingStatus>("connecting");
+		statusRef.current = status;
 
 		// Apply defaults for optional props
 		const poolId = component.props.poolId ?? "default";
@@ -60,13 +61,7 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 			(data: SSEMatchFound) => {
 				console.log("[Matchmaking] Match found:", data);
 
-				// Stop timer
-				if (timerRef.current) {
-					clearInterval(timerRef.current);
-					timerRef.current = null;
-				}
-
-				// Update status
+				// Update status (stops the countdown)
 				setStatus("matched");
 
 				// Update session state
@@ -93,13 +88,7 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 			(data: SSEMatchTimeout) => {
 				console.log("[Matchmaking] Match timeout:", data);
 
-				// Stop timer
-				if (timerRef.current) {
-					clearInterval(timerRef.current);
-					timerRef.current = null;
-				}
-
-				// Update status
+				// Update status (stops the countdown)
 				setStatus("timeout");
 
 				// Navigate to timeout target after brief delay
@@ -135,21 +124,6 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 						setStatus("waiting");
 						setCurrentCount(result.position);
 						startTimeRef.current = Date.now();
-
-						// Start countdown timer with client-side timeout fallback
-						timerRef.current = setInterval(() => {
-							const elapsed = Math.floor(
-								(Date.now() - startTimeRef.current) / 1000,
-							);
-							setElapsedSeconds(elapsed);
-
-							// Client-side timeout fallback (in case SSE event is missed)
-							if (elapsed >= timeoutSeconds && timerRef.current) {
-								clearInterval(timerRef.current);
-								timerRef.current = null;
-								handleMatchTimeout({ poolId, timeoutTarget });
-							}
-						}, 1000);
 					} else if (result.status === "matched") {
 						// Immediate match (rare, but handle it)
 						handleMatchFound({
@@ -165,17 +139,6 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 			}
 
 			join();
-
-			return () => {
-				if (timerRef.current) {
-					clearInterval(timerRef.current);
-					timerRef.current = null;
-				}
-				if (navTimerRef.current) {
-					clearTimeout(navTimerRef.current);
-					navTimerRef.current = null;
-				}
-			};
 		}, [
 			sessionId,
 			poolId,
@@ -185,8 +148,33 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 			assignmentType,
 			conditions,
 			handleMatchFound,
-			handleMatchTimeout,
 		]);
+
+		// Countdown while waiting, with a client-side timeout in case the
+		// match_timeout event is missed. Kept separate from the join effect,
+		// whose dependencies change on re-render and would clear the interval.
+		useEffect(() => {
+			if (status !== "waiting") return;
+			const interval = setInterval(() => {
+				const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+				setElapsedSeconds(elapsed);
+				if (elapsed >= timeoutSeconds) {
+					clearInterval(interval);
+					handleMatchTimeout({ poolId, timeoutTarget });
+				}
+			}, 1000);
+			return () => clearInterval(interval);
+		}, [status, timeoutSeconds, poolId, timeoutTarget, handleMatchTimeout]);
+
+		// Cancel a pending navigation only on unmount
+		useEffect(() => {
+			return () => {
+				if (navTimerRef.current) {
+					clearTimeout(navTimerRef.current);
+					navTimerRef.current = null;
+				}
+			};
+		}, []);
 
 		// Subscribe to SSE events
 		useEffect(() => {
@@ -206,18 +194,61 @@ export const MatchmakingRuntime = defineRuntimeComponent<
 			};
 		}, [sessionId, handleMatchFound, handleMatchTimeout]);
 
+		// Rejoin when the stream reconnects while waiting. The server may have
+		// dropped us from the pool (restart, long disconnect) or matched us while
+		// the stream was down, in which case match_found was never delivered.
+		useEffect(() => {
+			if (!sessionId) return;
+			const currentSessionId = sessionId;
+
+			return sseClient.on("connected", () => {
+				if (statusRef.current !== "waiting") return;
+				const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+				const remaining = timeoutSeconds - elapsed;
+				if (remaining <= 0) return;
+
+				joinMatchmaking(currentSessionId, {
+					poolId,
+					num_users: targetCount,
+					timeoutSeconds: remaining,
+					timeoutTarget,
+					assignmentType,
+					conditions,
+				})
+					.then((result) => {
+						if (statusRef.current !== "waiting") return;
+						if (result.status === "matched") {
+							handleMatchFound({
+								groupId: result.groupId,
+								treatment: result.treatment,
+								memberCount: targetCount,
+							});
+						} else {
+							setCurrentCount(result.position);
+						}
+					})
+					.catch((error) => {
+						console.error("[Matchmaking] Failed to rejoin:", error);
+					});
+			});
+		}, [
+			sessionId,
+			poolId,
+			targetCount,
+			timeoutSeconds,
+			timeoutTarget,
+			assignmentType,
+			conditions,
+			handleMatchFound,
+		]);
+
 		// Handle cancel
 		const handleCancel = useCallback(async () => {
 			if (!sessionId) return;
 
 			try {
 				await cancelMatchmaking(sessionId, poolId);
-
-				// Stop timer
-				if (timerRef.current) {
-					clearInterval(timerRef.current);
-					timerRef.current = null;
-				}
+				setStatus("timeout");
 
 				// Navigate to timeout target if available
 				if (timeoutTarget) {

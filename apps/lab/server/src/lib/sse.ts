@@ -65,6 +65,8 @@ export class AsyncEventQueue {
 // Map<sessionId, Set<SSEController>> - multiple tabs = multiple controllers
 const connections = new Map<string, Set<SSEController>>();
 
+export const MAX_CONNECTIONS_PER_SESSION = 3;
+
 export function addConnection(
 	sessionId: string,
 	controller: SSEController,
@@ -73,6 +75,14 @@ export function addConnection(
 	if (!sessionConnections) {
 		sessionConnections = new Set();
 		connections.set(sessionId, sessionConnections);
+	}
+	// After a reconnect or reload the old stream is usually dead but still
+	// open behind the proxy. Keep only the newest few per session (a few so
+	// that two open tabs don't keep displacing each other).
+	for (const existing of sessionConnections) {
+		if (sessionConnections.size < MAX_CONNECTIONS_PER_SESSION) break;
+		existing.close();
+		sessionConnections.delete(existing);
 	}
 	sessionConnections.add(controller);
 	console.log(

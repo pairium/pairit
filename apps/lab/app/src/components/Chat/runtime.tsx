@@ -3,7 +3,6 @@
  * Handles SSE subscription, message history, and event emission
  */
 
-import type { ChatAvatarOverrides } from "@app/lib/participant-icons";
 import {
 	type ChatMessage as ApiChatMessage,
 	getChatHistory,
@@ -13,6 +12,7 @@ import {
 	startChatAgents,
 	submitEvent,
 } from "@app/lib/api";
+import type { ChatAvatarOverrides } from "@app/lib/participant-icons";
 import { sseClient } from "@app/lib/sse";
 import { defineRuntimeComponent } from "@app/runtime/define-runtime-component";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -99,17 +99,21 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 		const hasTriggeredAgents = useRef(false);
 
 		const mergedAvatars = useMemo<ChatAvatarOverrides>(() => {
-			const configAgents: Record<string, NonNullable<ChatAvatarOverrides["agent"]>> =
-				Object.fromEntries(
-					(compiledConfig?.agents ?? [])
-						.filter(
-							(agent): agent is {
-								id: string;
-								avatar: NonNullable<ChatAvatarOverrides["agent"]>;
-							} => Boolean(agent.avatar),
-						)
-						.map((agent) => [agent.id, agent.avatar]),
-				);
+			const configAgents: Record<
+				string,
+				NonNullable<ChatAvatarOverrides["agent"]>
+			> = Object.fromEntries(
+				(compiledConfig?.agents ?? [])
+					.filter(
+						(
+							agent,
+						): agent is {
+							id: string;
+							avatar: NonNullable<ChatAvatarOverrides["agent"]>;
+						} => Boolean(agent.avatar),
+					)
+					.map((agent) => [agent.id, agent.avatar]),
+			);
 
 			return {
 				...component.props.avatars,
@@ -337,6 +341,45 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			return unsubscribe;
 		}, [sessionId, groupId, toViewMessage, component.events, component.id]);
 
+		// After the stream reconnects, fetch history to recover messages that
+		// were broadcast while it was down
+		useEffect(() => {
+			if (!sessionId || !groupId || loading) return;
+
+			let canceled = false;
+			const currentSessionId = sessionId;
+			const currentGroupId = groupId;
+
+			const unsubscribe = sseClient.on("connected", () => {
+				getChatHistory(currentGroupId, currentSessionId)
+					.then(({ messages: history }) => {
+						if (canceled) return;
+						const missed = history.filter(
+							(msg) => !seenMessageIds.current.has(msg.messageId),
+						);
+						if (missed.length === 0) return;
+						for (const msg of missed) {
+							seenMessageIds.current.add(msg.messageId);
+						}
+						setMessages((prev) =>
+							[...prev, ...missed.map(toViewMessage)].sort(
+								(a, b) =>
+									new Date(a.createdAt).getTime() -
+									new Date(b.createdAt).getTime(),
+							),
+						);
+					})
+					.catch((error) => {
+						console.error("[Chat] Failed to refresh history:", error);
+					});
+			});
+
+			return () => {
+				canceled = true;
+				unsubscribe();
+			};
+		}, [sessionId, groupId, loading, toViewMessage]);
+
 		const handleSend = useCallback(
 			async (content: string) => {
 				if (!sessionId || !groupId) return;
@@ -350,18 +393,21 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 						});
 					}
 
-					seenMessageIds.current.add(result.messageId);
-					setMessages((prev) => [
-						...prev,
-						{
-							messageId: result.messageId,
-							senderId: sessionId,
-							senderType: "participant" as const,
-							content,
-							createdAt: result.createdAt,
-							isOwn: true,
-						},
-					]);
+					// A reconnect refresh may already have added this message
+					if (!seenMessageIds.current.has(result.messageId)) {
+						seenMessageIds.current.add(result.messageId);
+						setMessages((prev) => [
+							...prev,
+							{
+								messageId: result.messageId,
+								senderId: sessionId,
+								senderType: "participant" as const,
+								content,
+								createdAt: result.createdAt,
+								isOwn: true,
+							},
+						]);
+					}
 
 					if (component.events?.onMessageSend) {
 						void emitChatEvent(
@@ -378,7 +424,13 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 					console.error("[Chat] Failed to send message:", error);
 				}
 			},
-			[sessionId, groupId, component.id, component.events, onSessionStateChange],
+			[
+				sessionId,
+				groupId,
+				component.id,
+				component.events,
+				onSessionStateChange,
+			],
 		);
 
 		if (!sessionId) {

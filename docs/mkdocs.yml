@@ -25,6 +25,7 @@ nav:
       - Form: components/form.md
   - Guides:
       - Agent Guardrails: guides/agent-guardrails.md
+      - Running Large Studies: guides/large-studies.md
   - Developer:
       - Getting Started: dev/getting-started.md
       - Architecture: dev/architecture.md

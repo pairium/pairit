@@ -86,6 +86,12 @@ This script will:
 4.  Build Docker images using Cloud Build.
 5.  Deploy the `manager` and `lab` services to Cloud Run.
 
+### Lab runs on one instance
+
+The lab service is deployed with `--max-instances 1`. Matchmaking pools and live updates (chat, match found, state changes) live in the server's memory. Two participants on different instances cannot be matched and do not see each other's messages. One instance with `--concurrency 1000`, 2 vCPU, and 1 GiB holds several hundred participants, since most of their connections are idle streams. The server ends each stream after 2 minutes and the browser reconnects. Cloud Run's proxy keeps a stream open on the server after the browser leaves, so without that cap, departed participants would fill the 1000-request limit. A load test on staging (Oct 2026) held 400 concurrent survey participants with flat latency and no errors, at about 520 open requests.
+
+Cloud Run can briefly run two instances while a new revision rolls out. Do not deploy while a multi-participant study is live.
+
 ## Verification
 
 After deployment, verify the services are healthy and run integration tests using the unified runner:
