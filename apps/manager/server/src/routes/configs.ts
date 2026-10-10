@@ -9,7 +9,11 @@
 import { Elysia, t } from "elysia";
 import { MongoServerError } from "mongodb";
 import { authMiddleware } from "../lib/auth-middleware";
-import { generateConfigId, nextRevision } from "../lib/config-identity";
+import {
+	generateConfigId,
+	nextRevision,
+	revisionSessionFilter,
+} from "../lib/config-identity";
 import {
 	getConfigRevisionsCollection,
 	getConfigsCollection,
@@ -179,9 +183,7 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 					previousRevisionSessionCount = await sessions.countDocuments({
 						configId,
 						simulated: { $ne: true },
-						configRevision: plan.archiveLegacy
-							? { $in: [previousRevision, null] }
-							: previousRevision,
+						configRevision: revisionSessionFilter(previousRevision),
 					});
 				}
 
@@ -309,30 +311,27 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 				.sort({ revision: 1 })
 				.toArray();
 
-			// Sessions per revision; legacy sessions without a revision count as rev 1
-			const counts = await (await getSessionsCollection())
-				.aggregate<{ _id: number | null; count: number }>([
-					{ $match: { configId, simulated: { $ne: true } } },
-					{ $group: { _id: "$configRevision", count: { $sum: 1 } } },
-				])
-				.toArray();
-			const countFor = (revision: number) =>
-				counts
-					.filter(
-						(c) => c._id === revision || (revision === 1 && c._id == null),
-					)
-					.reduce((sum, c) => sum + c.count, 0);
+			const sessions = await getSessionsCollection();
+			const sessionCounts = await Promise.all(
+				revisions.map((r) =>
+					sessions.countDocuments({
+						configId,
+						simulated: { $ne: true },
+						configRevision: revisionSessionFilter(r.revision),
+					}),
+				),
+			);
 
 			return {
 				configId,
 				name: config.name ?? null,
 				currentRevision: config.revision ?? null,
-				revisions: revisions.map((r) => ({
+				revisions: revisions.map((r, i) => ({
 					revision: r.revision,
 					checksum: r.checksum,
 					uploadedBy: r.uploadedBy,
 					createdAt: toIso(r.createdAt),
-					sessionCount: countFor(r.revision),
+					sessionCount: sessionCounts[i],
 				})),
 			};
 		},

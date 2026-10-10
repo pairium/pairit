@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { generateConfigId, nextRevision, slugifyName } from "./config-identity";
+import {
+	generateConfigId,
+	nextRevision,
+	revisionSessionFilter,
+	slugifyName,
+} from "./config-identity";
 
 describe("slugifyName", () => {
 	test("lowercases and joins words with dashes", () => {
@@ -33,6 +38,16 @@ describe("generateConfigId", () => {
 			Array.from({ length: 100 }, () => generateConfigId("x")),
 		);
 		expect(ids.size).toBe(100);
+	});
+});
+
+describe("revisionSessionFilter", () => {
+	test("rev 1 includes sessions from before revisions", () => {
+		expect(revisionSessionFilter(1)).toEqual({ $in: [1, null] });
+	});
+
+	test("later revisions match exactly", () => {
+		expect(revisionSessionFilter(2)).toBe(2);
 	});
 });
 

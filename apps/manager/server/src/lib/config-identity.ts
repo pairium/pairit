@@ -40,6 +40,16 @@ export function generateConfigId(name: string): string {
 	return `${slugifyName(name)}-${randomSuffix(ID_SUFFIX_LENGTH)}`;
 }
 
+/**
+ * Mongo filter for the sessions that ran one revision. Sessions from before
+ * revisions were recorded have no configRevision and always belong to rev 1.
+ */
+export function revisionSessionFilter(
+	revision: number,
+): number | { $in: (number | null)[] } {
+	return revision === 1 ? { $in: [1, null] } : revision;
+}
+
 export type RevisionPlan = {
 	revision: number;
 	// True when this upload's config should be saved as a new revision.
