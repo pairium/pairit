@@ -20,7 +20,9 @@ export type ResolvedLlmCredentials = {
 function getEncryptionKey(): Buffer {
 	const raw = process.env.CREDENTIALS_ENCRYPTION_KEY;
 	if (!raw) {
-		throw new Error("CREDENTIALS_ENCRYPTION_KEY is required for per-config LLM credentials");
+		throw new Error(
+			"CREDENTIALS_ENCRYPTION_KEY is required for per-config LLM credentials",
+		);
 	}
 
 	const trimmed = raw.trim();
@@ -53,6 +55,12 @@ function decryptSecret(secret: EncryptedSecret): string {
 	return plaintext.toString("utf8");
 }
 
+/**
+ * Credentials come from the live `configs` doc, unlike agents and pages, which
+ * come from the config the session started on. They are stored encrypted on
+ * the config doc only and are never copied into sessions or config_revisions,
+ * so a rotated or removed key takes effect for sessions already in progress.
+ */
 export async function getLlmCredentialsForConfig(
 	configId: string,
 ): Promise<ResolvedLlmCredentials> {

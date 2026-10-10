@@ -1,11 +1,11 @@
 /**
  * Agent configuration resolution
- * Loads agent configs from MongoDB or local files
+ * Reads agents from the config a session started on, or from local files
  */
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { getConfigsCollection, getSessionsCollection } from "./db";
+import { getSessionsCollection } from "./db";
 import type { AgentConfig, ReplyCondition, Trigger } from "./llm";
 
 type RawAgent = {
@@ -55,109 +55,51 @@ function toAgentConfig(raw: RawAgent): AgentConfig {
 	};
 }
 
-export async function getAgentsForConfig(
-	configId: string,
-): Promise<AgentConfig[]> {
-	const collection = await getConfigsCollection();
-	const doc = await collection.findOne({ configId });
-
-	if (!doc?.config) {
-		return tryLocalConfig(configId);
-	}
-
-	const raw = doc.config as { agents?: unknown[] };
-	const agents = raw?.agents ?? [];
-
+/**
+ * Agents defined in a compiled config. Pure: callers pass the config the
+ * session started on so agents and pages come from the same revision.
+ */
+export function getAgentsFromConfig(config: unknown): AgentConfig[] {
+	if (!config || typeof config !== "object") return [];
+	const agents = (config as { agents?: unknown }).agents;
+	if (!Array.isArray(agents)) return [];
 	return agents.filter(isValidAgent).map(toAgentConfig);
 }
 
-async function tryLocalConfig(configId: string): Promise<AgentConfig[]> {
-	try {
-		// Configs are in the lab app's public folder, not the server's cwd
-		const configPath = path.join(
-			process.cwd(),
-			"..",
-			"app",
-			"public",
-			"configs",
-			`${configId}.json`,
-		);
-		const content = await readFile(configPath, "utf8");
-		const parsed = JSON.parse(content) as { agents?: unknown[] };
-		const agents = parsed?.agents ?? [];
-		return agents.filter(isValidAgent).map(toAgentConfig);
-	} catch {
-		return [];
-	}
-}
+type PageShape = {
+	id: string;
+	components?: Array<{ type: string; props?: { agents?: string[] } }>;
+};
 
-export async function getAgentById(
-	configId: string,
-	agentId: string,
-): Promise<AgentConfig | null> {
-	const agents = await getAgentsForConfig(configId);
-	return agents.find((a) => a.id === agentId) ?? null;
-}
-
-export async function getSessionConfig(sessionId: string): Promise<{
-	configId: string;
-	currentPageId: string;
-	sessionState: Record<string, unknown> | undefined;
-} | null> {
-	const collection = await getSessionsCollection();
-	const session = await collection.findOne(
-		{ id: sessionId },
-		{ projection: { configId: 1, currentPageId: 1, session_state: 1 } },
-	);
-
-	if (!session) return null;
-
-	return {
-		configId: session.configId,
-		currentPageId: session.currentPageId,
-		sessionState: session.session_state as Record<string, unknown> | undefined,
-	};
-}
-
-export async function getPageAgentIds(
-	configId: string,
+/** Agent ids referenced by chat and live-workspace components on a page. */
+export function getPageAgentIdsFromConfig(
+	config: unknown,
 	pageId: string,
-): Promise<string[]> {
-	const collection = await getConfigsCollection();
-	const doc = await collection.findOne({ configId });
-
-	if (!doc?.config) {
-		return tryLocalPageAgents(configId, pageId);
-	}
-
-	type PageShape = {
-		id: string;
-		components?: Array<{ type: string; props?: { agents?: string[] } }>;
-	};
-	const config = doc.config as {
+): string[] {
+	if (!config || typeof config !== "object") return [];
+	const { pages, nodes } = config as {
 		pages?: Record<string, PageShape>;
 		nodes?: PageShape[];
 	};
 
 	const page =
-		config.pages?.[pageId] ?? config.nodes?.find((n) => n.id === pageId);
-	if (!page) {
-		return [];
-	}
+		pages?.[pageId] ??
+		(Array.isArray(nodes) ? nodes.find((n) => n.id === pageId) : undefined);
+	if (!page) return [];
 
 	const agentIds: string[] = [];
 	for (const c of page.components ?? []) {
-		if ((c.type === "chat" || c.type === "live-workspace") && c.props?.agents) {
-			agentIds.push(...(c.props.agents as string[]));
+		if (
+			(c.type === "chat" || c.type === "live-workspace") &&
+			Array.isArray(c.props?.agents)
+		) {
+			agentIds.push(...c.props.agents);
 		}
 	}
 	return agentIds;
 }
 
-async function tryLocalPageAgents(
-	configId: string,
-	pageId: string,
-): Promise<string[]> {
+async function readLocalConfig(configId: string): Promise<unknown> {
 	try {
 		// Configs are in the lab app's public folder, not the server's cwd
 		const configPath = path.join(
@@ -168,31 +110,49 @@ async function tryLocalPageAgents(
 			"configs",
 			`${configId}.json`,
 		);
-		const content = await readFile(configPath, "utf8");
-		type PageShape = {
-			id: string;
-			components?: Array<{ type: string; props?: { agents?: string[] } }>;
-		};
-		const parsed = JSON.parse(content) as {
-			pages?: Record<string, PageShape>;
-			nodes?: PageShape[];
-		};
-
-		const page =
-			parsed.pages?.[pageId] ?? parsed.nodes?.find((n) => n.id === pageId);
-		if (!page) return [];
-
-		const agentIds: string[] = [];
-		for (const c of page.components ?? []) {
-			if (
-				(c.type === "chat" || c.type === "live-workspace") &&
-				c.props?.agents
-			) {
-				agentIds.push(...(c.props.agents as string[]));
-			}
-		}
-		return agentIds;
+		return JSON.parse(await readFile(configPath, "utf8"));
 	} catch {
-		return [];
+		return null;
 	}
+}
+
+/**
+ * Session context for running agents. `config` is the config the session
+ * started on (stored on the session document), not the live `configs` doc, so
+ * a mid-session re-upload cannot change which agents run. Configs that were
+ * never in Mongo fall back to the lab app's local config file.
+ */
+export async function getSessionConfig(sessionId: string): Promise<{
+	configId: string;
+	currentPageId: string;
+	sessionState: Record<string, unknown> | undefined;
+	config: unknown;
+} | null> {
+	const collection = await getSessionsCollection();
+	const session = await collection.findOne(
+		{ id: sessionId },
+		{
+			projection: {
+				configId: 1,
+				currentPageId: 1,
+				session_state: 1,
+				config: 1,
+			},
+		},
+	);
+
+	if (!session) return null;
+
+	const stored: unknown = session.config;
+	const config =
+		stored && typeof stored === "object"
+			? stored
+			: await readLocalConfig(session.configId);
+
+	return {
+		configId: session.configId,
+		currentPageId: session.currentPageId,
+		sessionState: session.session_state as Record<string, unknown> | undefined,
+		config,
+	};
 }
