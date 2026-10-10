@@ -19,33 +19,33 @@ fi
 
 echo "🔍 Verifying Deployment Health..."
 
-# 1. Check Lab Server
-echo -n "🧪 Checking Lab Server ($LAB_URL)... "
-LAB_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$LAB_URL")
-if [ "$LAB_STATUS" -eq 200 ] || [ "$LAB_STATUS" -eq 304 ]; then
-    echo -e "${GREEN}UP ($LAB_STATUS)${NC}"
-else
-    echo -e "${RED}FAILED ($LAB_STATUS)${NC}"
-    # Don't exit yet, check Manager too
-fi
+FAILURES=0
 
-# 2. Check Manager Server
-echo -n "🧪 Checking Manager Server ($MANAGER_URL)... "
-MANAGER_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$MANAGER_URL")
-if [ "$MANAGER_STATUS" -eq 200 ] || [ "$MANAGER_STATUS" -eq 304 ]; then
-    echo -e "${GREEN}UP ($MANAGER_STATUS)${NC}"
-else
-    echo -e "${RED}FAILED ($MANAGER_STATUS)${NC}"
-fi
+# check <label> <url> <accepted status codes...>
+check() {
+    local label=$1
+    local url=$2
+    shift 2
+    echo -n "🧪 Checking $label ($url)... "
+    local status
+    status=$(curl -s -o /dev/null -w "%{http_code}" "$url" || true)
+    for ok in "$@"; do
+        if [ "$status" = "$ok" ]; then
+            echo -e "${GREEN}UP ($status)${NC}"
+            return
+        fi
+    done
+    echo -e "${RED}FAILED ($status)${NC}"
+    FAILURES=$((FAILURES + 1))
+}
 
-# 3. Check Auth Endpoint (Basic reachability)
-# api/auth/providers is a standard better-auth endpoint
-echo -n "🧪 Checking Auth Endpoint... "
-AUTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$MANAGER_URL/api/auth/providers")
-if [ "$AUTH_STATUS" -lt 500 ]; then
-    echo -e "${GREEN}REACHABLE ($AUTH_STATUS)${NC}"
-else
-    echo -e "${RED}ERROR ($AUTH_STATUS)${NC}"
-fi
+check "Lab Server" "$LAB_URL" 200 304
+check "Manager Server" "$MANAGER_URL" 200 304
+check "Auth Endpoint" "$MANAGER_URL/api/auth/get-session" 200
 
 echo "🏁 Health Check Complete"
+
+if [ "$FAILURES" -gt 0 ]; then
+    echo -e "${RED}❌ $FAILURES health check(s) failed${NC}"
+    exit 1
+fi
