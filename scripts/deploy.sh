@@ -193,6 +193,13 @@ gcloud storage buckets add-iam-policy-binding "gs://$MEDIA_BUCKET" \
     --member=allUsers \
     --role=roles/storage.objectViewer >/dev/null
 echo "✅ Bucket gs://$MEDIA_BUCKET is publicly readable."
+# The manager uploads, lists, and deletes media as the default compute service
+# account. Grant it on the bucket; a new project's account may lack roles/editor.
+gcloud storage buckets add-iam-policy-binding "gs://$MEDIA_BUCKET" \
+    --project="$PROJECT_ID" \
+    --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+    --role=roles/storage.objectAdmin >/dev/null
+echo "✅ Manager can write to gs://$MEDIA_BUCKET."
 
 # Define Image Paths
 LAB_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/pairit-lab"
