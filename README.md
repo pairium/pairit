@@ -143,7 +143,7 @@ We use Google Cloud Run for a serverless, scalable deployment.
 - **Staging**: `./scripts/test.sh staging`
 - **Production**: `./scripts/test.sh production`
 
-The published `pairit` CLI talks to production. To use staging, set `PAIRIT_API_URL` to the staging manager and `PAIRIT_LAB_URL` to the staging lab, then run `pairit login`. That login replaces the saved production login. Run `pairit login` again with those variables unset to switch back. See the [deployment guide](docs/docs/dev/deployment.md).
+The published `pairit` CLI talks to production. Add `--env staging` to use staging (e.g. `pairit --env staging login`). Each environment keeps its own saved login. See the [deployment guide](docs/docs/dev/deployment.md).
 
 ---
 

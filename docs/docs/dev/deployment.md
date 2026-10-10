@@ -20,13 +20,16 @@ Staging and production are separate Google projects, separate OAuth apps, and se
 
 Try a change on staging first. Deploy production only after staging looks right.
 
-The published `pairit` CLI talks to production. Point it at staging by setting both URLs, then log in again. That login replaces the saved production login. Run `pairit login` with those variables unset to switch back.
+The published `pairit` CLI talks to production. Add `--env staging` to any command to use staging. Each environment keeps its own saved login, so logging in to staging does not replace the production login.
 
 ```bash
-PAIRIT_API_URL=https://manager-823036187164.us-central1.run.app \
-PAIRIT_LAB_URL=https://lab-823036187164.us-central1.run.app \
-pairit login
+pairit --env staging login
+pairit --env staging config upload configs/hello-world.yaml
 ```
+
+You can also set `PAIRIT_ENV=staging`. `PAIRIT_API_URL` and `PAIRIT_LAB_URL` still override the URLs, for local development.
+
+Set `LAB_PUBLIC_URL` and `MANAGER_PUBLIC_URL` in the env file to serve an environment from custom domains. Auth and links then use those domains, and the Cloud Run URLs stay trusted.
 
 ## Prerequisites
 
