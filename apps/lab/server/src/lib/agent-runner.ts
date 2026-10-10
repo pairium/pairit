@@ -3,7 +3,11 @@
  * Orchestrates AI agent responses to chat messages
  */
 
-import { getAgentById, getPageAgentIds, getSessionConfig } from "./agents";
+import {
+	getAgentsFromConfig,
+	getPageAgentIdsFromConfig,
+	getSessionConfig,
+} from "./agents";
 import {
 	getChatMessagesCollection,
 	getEventsCollection,
@@ -116,15 +120,16 @@ export async function triggerAgents(
 			return;
 		}
 
-		const { configId, currentPageId, sessionState } = sessionConfig;
+		const { configId, currentPageId, sessionState, config } = sessionConfig;
 
-		const agentIds = await getPageAgentIds(configId, currentPageId);
+		const agentIds = getPageAgentIdsFromConfig(config, currentPageId);
 		if (agentIds.length === 0) {
 			return;
 		}
 
+		const agents = getAgentsFromConfig(config);
 		for (const agentId of agentIds) {
-			const agent = await getAgentById(configId, agentId);
+			const agent = agents.find((a) => a.id === agentId);
 			if (!agent) {
 				console.error(`[Agent] Agent not found: ${agentId}`);
 				continue;
@@ -183,15 +188,16 @@ export async function triggerJoinAgents(
 			return;
 		}
 
-		const { configId, currentPageId, sessionState } = sessionConfig;
+		const { configId, currentPageId, sessionState, config } = sessionConfig;
 
-		const agentIds = await getPageAgentIds(configId, currentPageId);
+		const agentIds = getPageAgentIdsFromConfig(config, currentPageId);
 		if (agentIds.length === 0) {
 			return;
 		}
 
+		const agents = getAgentsFromConfig(config);
 		for (const agentId of agentIds) {
-			const agent = await getAgentById(configId, agentId);
+			const agent = agents.find((a) => a.id === agentId);
 			if (!agent) {
 				console.error(`[Agent] Agent not found: ${agentId}`);
 				continue;
