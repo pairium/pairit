@@ -10,6 +10,7 @@ nav:
       - Components: components.md
       - CLI: cli.md
       - Examples: examples.md
+      - Changelog: changelog.md
   - Components:
       - Text: components/text.md
       - Button: components/buttons.md
