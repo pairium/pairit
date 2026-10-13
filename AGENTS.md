@@ -10,7 +10,7 @@ Setup, once:
 - `cp env.template .env`. It points at a local MongoDB and at `localhost` for the CLI.
 - In `.env`, set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` from `.env.staging`. That OAuth client allows `http://localhost:3000` (lab) and `http://localhost:3002` (manager).
 - In `.env`, set `MANAGER_BOOTSTRAP_ADMIN_EMAIL` to your email so the local manager lets you upload.
-- Start MongoDB: `mongod --dbpath <dir>`.
+- Start MongoDB: `mkdir -p ~/.pairit-mongo && mongod --dbpath ~/.pairit-mongo`. Keep it running while you use `bun run dev`.
 
 ```bash
 bun run dev                                                       # lab-app:3000, lab-server:3001, manager-server:3002
