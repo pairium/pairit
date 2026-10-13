@@ -1,9 +1,7 @@
 name: Deploy
 
-# Push to main: run CI, then deploy staging (when the repo variable
-# STAGING_AUTO_DEPLOY is "true"). Production deploys only by hand from the
-# Actions tab, and the "production" environment can require approval.
-# Setup is in docs/docs/dev/deployment.md ("Deploying from GitHub Actions").
+# Push to main deploys staging when the repo variable STAGING_AUTO_DEPLOY is "true".
+# Production deploys only by hand. Setup: docs/docs/dev/deployment.md.
 
 on:
   push:
@@ -12,10 +10,13 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: Environment to deploy
         type: choice
         options: [staging, production]
         default: staging
+      ref:
+        description: Tag or full commit SHA (blank = latest main)
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -24,6 +25,8 @@ permissions:
 jobs:
   ci:
     uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ inputs.ref }}
 
   deploy:
     needs: ci
@@ -31,40 +34,24 @@ jobs:
       (github.event_name == 'push' && vars.STAGING_AUTO_DEPLOY == 'true') ||
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
-    environment:
-      name: ${{ inputs.target || 'staging' }}
-      url: ${{ vars.LAB_URL }}
-    concurrency:
-      group: deploy-${{ inputs.target || 'staging' }}
-      cancel-in-progress: false
+    environment: ${{ inputs.target || 'staging' }}
+    concurrency: deploy-${{ inputs.target || 'staging' }}
     env:
       TARGET: ${{ inputs.target || 'staging' }}
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          ref: ${{ inputs.ref }}
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.8
-
       - uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
-
       - uses: google-github-actions/setup-gcloud@v2
-
-      - name: Write env file
+      - run: printf '%s\n' "$ENV_FILE" > ".env.$TARGET"
         env:
           ENV_FILE: ${{ secrets.ENV_FILE }}
-        run: |
-          if [ -z "$ENV_FILE" ]; then
-            echo "::error::The $TARGET environment has no ENV_FILE secret."
-            exit 1
-          fi
-          printf '%s\n' "$ENV_FILE" > ".env.$TARGET"
-
-      - name: Deploy
-        run: bash scripts/deploy.sh "$TARGET"
-
-      - name: Health check
-        run: bash scripts/tests/verify-health.sh "${{ vars.LAB_URL }}" "${{ vars.MANAGER_URL }}"
+      - run: bash scripts/deploy.sh "$TARGET"
+      - run: bash scripts/tests/verify-health.sh "${{ vars.LAB_URL }}" "${{ vars.MANAGER_URL }}"

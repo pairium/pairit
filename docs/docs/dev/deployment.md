@@ -98,6 +98,14 @@ This script will:
 
 - Push to `main` deploys staging, once the repo variable `STAGING_AUTO_DEPLOY` is `true`. Docs-only pushes are skipped.
 - Production deploys only by hand: Actions → Deploy → Run workflow → `production`, from `main`.
+- A manual run deploys the `ref` input, a tag or full commit SHA. Left blank, it deploys the latest `main`, which is what staging runs. So check staging, then deploy production with `ref` blank.
+
+```bash
+gh workflow run deploy.yml -f target=production                # what staging runs
+gh workflow run deploy.yml -f target=production -f ref=<sha>   # an older commit, e.g. to roll back
+```
+
+To roll back in seconds without a rebuild, send traffic to an earlier Cloud Run revision: `gcloud run services update-traffic lab --to-revisions=<revision>=100 --region us-central1 --project <project>` (same for `manager`). The next deploy replaces it, so revert the bad commit first.
 
 One-time setup, per environment (`staging`, `production`):
 
