@@ -87,7 +87,7 @@ Provider keys are stored per experiment, encrypted at rest, and resolved by `con
 | `replyCondition` | string \| object \| array | `always` | Whether the agent actually responds once triggered. See [Reply Conditions](#reply-conditions). |
 | `sendFirstMessage` | boolean | `false` | **Legacy.** Sends an opening message when chat loads and room is empty. Ignored if `trigger` is set. |
 | `guardrails` | boolean | `true` | Prepend default guardrail instructions to the system prompt. Set to `false` to opt out. See [Agent Guardrails](../guides/agent-guardrails.md). |
-| `reasoningEffort` | string | - | For reasoning models: `minimal`, `low`, `medium`, `high` |
+| `reasoningEffort` | string | - | For reasoning models: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`. Supported values vary by model (e.g. `gpt-6-luna` rejects `minimal`). |
 | `prompts` | array | - | Conditional prompt blocks based on `session_state`. See [Conditional Prompts](#conditional-prompts). |
 | `tools` | array | - | Tool definitions the agent can invoke |
 
