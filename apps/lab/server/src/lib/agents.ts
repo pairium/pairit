@@ -20,7 +20,7 @@ type RawAgent = {
 	trigger?: Trigger | Trigger[];
 	replyCondition?: ReplyCondition | ReplyCondition[];
 	guardrails?: boolean;
-	reasoningEffort?: "minimal" | "low" | "medium" | "high";
+	reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
 	tools?: Array<{
 		name: string;
 		description: string;

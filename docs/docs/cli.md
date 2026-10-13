@@ -40,7 +40,7 @@ Each config has a **name** you choose and a **config ID** that Pairit assigns. T
 
 If a config includes AI agents, upload the required provider key with that config.
 
-- `--openai-api-key` is used for OpenAI models like `gpt-4o`
+- `--openai-api-key` is used for OpenAI models like `gpt-6-luna`
 - `--anthropic-api-key` is used for Anthropic models like `claude-sonnet-*`
 - Keys are encrypted at rest and stored per `configId`
 - Re-uploading the same config without a new key keeps the existing key for that config

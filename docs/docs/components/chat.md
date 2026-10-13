@@ -103,13 +103,13 @@ pages:
 
 agents:
   - id: assistant
-    model: gpt-4o
+    model: gpt-6-luna
     avatar:
       icon: sparkles
     system: You are a helpful assistant.
 
   - id: tutor
-    model: gpt-4o
+    model: gpt-6-luna
     avatar:
       icon: graduation-cap
     system: You are a tutor.

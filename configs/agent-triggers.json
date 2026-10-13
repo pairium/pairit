@@ -174,7 +174,8 @@
   "agents": [
     {
       "id": "greeter",
-      "model": "gpt-5-mini",
+      "model": "gpt-6-luna",
+      "reasoningEffort": "low",
       "avatar": {
         "icon": "hand"
       },
@@ -183,7 +184,8 @@
     },
     {
       "id": "coach",
-      "model": "gpt-5-mini",
+      "model": "gpt-6-luna",
+      "reasoningEffort": "low",
       "avatar": {
         "icon": "badge-help"
       },
@@ -194,7 +196,8 @@
     },
     {
       "id": "facilitator",
-      "model": "gpt-5-mini",
+      "model": "gpt-6-luna",
+      "reasoningEffort": "low",
       "avatar": {
         "image": "https://placehold.co/64x64/png"
       },

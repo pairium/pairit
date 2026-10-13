@@ -76,7 +76,8 @@ matchmaking:
 
 agents:
   - id: facilitator
-    model: "gpt-5-nano"
+    model: "gpt-6-luna"
+    reasoningEffort: low
     system: |
       You are a neutral facilitator helping two people make a hiring decision.
       Keep responses to ONE short sentence. Be extremely brief.

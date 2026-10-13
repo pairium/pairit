@@ -9,7 +9,7 @@ Define agents in your experiment config's `agents` array:
 ```yaml
 agents:
   - id: assistant
-    model: gpt-4o
+    model: gpt-6-luna
     avatar:
       icon: bot
     system: |
@@ -41,13 +41,13 @@ Agents can define an optional `avatar` used in chat UIs.
 ```yaml
 agents:
   - id: tutor
-    model: gpt-4o
+    model: gpt-6-luna
     avatar:
       icon: graduation-cap
     system: You are a tutor.
 
   - id: chef
-    model: gpt-4o
+    model: gpt-6-luna
     avatar:
       image: /images/chef.png
     system: You are a chef.
@@ -64,7 +64,7 @@ Notes:
 Agents support both OpenAI and Anthropic models. The provider is inferred from the model name:
 
 **OpenAI models** (requires a per-config OpenAI key uploaded with `pairit config upload --openai-api-key ...`):
-- `gpt-4o`, `gpt-4o-mini`
+- `gpt-6-luna`, `gpt-6-sol`
 - `o1`, `o1-mini`, `o3-mini`
 - Any OpenAI-compatible model
 
@@ -80,14 +80,14 @@ Provider keys are stored per experiment, encrypted at rest, and resolved by `con
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `id` | string | required | Unique identifier for the agent |
-| `model` | string | required | Model name (e.g., `gpt-4o`, `claude-sonnet-4-5-20250929`) |
+| `model` | string | required | Model name (e.g., `gpt-6-luna`, `claude-sonnet-4-5-20250929`) |
 | `system` | string | required | System prompt defining the agent's role and behavior |
 | `avatar` | object | - | Optional chat avatar for this agent. Supports `icon` (Lucide icon name) or `image` (URL/path). |
 | `trigger` | string \| object \| array | `every_message` | When to potentially run the agent. See [Triggers](#triggers). |
 | `replyCondition` | string \| object \| array | `always` | Whether the agent actually responds once triggered. See [Reply Conditions](#reply-conditions). |
 | `sendFirstMessage` | boolean | `false` | **Legacy.** Sends an opening message when chat loads and room is empty. Ignored if `trigger` is set. |
 | `guardrails` | boolean | `true` | Prepend default guardrail instructions to the system prompt. Set to `false` to opt out. See [Agent Guardrails](../guides/agent-guardrails.md). |
-| `reasoningEffort` | string | - | For reasoning models: `minimal`, `low`, `medium`, `high` |
+| `reasoningEffort` | string | - | For reasoning models: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`. Supported values vary by model (e.g. `gpt-6-luna` rejects `minimal`). |
 | `prompts` | array | - | Conditional prompt blocks based on `session_state`. See [Conditional Prompts](#conditional-prompts). |
 | `tools` | array | - | Tool definitions the agent can invoke |
 
@@ -162,7 +162,7 @@ Use `{{session_state.key}}` anywhere in a system prompt to inject the participan
 ```yaml
 agents:
   - id: tutor
-    model: gpt-4o
+    model: gpt-6-luna
     system: |
       You are a tutor helping a student who scored {{session_state.pretest_score}} on the pretest.
       Their learning style is {{session_state.learning_style}}.
@@ -178,7 +178,7 @@ Use the `prompts` array to select entirely different system prompts based on `se
 ```yaml
 agents:
   - id: negotiator
-    model: gpt-4o
+    model: gpt-6-luna
     system: You are a negotiation partner.  # base fallback
     prompts:
       - when: "session_state.condition == 'cooperative'"
