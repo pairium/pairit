@@ -1,4 +1,5 @@
 allowRetake: true
+requireAuth: false
 
 pages:
   - id: intro

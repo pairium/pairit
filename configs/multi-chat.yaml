@@ -1,5 +1,6 @@
 schema_version: 0.1.0
 allowRetake: true
+requireAuth: false
 initialPageId: intro
 
 pages:
