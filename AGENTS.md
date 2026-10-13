@@ -141,6 +141,7 @@ Two cloud environments. Local dev still uses `.env`. The deploy script never sou
 - A staging deploy refuses a database whose name does not contain `staging`. A production deploy refuses a database whose name contains `staging`.
 - `bash scripts/test.sh staging` and `bash scripts/test.sh production` test the public URLs. The integration step reuses your CLI login for that environment. Log in first with `bun run apps/manager/cli/src/index.ts --env staging login` (or `--env production`).
 - Deploy staging before production.
+- CI (`.github/workflows/ci.yml`) runs Biome, type check, tests, and build on every PR. `deploy.yml` deploys staging on push to `main` and production by hand from the Actions tab. Setup: "Deploying from GitHub Actions" in `docs/docs/dev/deployment.md`.
 - The published `pairit` CLI talks to production. Add `--env staging` to use staging (e.g. `pairit --env staging login`). Each environment keeps its own saved login.
 
 ## Conventions
@@ -159,4 +160,4 @@ Bun and MongoDB are preinstalled in the environment (`bun` is on `PATH`); the st
 - Run everything with `bun run dev` (lab-app:3000, lab-server:3001, manager-server:3002). Standard commands are in the `## Commands` section above.
 - Email/password auth is disabled — only Google OAuth. With dummy OAuth you cannot complete a real sign-in locally. To exercise a full experiment without Google login, load the lab as a Prolific participant: `http://localhost:3000/<configId>?PROLIFIC_PID=x&STUDY_ID=y&SESSION_ID=z` (these params bypass the `FORCE_AUTH=true` OAuth check). The `<configId>` must already exist in the Mongo `configs` collection; seed one by compiling a config (`bun run apps/manager/cli/src/index.ts config compile configs/hello-world.yaml`) and inserting the JSON with `configId` + `requireAuth: false`.
 - Run the CLI from source with `bun run apps/manager/cli/src/index.ts <command>` (the globally published `pairit` may be stale). `config lint`/`config compile` are fully local; `upload`/`admin`/`data` need auth + the manager server.
-- `biome check` currently reports pre-existing lint/format errors unrelated to setup. Root `tsc --noEmit` needs a package tsconfig (there is no root `tsconfig.json`); type-check per package instead.
+- CI runs `biome ci`, so keep `biome check` clean. Root `tsc --noEmit` needs a package tsconfig (there is no root `tsconfig.json`); type-check per package instead.

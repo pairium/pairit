@@ -83,9 +83,10 @@ export async function connectDB(): Promise<Db> {
 	try {
 		return await connectionPromise;
 	} catch (error) {
-		// Reset state on connection failure
+		// Reset state on connection failure so the next call retries. Keep the
+		// client: Better Auth already holds it via getClient(), and calling
+		// connect() again on the same client replaces its closed topology.
 		connectionPromise = null;
-		client = null;
 		db = null;
 		throw error;
 	}
