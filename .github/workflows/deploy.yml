@@ -3,6 +3,8 @@ name: Deploy
 # Push to main: run CI, then deploy staging (when the repo variable
 # STAGING_AUTO_DEPLOY is "true"). Production deploys only by hand from the
 # Actions tab, and the "production" environment can require approval.
+# A manual run deploys `ref`. Left blank, production gets the commit staging
+# last deployed (a promotion) and staging gets the latest main.
 # Setup is in docs/docs/dev/deployment.md ("Deploying from GitHub Actions").
 
 on:
@@ -16,17 +18,59 @@ on:
         type: choice
         options: [staging, production]
         default: staging
+      ref:
+        description: Commit or tag to deploy (blank = what staging runs, for production)
+        type: string
+        default: ''
 
 permissions:
   contents: read
+  deployments: read
   id-token: write
 
 jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+    steps:
+      - id: sha
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TARGET: ${{ inputs.target || 'staging' }}
+          REF: ${{ inputs.ref }}
+        run: |
+          if [ -n "$REF" ]; then
+            sha=$(gh api "repos/$REPO/commits/$REF" --jq .sha)
+          elif [ "$TARGET" = production ]; then
+            # Newest staging deployment whose latest status is success.
+            sha=""
+            while read -r id commit; do
+              state=$(gh api "repos/$REPO/deployments/$id/statuses?per_page=1" --jq '.[0].state')
+              if [ "$state" = success ]; then
+                sha=$commit
+                break
+              fi
+            done < <(gh api "repos/$REPO/deployments?environment=staging&per_page=30" --jq '.[] | "\(.id) \(.sha)"')
+            if [ -z "$sha" ]; then
+              echo "::error::No successful staging deploy found. Pass a ref to deploy."
+              exit 1
+            fi
+          else
+            sha=$GITHUB_SHA
+          fi
+          echo "Deploying $TARGET at $sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
   ci:
+    needs: resolve
     uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.resolve.outputs.sha }}
 
   deploy:
-    needs: ci
+    needs: [resolve, ci]
     if: >-
       (github.event_name == 'push' && vars.STAGING_AUTO_DEPLOY == 'true') ||
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
@@ -41,6 +85,8 @@ jobs:
       TARGET: ${{ inputs.target || 'staging' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
 
       - uses: oven-sh/setup-bun@v2
         with:

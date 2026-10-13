@@ -3,12 +3,17 @@ name: CI
 on:
   pull_request:
   workflow_call:
+    inputs:
+      ref:
+        description: Commit to check (default is the triggering commit)
+        type: string
+        default: ''
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -16,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
 
       - uses: oven-sh/setup-bun@v2
         with:
