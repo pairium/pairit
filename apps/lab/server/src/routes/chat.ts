@@ -16,9 +16,7 @@ import { getGroupMembers, verifyMembership } from "../lib/groups";
 import { broadcastToSession } from "../lib/sse";
 import type { ChatMessageDocument } from "../types";
 
-async function checkIdempotency(
-	key: string,
-): Promise<{ duplicate: boolean }> {
+async function checkIdempotency(key: string): Promise<{ duplicate: boolean }> {
 	const collection = await getIdempotencyCollection();
 
 	try {

@@ -38,11 +38,7 @@ export function ParticipantIcon({
 			style={wrapperStyle}
 		>
 			{avatar.type === "image" ? (
-				<img
-					src={avatar.src}
-					alt=""
-					className="h-full w-full object-cover"
-				/>
+				<img src={avatar.src} alt="" className="h-full w-full object-cover" />
 			) : (
 				<avatar.icon size={size} className={iconClass} />
 			)}

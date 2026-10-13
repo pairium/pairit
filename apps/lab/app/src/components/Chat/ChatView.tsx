@@ -45,6 +45,7 @@ export function ChatView({
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLTextAreaElement>(null);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: scroll when messages arrive or stream
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 	}, [messages.length, streamingMessage?.content]);

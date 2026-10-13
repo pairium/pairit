@@ -37,13 +37,7 @@ export function Media({
 	if (!type || !src) return null;
 
 	if (type === "image") {
-		return (
-			<img
-				src={src}
-				alt={alt}
-				className="w-full rounded-lg"
-			/>
-		);
+		return <img src={src} alt={alt} className="w-full rounded-lg" />;
 	}
 
 	if (type === "video") {

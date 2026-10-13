@@ -90,6 +90,50 @@ This script will:
 4.  Build Docker images using Cloud Build.
 5.  Deploy the `manager` and `lab` services to Cloud Run.
 
+### Deploying from GitHub Actions
+
+`.github/workflows/ci.yml` runs on every pull request: Biome, type check, tests, and build.
+
+`.github/workflows/deploy.yml` runs CI and then `scripts/deploy.sh`:
+
+- Push to `main` deploys staging, once the repo variable `STAGING_AUTO_DEPLOY` is `true`. Docs-only pushes are skipped.
+- Production deploys only by hand: Actions → Deploy → Run workflow → `production`, from `main`.
+
+One-time setup, per environment (`staging`, `production`):
+
+1.  In GitHub (Settings → Environments), create the environment. For `production`, add yourself as a required reviewer.
+2.  Add the secret `ENV_FILE` with the whole contents of `.env.staging` or `.env.production`.
+3.  Add the variables `LAB_URL`, `MANAGER_URL` (the public URLs in the table above), `GCP_WORKLOAD_IDENTITY_PROVIDER`, and `GCP_SERVICE_ACCOUNT`.
+4.  In that environment's Google project, create a deploy service account and let GitHub use it through Workload Identity Federation, limited to `pairium/pairit`:
+
+    ```bash
+    PROJECT_ID=pairit-lab-staging   # or pairit-lab
+    PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
+    SA=github-deploy@$PROJECT_ID.iam.gserviceaccount.com
+
+    gcloud iam service-accounts create github-deploy --project $PROJECT_ID
+    for role in run.admin cloudbuild.builds.editor artifactregistry.admin storage.admin \
+                serviceusage.serviceUsageConsumer serviceusage.serviceUsageAdmin \
+                iam.serviceAccountUser logging.viewer browser; do
+      gcloud projects add-iam-policy-binding $PROJECT_ID --member "serviceAccount:$SA" --role "roles/$role" >/dev/null
+    done
+
+    gcloud iam workload-identity-pools create github --project $PROJECT_ID --location global
+    gcloud iam workload-identity-pools providers create-oidc github --project $PROJECT_ID \
+      --location global --workload-identity-pool github \
+      --issuer-uri https://token.actions.githubusercontent.com \
+      --attribute-mapping google.subject=assertion.sub,attribute.repository=assertion.repository \
+      --attribute-condition "assertion.repository == 'pairium/pairit'"
+    gcloud iam service-accounts add-iam-policy-binding $SA --project $PROJECT_ID \
+      --role roles/iam.workloadIdentityUser \
+      --member "principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/attribute.repository/pairium/pairit"
+
+    echo "GCP_WORKLOAD_IDENTITY_PROVIDER=projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/providers/github"
+    echo "GCP_SERVICE_ACCOUNT=$SA"
+    ```
+
+When you change a local `.env.staging` or `.env.production`, update the matching `ENV_FILE` secret too.
+
 ### Lab runs on one instance
 
 The lab service is deployed with `--max-instances 1`. Matchmaking pools and live updates (chat, match found, state changes) live in the server's memory. Two participants on different instances cannot be matched and do not see each other's messages. One instance with `--concurrency 1000`, 2 vCPU, and 1 GiB holds several hundred participants, since most of their connections are idle streams. The server ends each stream after 2 minutes and the browser reconnects. Cloud Run's proxy keeps a stream open on the server after the browser leaves, so without that cap, departed participants would fill the 1000-request limit. A load test on staging (Oct 2026) held 400 concurrent survey participants with flat latency and no errors, at about 520 open requests.

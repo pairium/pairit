@@ -16,8 +16,8 @@ import {
 } from "./db";
 import { getGroupMembers } from "./groups";
 import type { AgentConfig, ChatMessage, ReplyCondition, Trigger } from "./llm";
-import { getLlmCredentialsForConfig } from "./llm-credentials";
 import { streamAgentResponse } from "./llm";
+import { getLlmCredentialsForConfig } from "./llm-credentials";
 import { resolveSystemPrompt } from "./prompt-resolver";
 import { broadcastToSession, getConnectionCount } from "./sse";
 
