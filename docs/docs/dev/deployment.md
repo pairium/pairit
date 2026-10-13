@@ -119,11 +119,12 @@ One-time setup, per environment (`staging`, `production`):
     PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
     SA=github-deploy@$PROJECT_ID.iam.gserviceaccount.com
 
+    gcloud services enable iamcredentials.googleapis.com sts.googleapis.com --project $PROJECT_ID
     gcloud iam service-accounts create github-deploy --project $PROJECT_ID
     for role in run.admin cloudbuild.builds.editor artifactregistry.admin storage.admin \
                 serviceusage.serviceUsageConsumer serviceusage.serviceUsageAdmin \
-                iam.serviceAccountUser logging.viewer browser; do
-      gcloud projects add-iam-policy-binding $PROJECT_ID --member "serviceAccount:$SA" --role "roles/$role" >/dev/null
+                iam.serviceAccountUser viewer; do
+      gcloud projects add-iam-policy-binding $PROJECT_ID --member "serviceAccount:$SA" --role "roles/$role" --condition=None >/dev/null
     done
 
     gcloud iam workload-identity-pools create github --project $PROJECT_ID --location global
