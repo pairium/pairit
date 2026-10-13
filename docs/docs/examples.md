@@ -136,6 +136,19 @@ Custom slider UI uploaded with the config and shown in a locked-down frame.
 
 <div class="card" markdown>
 
+### Split Layout
+
+Negotiate with an AI dealer while the car listing stays on screen beside the chat.
+
+<div class="card-links">
+<a href="https://pairit.pairium.ai/split-demo" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
+<a href="https://github.com/pairium/pairit/blob/main/configs/split-demo.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
+</div>
+
+</div>
+
+<div class="card" markdown>
+
 ### Timer
 
 Countdown timer with warning state and auto-navigation on expiry.

@@ -33,6 +33,16 @@ function mergeNestedUpdates(
 	return next;
 }
 
+// A chat in a split column fills the column: it drops its fixed height
+// and its own border, and cancels the column padding to sit flush with
+// the card edges.
+const SPLIT_COLUMN_CLASS = [
+	"flex h-full flex-col gap-4 p-4",
+	"[&>[data-chat]]:h-auto [&>[data-chat]]:min-h-0 [&>[data-chat]]:flex-1",
+	"[&>[data-chat]]:-mx-4 [&>[data-chat]]:rounded-none [&>[data-chat]]:border-0",
+	"[&>[data-chat]:first-child]:-mt-4 [&>[data-chat]:last-child]:-mb-4",
+].join(" ");
+
 function isComponentVisible(
 	component: ComponentInstance,
 	sessionState: Record<string, unknown>,
@@ -158,14 +168,23 @@ export function PageRenderer({
 			page.components?.filter((c) =>
 				isComponentVisible(c, sessionState ?? {}),
 			) ?? [];
+		// An explicit `column` wins. Otherwise the workspace goes right,
+		// buttons go below both columns, and everything else goes left.
+		const placementOf = (c: ComponentInstance) =>
+			c.column ??
+			(c.type === "live-workspace"
+				? "right"
+				: c.type === "buttons"
+					? "bottom"
+					: "left");
 		const leftComponents = visibleComponents.filter(
-			(c) => c.type !== "live-workspace" && c.type !== "buttons",
+			(c) => placementOf(c) === "left",
 		);
 		const rightComponents = visibleComponents.filter(
-			(c) => c.type === "live-workspace",
+			(c) => placementOf(c) === "right",
 		);
 		const bottomComponents = visibleComponents.filter(
-			(c) => c.type === "buttons",
+			(c) => placementOf(c) === "bottom",
 		);
 
 		return (
@@ -173,7 +192,7 @@ export function PageRenderer({
 				<div className="w-full max-w-6xl space-y-4">
 					<div className="grid h-[calc(100vh-14rem)] grid-cols-2 gap-4">
 						<Card className="overflow-hidden">
-							<CardContent className="flex h-full flex-col space-y-4 p-4">
+							<div className={SPLIT_COLUMN_CLASS}>
 								{leftComponents.length ? (
 									leftComponents.map((component, index) =>
 										renderComponentInstance(component, index, runtimeContext),
@@ -183,20 +202,20 @@ export function PageRenderer({
 										No components provided.
 									</div>
 								)}
-							</CardContent>
+							</div>
 						</Card>
 						<Card className="overflow-hidden">
-							<CardContent className="flex h-full flex-col p-4">
+							<div className={SPLIT_COLUMN_CLASS}>
 								{rightComponents.length ? (
 									rightComponents.map((component, index) =>
 										renderComponentInstance(component, index, runtimeContext),
 									)
 								) : (
 									<div className="text-center text-sm text-slate-500">
-										No workspace component provided.
+										No components provided.
 									</div>
 								)}
-							</CardContent>
+							</div>
 						</Card>
 					</div>
 					{bottomComponents.length > 0 && (

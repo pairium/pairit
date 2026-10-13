@@ -60,7 +60,7 @@ Common page fields:
 - `endRedirectUrl?`: string; optional URL exposed as a "Continue" button on end pages. Participants can follow it to finish in an external system instead of restarting.
 - `onEnter?`: array of actions to run invisibly when entering the page (e.g., randomization). See [Randomization](components/randomization.md).
 - `components?`: array of component instances shown on the page (canonical)
-- `layout?`: optional presentation hints for the client
+- `layout?`: set to `split` for a two-column page (see [Split layout](#split-layout))
 
 Component instance shapes:
 
@@ -72,6 +72,35 @@ Component instance shapes:
 - Built-in html: `{ type: "html", props: { src: string, read?: string[], write?: string[], height?: number, required?: bool } }`
 
 All component instances also accept an optional `when` field to conditionally render based on `session_state` (see [Expressions](#expressions)).
+
+### Split layout
+
+`layout: split` shows the page in two columns. Set `column: left` or `column: right` on a component to choose its column. Components without `column` follow the defaults:
+
+- `live-workspace` goes right.
+- `buttons` go below both columns.
+- Everything else goes left.
+
+```yaml
+pages:
+  - id: negotiate
+    layout: split
+    components:
+      - type: chat
+        props:
+          agents: [dealer]
+      - type: html
+        column: right
+        props:
+          src: listing.html
+      - type: buttons
+        props:
+          buttons:
+            - text: Done
+              action: { type: go_to, target: thanks }
+```
+
+`column` has no effect on pages without `layout: split`.
 
 Example page:
 

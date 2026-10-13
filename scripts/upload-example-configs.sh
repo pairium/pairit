@@ -47,6 +47,7 @@ AGENT_CONFIGS=(
     workspace
     agent-triggers
     conditional-agent
+    split-demo
 )
 
 # Configs without agents (no credentials needed)

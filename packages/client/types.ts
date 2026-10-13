@@ -33,6 +33,7 @@ export interface ComponentInstance<
 	props: Props;
 	events?: ComponentEventsConfig<Type>;
 	when?: string;
+	column?: "left" | "right";
 }
 
 export type OnEnterAction = {
