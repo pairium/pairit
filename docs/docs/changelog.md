@@ -8,6 +8,13 @@ npm install -g pairit
 
 Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/releases).
 
+## CLI 0.3.1
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/cli-v0.3.1)
+
+- In a split layout, `pairit config lint` checks that each component's `column` is `left` or `right`. See [Split layout](configuration.md#split-layout).
+- `--env staging` and `--env production` now take precedence over `PAIRIT_API_URL`.
+
 ## CLI 0.3.0
 
 [Release notes](https://github.com/pairium/pairit/releases/tag/cli-v0.3.0)
