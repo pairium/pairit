@@ -433,3 +433,5 @@ tests/test-media-*.txt
 
 # Claude Code local settings
 .claude/settings.local.json
+# google-github-actions/auth credentials
+gha-creds-*.json
