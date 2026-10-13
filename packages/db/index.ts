@@ -51,6 +51,26 @@ function buildClientOptions(): MongoClientOptions {
 	return options;
 }
 
+const CONNECT_ATTEMPTS = 5;
+
+/**
+ * A failed connect() leaves the client's topology closed, and every query
+ * on it (including Better Auth's) fails until connect() is called again.
+ * Retry so a slow first connection on a cold start does not break sign-in.
+ */
+async function connectWithRetry(mongoClient: MongoClient): Promise<void> {
+	for (let attempt = 1; ; attempt++) {
+		try {
+			await mongoClient.connect();
+			return;
+		} catch (error) {
+			if (attempt >= CONNECT_ATTEMPTS) throw error;
+			console.warn(`[DB] Connect attempt ${attempt} failed, retrying`);
+			await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+		}
+	}
+}
+
 /**
  * Connect to MongoDB and return the database instance
  * Uses singleton pattern - subsequent calls return the same connection
@@ -70,7 +90,7 @@ export async function connectDB(): Promise<Db> {
 		if (!client) {
 			client = new MongoClient(uri, options);
 		}
-		await client.connect();
+		await connectWithRetry(client);
 
 		// Extract database name from URI or use default
 		const dbName = new URL(uri).pathname.slice(1) || "pairit";
