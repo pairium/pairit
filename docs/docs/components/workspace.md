@@ -30,7 +30,7 @@ Workspace documents are identified by a `groupId`. The resolution depends on `sc
 
 ## Split Layout
 
-Use `layout: "split"` on a page to display workspace alongside other components in a two-column layout. The workspace goes in the right column, everything else in the left.
+Use `layout: "split"` on a page to display workspace alongside other components in a two-column layout. By default the workspace goes in the right column and everything else in the left. Set `column: left` or `column: right` on any component to move it (see [Split layout](../configuration.md#split-layout)).
 
 ```yaml
 pages:

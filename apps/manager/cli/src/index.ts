@@ -590,6 +590,14 @@ async function lintConfig(configPath: string): Promise<HtmlSourceInfo[]> {
 			if (!page.id) {
 				errors.push(`pages[${index}] is missing id`);
 			}
+			page.components?.forEach((component, componentIndex) => {
+				const column = (component as { column?: unknown } | null)?.column;
+				if (column !== undefined && column !== "left" && column !== "right") {
+					errors.push(
+						`pages[${index}].components[${componentIndex}].column must be "left" or "right"`,
+					);
+				}
+			});
 		});
 	}
 
