@@ -131,6 +131,25 @@ Use `pairit.event` for traces you do not need later. They go to the event log on
 pairit.event("slider_move", { x: 2 });
 ```
 
+## Side by side
+
+On a `layout: split` page, set `column: left` or `column: right` to show the frame next to another component, such as a chat. Without `column`, it goes in the left column. See [Split layout](../configuration.md#split-layout) and the [Split layout example](../examples.md#split-layout).
+
+```yaml
+pages:
+  - id: negotiate
+    layout: split
+    components:
+      - type: chat
+        props:
+          agents: [dealer]
+      - type: html
+        column: right
+        props:
+          src: listing.html
+          height: 320
+```
+
 ## Styling
 
 Pairit does not style the HTML inside the frame. Put CSS in a `<style>` tag or on the elements. The iframe cannot see Pairit’s page styles, and it cannot load CSS from the internet.

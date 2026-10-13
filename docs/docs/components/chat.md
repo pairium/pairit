@@ -50,6 +50,25 @@ pages:
           placeholder: "Ask me anything..."
 ```
 
+## Side by side
+
+On a `layout: split` page, set `column` to put the chat in the left or right column. The chat then fills its column instead of keeping its standalone height. See [Split layout](../configuration.md#split-layout).
+
+```yaml
+pages:
+  - id: negotiate
+    layout: split
+    components:
+      - type: chat
+        column: right
+        props:
+          agents: [dealer]
+      - type: html
+        column: left
+        props:
+          src: listing.html
+```
+
 ## Avatars
 
 Chat supports optional avatar overrides for:
