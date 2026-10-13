@@ -108,7 +108,7 @@ pages:
 
 agents:
   - id: advisor
-    model: "gpt-5-mini"
+    model: "gpt-6-luna"
     system: |
       You are a friendly financial advisor. Give brief, helpful responses.
       If the user has spoken to you before in this session, acknowledge the prior conversation.

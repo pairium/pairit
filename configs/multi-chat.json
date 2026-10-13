@@ -163,7 +163,7 @@
   "agents": [
     {
       "id": "advisor",
-      "model": "gpt-5-mini",
+      "model": "gpt-6-luna",
       "system": "You are a friendly financial advisor. Give brief, helpful responses.\nIf the user has spoken to you before in this session, acknowledge the prior conversation.\nKeep responses SHORT - 2-3 sentences max.\n"
     }
   ]

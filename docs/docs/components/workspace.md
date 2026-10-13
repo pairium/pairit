@@ -66,7 +66,7 @@ Agents can update the workspace using the `write_workspace` tool:
 ```yaml
 agents:
   - id: dealer
-    model: gpt-5-mini
+    model: gpt-6-luna
     system: "You are negotiating a deal. Use the workspace to draft terms."
     tools:
       - name: write_workspace
@@ -101,7 +101,7 @@ pages:
 
 agents:
   - id: writer
-    model: gpt-5-mini
+    model: gpt-6-luna
     system: "You are a writing assistant. Help the user draft their document."
     tools:
       - name: write_workspace

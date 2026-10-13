@@ -26,7 +26,7 @@ If you need full control over the agent's behavior (for example, if the agent *i
 ```yaml
 agents:
   - id: custom-agent
-    model: gpt-4o
+    model: gpt-6-luna
     guardrails: false
     system: |
       You are a custom research interface. You may discuss all aspects
@@ -83,7 +83,7 @@ If your agent uses tools like `end_chat` or `assign_state`, the guardrails still
 ```yaml
 agents:
   - id: mediator
-    model: gpt-4o
+    model: gpt-6-luna
     system: |
       You mediate a negotiation between participants.
       Use end_chat when both parties agree or after 10 exchanges.

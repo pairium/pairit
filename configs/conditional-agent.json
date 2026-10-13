@@ -98,7 +98,7 @@
   "agents": [
     {
       "id": "chef",
-      "model": "gpt-4o-mini",
+      "model": "gpt-6-luna",
       "trigger": "on_join",
       "system": "You are a chef.",
       "prompts": [

@@ -91,7 +91,7 @@
   "agents": [
     {
       "id": "writer",
-      "model": "gpt-5-mini",
+      "model": "gpt-6-luna",
       "system": "You are a writing assistant helping the user draft a project proposal.\nThe shared workspace contains the current document.\nUse the write_workspace tool to update the document when the user asks for edits.\nKeep chat responses SHORT - 1-2 sentences. Do the real work in the workspace.\n",
       "tools": [
         {
