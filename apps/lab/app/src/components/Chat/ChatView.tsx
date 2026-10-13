@@ -74,9 +74,9 @@ export function ChatView({
 			data-chat
 			className="flex h-[500px] flex-col rounded-2xl border border-slate-200 bg-white"
 		>
-			<div className="flex-1 space-y-3 overflow-y-auto p-4">
+			<div className="relative flex-1 space-y-3 overflow-y-auto p-4">
 				{messages.length === 0 && (
-					<div className="flex h-full items-center justify-center text-sm text-slate-400">
+					<div className="absolute inset-0 flex items-center justify-center text-sm text-slate-400">
 						No messages yet
 					</div>
 				)}

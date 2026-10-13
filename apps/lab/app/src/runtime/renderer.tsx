@@ -33,10 +33,15 @@ function mergeNestedUpdates(
 	return next;
 }
 
-// A chat in a split column stretches to fill the column instead of
-// keeping its fixed standalone height.
-const SPLIT_COLUMN_CLASS =
-	"flex h-full flex-col gap-4 p-4 [&>[data-chat]]:h-auto [&>[data-chat]]:min-h-0 [&>[data-chat]]:flex-1";
+// A chat in a split column fills the column: it drops its fixed height
+// and its own border, and cancels the column padding to sit flush with
+// the card edges.
+const SPLIT_COLUMN_CLASS = [
+	"flex h-full flex-col gap-4 p-4",
+	"[&>[data-chat]]:h-auto [&>[data-chat]]:min-h-0 [&>[data-chat]]:flex-1",
+	"[&>[data-chat]]:-mx-4 [&>[data-chat]]:rounded-none [&>[data-chat]]:border-0",
+	"[&>[data-chat]:first-child]:-mt-4 [&>[data-chat]:last-child]:-mb-4",
+].join(" ");
 
 function isComponentVisible(
 	component: ComponentInstance,
