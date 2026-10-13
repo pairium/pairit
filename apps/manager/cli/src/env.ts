@@ -32,12 +32,15 @@ export function getEnvName(): EnvName {
 	return fromEnv ? parseEnvName(fromEnv) : "production";
 }
 
-// PAIRIT_API_URL / PAIRIT_LAB_URL still win, so local dev keeps working.
+// An explicit --env wins. Otherwise PAIRIT_API_URL / PAIRIT_LAB_URL win,
+// so local dev (where .env points them at localhost) keeps working.
 export function getApiUrl(): string {
+	if (selected) return ENVIRONMENTS[selected].api;
 	return process.env.PAIRIT_API_URL || ENVIRONMENTS[getEnvName()].api;
 }
 
 export function getLabUrl(): string {
+	if (selected) return ENVIRONMENTS[selected].lab;
 	return process.env.PAIRIT_LAB_URL || ENVIRONMENTS[getEnvName()].lab;
 }
 

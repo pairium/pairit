@@ -4,14 +4,30 @@ Monorepo for a behavioral science experiment platform. Participants run experime
 
 ## Local Development
 
-Prerequisites:
-- `.env` file in project root (Google OAuth credentials + remote Atlas URI)
+Test changes locally before deploying to staging.
+
+Setup, once:
+- `cp env.template .env`. It points at a local MongoDB and at `localhost` for the CLI.
+- In `.env`, set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` from `.env.staging`. That OAuth client allows `http://localhost:3000` (lab) and `http://localhost:3002` (manager).
+- In `.env`, set `MANAGER_BOOTSTRAP_ADMIN_EMAIL` to your email so the local manager lets you upload.
+- Start MongoDB: `mongod --dbpath <dir>`.
 
 ```bash
-# Start dev (remote Atlas + Google OAuth + auth required)
-# Open http://localhost:3000/<experimentId> to trigger sign-in
-bun run dev
+bun run dev                                                       # lab-app:3000, lab-server:3001, manager-server:3002
+bun run apps/manager/cli/src/index.ts login                       # local manager; .env sets PAIRIT_API_URL
+bun run apps/manager/cli/src/index.ts config upload configs/split-demo.yaml --config-id split-demo --openai-api-key <key>
 ```
+
+Then open `http://localhost:3000/split-demo` and sign in with Google. Use the lab on port 3000; port 3001 serves the last `bun run build`.
+
+To skip sign-in, or to act as several participants at once (e.g. matchmaking or a shared chat), open the experiment as Prolific participants. Each `PROLIFIC_PID` is a separate participant:
+
+```
+http://localhost:3000/split-demo?PROLIFIC_PID=a&STUDY_ID=s&SESSION_ID=1
+http://localhost:3000/split-demo?PROLIFIC_PID=b&STUDY_ID=s&SESSION_ID=2
+```
+
+The CLI uses `PAIRIT_API_URL` from `.env` unless you pass `--env staging` or `--env production`, which always win.
 
 ## Commands
 
