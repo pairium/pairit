@@ -129,6 +129,7 @@
     {
       "id": "facilitator",
       "model": "gpt-6-luna",
+      "reasoningEffort": "low",
       "system": "You are a neutral facilitator helping two people make a hiring decision.\nKeep responses to ONE short sentence. Be extremely brief.\nAsk a question OR make an observation, never both.\nStay neutral - never express preferences.\n"
     }
   ],

@@ -164,6 +164,7 @@
     {
       "id": "advisor",
       "model": "gpt-6-luna",
+      "reasoningEffort": "low",
       "system": "You are a friendly financial advisor. Give brief, helpful responses.\nIf the user has spoken to you before in this session, acknowledge the prior conversation.\nKeep responses SHORT - 2-3 sentences max.\n"
     }
   ]

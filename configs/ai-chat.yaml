@@ -47,6 +47,7 @@ pages:
 agents:
   - id: dealer
     model: "gpt-6-luna"
+    reasoningEffort: low
     avatar:
       icon: badge-dollar-sign
     system: |

@@ -175,6 +175,7 @@
     {
       "id": "greeter",
       "model": "gpt-6-luna",
+      "reasoningEffort": "low",
       "avatar": {
         "icon": "hand"
       },
@@ -184,6 +185,7 @@
     {
       "id": "coach",
       "model": "gpt-6-luna",
+      "reasoningEffort": "low",
       "avatar": {
         "icon": "badge-help"
       },
@@ -195,6 +197,7 @@
     {
       "id": "facilitator",
       "model": "gpt-6-luna",
+      "reasoningEffort": "low",
       "avatar": {
         "image": "https://placehold.co/64x64/png"
       },
