@@ -35,12 +35,14 @@ function mergeNestedUpdates(
 
 // A chat in a split column fills the column: it drops its fixed height
 // and its own border, and cancels the column padding to sit flush with
-// the card edges.
+// the card edges. An html embed also drops its border and sits flush.
 const SPLIT_COLUMN_CLASS = [
 	"flex h-full flex-col gap-4 p-4",
 	"[&>[data-chat]]:h-auto [&>[data-chat]]:min-h-0 [&>[data-chat]]:flex-1",
 	"[&>[data-chat]]:-mx-4 [&>[data-chat]]:rounded-none [&>[data-chat]]:border-0",
 	"[&>[data-chat]:first-child]:-mt-4 [&>[data-chat]:last-child]:-mb-4",
+	"[&>[data-html]]:-mx-4 [&>[data-html]:first-child]:-mt-4",
+	"[&>[data-html]_iframe]:rounded-none [&>[data-html]_iframe]:border-0",
 ].join(" ");
 
 function isComponentVisible(

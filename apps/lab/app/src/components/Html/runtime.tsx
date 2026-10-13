@@ -152,7 +152,7 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 		}
 
 		return (
-			<div className="space-y-2">
+			<div data-html className="space-y-2">
 				<HtmlEmbed
 					iframeRef={iframeRef}
 					srcdoc={srcdoc}
