@@ -85,6 +85,9 @@ export function createAuth(options: CreateAuthOptions = {}) {
 				clientId: process.env.GOOGLE_CLIENT_ID || "",
 				clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
 				scope: ["email", "profile", "openid"],
+				// Always show Google's account chooser, so people signed in to
+				// several Google accounts can pick the allowlisted one.
+				prompt: "select_account",
 			},
 		},
 		session: {
