@@ -8,9 +8,9 @@ npm install -g pairit
 
 Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/releases).
 
-## CLI 0.4.0
+## CLI 0.3.2
 
-[Release notes](https://github.com/pairium/pairit/releases/tag/cli-v0.4.0)
+[Release notes](https://github.com/pairium/pairit/releases/tag/cli-v0.3.2)
 
 - `pairit config lint` checks randomization that uses `distribute: true`: it needs `scope: group`, and its `conditions` list must have one entry per group member. See [Different roles within a group](components/randomization.md#different-roles-within-a-group).
 
