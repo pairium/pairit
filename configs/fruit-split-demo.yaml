@@ -1,0 +1,109 @@
+schema_version: 0.1.0
+name: fruit-split-demo
+allowRetake: true
+requireAuth: false
+initialPageId: intro
+
+pages:
+  - id: intro
+    components:
+      - type: text
+        props:
+          text: |
+            # Fruit Split 🍎🍊
+
+            You'll be paired with a partner. One of you gets apples,
+            the other gets oranges.
+      - type: buttons
+        props:
+          buttons:
+            - id: start
+              text: "Find a partner"
+              action:
+                type: go_to
+                target: matching
+
+  - id: matching
+    components:
+      - type: matchmaking
+        props:
+          poolId: main_pool
+          onMatchTarget: reveal
+
+  - id: matching_timeout
+    end: true
+    components:
+      - type: text
+        props:
+          text: "No partner showed up this time. Thanks for trying!"
+
+  # Give each partner a different fruit
+  - id: reveal
+    onEnter:
+      - type: randomize
+        scope: group
+        distribute: true
+        conditions: [apples, oranges]
+        stateKey: fruit
+    components:
+      - type: text
+        props:
+          text: "# You're paired! 🎉"
+      - type: buttons
+        props:
+          buttons:
+            - id: open
+              text: "Open your basket"
+              action:
+                type: go_to
+                branches:
+                  - when: "session_state.fruit == 'apples'"
+                    target: apples
+                  - target: oranges
+
+  - id: apples
+    components:
+      - type: text
+        props:
+          text: |
+            # You got apples! 🍎🍎🍎
+
+            Your partner got oranges.
+      - type: buttons
+        props:
+          buttons:
+            - id: done
+              text: "Done"
+              action:
+                type: go_to
+                target: done
+
+  - id: oranges
+    components:
+      - type: text
+        props:
+          text: |
+            # You got oranges! 🍊🍊🍊
+
+            Your partner got apples.
+      - type: buttons
+        props:
+          buttons:
+            - id: done
+              text: "Done"
+              action:
+                type: go_to
+                target: done
+
+  - id: done
+    end: true
+    components:
+      - type: text
+        props:
+          text: "Thanks for trying the demo!"
+
+matchmaking:
+  - id: main_pool
+    num_users: 2
+    timeoutSeconds: 180
+    timeoutTarget: matching_timeout
