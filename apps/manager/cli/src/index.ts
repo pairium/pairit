@@ -15,6 +15,7 @@ import {
 	type HtmlSourceInfo,
 	inspectHtmlSources,
 } from "./html-assets.js";
+import { lintRandomization } from "./randomize-lint.js";
 
 type ExperimentPage = {
 	id: string;
@@ -600,6 +601,7 @@ async function lintConfig(configPath: string): Promise<HtmlSourceInfo[]> {
 			});
 		});
 	}
+	errors.push(...lintRandomization(config));
 
 	if (errors.length) {
 		throw new Error(errors.join(", "));
@@ -721,6 +723,10 @@ async function buildUploadPayload(
 }> {
 	// Load source YAML to read top-level flags (not preserved in compiled output)
 	const sourceConfig = await loadConfig(configPath);
+	const randomizationErrors = lintRandomization(sourceConfig);
+	if (randomizationErrors.length) {
+		throw new Error(randomizationErrors.join(", "));
+	}
 	const allowRetake = sourceConfig.allowRetake === true;
 	const requireAuth = sourceConfig.requireAuth;
 

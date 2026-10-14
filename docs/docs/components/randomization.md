@@ -37,6 +37,7 @@ When the participant navigates to `chat`, the randomization runs in the backgrou
 | `assignmentType` | string | `"random"` | Algorithm: `random`, `balanced_random`, or `block` |
 | `stateKey` | string | `"treatment"` | User state key where the assignment is stored |
 | `scope` | string | `"session"` | `"session"` for per-participant, `"group"` for group-level |
+| `distribute` | boolean | `false` | With `scope: group`, give each group member a different entry from `conditions` |
 
 ### Group-level randomization
 
@@ -65,6 +66,29 @@ pages:
 ```
 
 The first group member to enter the page triggers randomization. Subsequent members receive the same condition (idempotent).
+
+### Different roles within a group
+
+Add `distribute: true` to give each group member a different condition. For example, one partner sees an AI estimate and the other does not:
+
+```yaml
+  - id: task
+    onEnter:
+      - type: randomize
+        scope: group
+        distribute: true
+        conditions: [ai_estimate, no_estimate]
+        stateKey: role
+```
+
+The conditions are shuffled and handed out one per member, so every pair gets one `ai_estimate` and one `no_estimate`. Later pages branch on `session_state.role`.
+
+Conditions can repeat. A group of three with one leader uses `conditions: [leader, follower, follower]`.
+
+- The list must have exactly one entry per group member. `pairit config lint` and `pairit config upload` check this when all matchmaking pools have the same `num_users`. Otherwise the server checks it and returns an error instead of assigning roles.
+- `assignmentType` is ignored, because every group gets the whole list.
+- Roles are saved, so a participant who refreshes keeps their role.
+- To swap roles in a later round, branch on the same `role` with the pages reversed. You don't need a second randomization.
 
 ### Multiple randomizations
 
@@ -105,6 +129,8 @@ You can also use randomization as a rendered component. This is useful when you 
 | `assignmentType` | string | `"random"` | Assignment algorithm: `random`, `balanced_random`, or `block` |
 | `conditions` | string[] | `[]` | Array of condition names to assign from |
 | `stateKey` | string | `"treatment"` | User state key where the assignment is stored |
+| `scope` | string | `"session"` | `"session"` for per-participant, `"group"` for group-level |
+| `distribute` | boolean | `false` | With `scope: group`, give each group member a different entry from `conditions` |
 | `target` | string | - | Page to auto-navigate to after assignment |
 | `showAssignment` | boolean | `true` | Whether to display the assignment result briefly |
 
@@ -151,6 +177,8 @@ For `scope: group`, the endpoint:
 2. Checks if any group member already has `session_state.{stateKey}` set
 3. If found, returns the existing condition and ensures the requesting session also has it
 4. If not, assigns a new condition and sets it on all group members
+
+With `distribute: true`, the first request shuffles `conditions` across the group's members, saves the result on the group document, and writes each member's own condition to their session.
 
 This ensures participants always see the same condition even if they refresh or return later.
 

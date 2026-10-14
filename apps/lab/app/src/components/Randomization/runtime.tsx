@@ -15,6 +15,8 @@ type RandomizationProps = {
 	assignmentType?: "random" | "balanced_random" | "block";
 	conditions?: string[];
 	stateKey?: string;
+	scope?: "session" | "group";
+	distribute?: boolean;
 	target?: string;
 	showAssignment?: boolean;
 };
@@ -34,6 +36,8 @@ export const RandomizationRuntime = defineRuntimeComponent<
 		const assignmentType = component.props.assignmentType ?? "random";
 		const conditions = component.props.conditions ?? [];
 		const stateKey = component.props.stateKey ?? "treatment";
+		const scope = component.props.scope;
+		const distribute = component.props.distribute;
 		const target = component.props.target;
 		const showAssignment = component.props.showAssignment ?? false;
 
@@ -49,6 +53,8 @@ export const RandomizationRuntime = defineRuntimeComponent<
 						assignmentType,
 						conditions,
 						stateKey,
+						scope,
+						distribute,
 					});
 
 					console.log(
@@ -89,6 +95,8 @@ export const RandomizationRuntime = defineRuntimeComponent<
 			assignmentType,
 			conditions,
 			stateKey,
+			scope,
+			distribute,
 			target,
 			showAssignment,
 			onAction,

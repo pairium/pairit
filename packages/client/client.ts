@@ -122,6 +122,7 @@ export type RandomizeParams = {
 	conditions?: string[];
 	stateKey?: string;
 	scope?: "session" | "group";
+	distribute?: boolean;
 };
 
 export type RandomizeResponse = {

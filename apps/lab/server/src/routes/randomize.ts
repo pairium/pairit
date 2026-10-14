@@ -5,7 +5,10 @@
 
 import { Elysia, t } from "elysia";
 import { getGroupsCollection, getSessionsCollection } from "../lib/db";
-import { assignTreatment } from "../lib/treatment-assignment";
+import {
+	assignTreatment,
+	distributeConditions,
+} from "../lib/treatment-assignment";
 import { loadSession } from "./sessions";
 
 export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
@@ -23,6 +26,7 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 			conditions = [],
 			stateKey = "treatment",
 			scope = "session",
+			distribute = false,
 		} = body;
 
 		// Validate stateKey to prevent MongoDB operator injection
@@ -33,6 +37,14 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 		) {
 			set.status = 400;
 			return { error: "invalid_state_key" };
+		}
+
+		if (distribute && scope !== "group") {
+			set.status = 400;
+			return {
+				error: "distribute_requires_group_scope",
+				message: "distribute: true only works with scope: group.",
+			};
 		}
 
 		// Idempotent: return existing assignment if present
@@ -57,6 +69,81 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 			}
 
 			const sessionsCollection = await getSessionsCollection();
+
+			if (distribute) {
+				// Each member gets a different entry from conditions
+				const groupsCollection = await getGroupsCollection();
+				const group = await groupsCollection.findOne(
+					{ groupId },
+					{ projection: { memberSessionIds: 1, distributions: 1 } },
+				);
+				if (!group) {
+					set.status = 400;
+					return {
+						error: "group_not_found",
+						message: `Group ${groupId} does not exist.`,
+					};
+				}
+
+				let distribution = group.distributions?.[stateKey];
+				const existing = Boolean(distribution);
+				if (!distribution) {
+					let candidate: Record<string, string>;
+					try {
+						candidate = distributeConditions(
+							conditions,
+							group.memberSessionIds,
+						);
+					} catch (error) {
+						const message =
+							error instanceof Error ? error.message : String(error);
+						console.error(`[Randomize] Group ${groupId}: ${message}`);
+						set.status = 400;
+						return { error: "group_size_mismatch", message };
+					}
+
+					// Claim the distribution on the group document so members
+					// randomizing at the same time all use the first writer's
+					const distributionPath = `distributions.${stateKey}`;
+					await groupsCollection.updateOne(
+						{ groupId, [distributionPath]: { $exists: false } },
+						{ $set: { [distributionPath]: candidate } },
+					);
+					const claimed = await groupsCollection.findOne(
+						{ groupId },
+						{ projection: { distributions: 1 } },
+					);
+					distribution = claimed?.distributions?.[stateKey] ?? candidate;
+
+					await sessionsCollection.bulkWrite(
+						Object.entries(distribution).map(([sid, value]) => ({
+							updateOne: {
+								filter: { id: sid },
+								update: {
+									$set: {
+										[`session_state.${stateKey}`]: value,
+										updatedAt: new Date(),
+									},
+								},
+							},
+						})),
+					);
+
+					console.log(
+						`[Randomize] Group ${groupId} distributed ${stateKey}: ${JSON.stringify(distribution)}`,
+					);
+				}
+
+				const condition = distribution[id];
+				if (!condition) {
+					set.status = 400;
+					return {
+						error: "not_in_group",
+						message: `Session ${id} is not a member of group ${groupId}.`,
+					};
+				}
+				return { condition, existing };
+			}
 
 			// Check if any group member already has an assignment
 			const existingMember = await sessionsCollection.findOne({
@@ -167,6 +254,7 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 			conditions: t.Optional(t.Array(t.String())),
 			stateKey: t.Optional(t.String()),
 			scope: t.Optional(t.Union([t.Literal("session"), t.Literal("group")])),
+			distribute: t.Optional(t.Boolean()),
 		}),
 	},
 );
