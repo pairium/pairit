@@ -1,0 +1,188 @@
+{
+  "schema_version": "0.1.0",
+  "initialPageId": "intro",
+  "pages": {
+    "intro": {
+      "id": "intro",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "# Fruit Split 🍎🍊\n\nYou'll be paired with a partner. One of you gets apples,\nthe other gets oranges.\n"
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "start",
+                "text": "Find a partner",
+                "action": {
+                  "type": "go_to",
+                  "target": "matching"
+                }
+              }
+            ]
+          },
+          "id": "buttons-1"
+        }
+      ]
+    },
+    "matching": {
+      "id": "matching",
+      "components": [
+        {
+          "type": "matchmaking",
+          "props": {
+            "poolId": "main_pool",
+            "onMatchTarget": "reveal",
+            "num_users": 2,
+            "timeoutSeconds": 180,
+            "timeoutTarget": "matching_timeout"
+          },
+          "id": "matchmaking-0"
+        }
+      ]
+    },
+    "matching_timeout": {
+      "id": "matching_timeout",
+      "end": true,
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "No partner showed up this time. Thanks for trying!"
+          },
+          "id": "text-0"
+        }
+      ]
+    },
+    "reveal": {
+      "id": "reveal",
+      "onEnter": [
+        {
+          "type": "randomize",
+          "scope": "group",
+          "distribute": true,
+          "conditions": [
+            "apples",
+            "oranges"
+          ],
+          "stateKey": "fruit"
+        }
+      ],
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "# You're paired! 🎉"
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "open",
+                "text": "Open your basket",
+                "action": {
+                  "type": "go_to",
+                  "branches": [
+                    {
+                      "when": "session_state.fruit == 'apples'",
+                      "target": "apples"
+                    },
+                    {
+                      "target": "oranges"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "id": "buttons-1"
+        }
+      ]
+    },
+    "apples": {
+      "id": "apples",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "# You got apples! 🍎🍎🍎\n\nYour partner got oranges.\n"
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "done",
+                "text": "Done",
+                "action": {
+                  "type": "go_to",
+                  "target": "done"
+                }
+              }
+            ]
+          },
+          "id": "buttons-1"
+        }
+      ]
+    },
+    "oranges": {
+      "id": "oranges",
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "# You got oranges! 🍊🍊🍊\n\nYour partner got apples.\n"
+          },
+          "id": "text-0"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "done",
+                "text": "Done",
+                "action": {
+                  "type": "go_to",
+                  "target": "done"
+                }
+              }
+            ]
+          },
+          "id": "buttons-1"
+        }
+      ]
+    },
+    "done": {
+      "id": "done",
+      "end": true,
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "Thanks for trying the demo!"
+          },
+          "id": "text-0"
+        }
+      ]
+    }
+  },
+  "matchmaking": [
+    {
+      "id": "main_pool",
+      "num_users": 2,
+      "timeoutSeconds": 180,
+      "timeoutTarget": "matching_timeout"
+    }
+  ]
+}
