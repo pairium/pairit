@@ -102,7 +102,7 @@ Match 2 participants and let them chat together.
 Pair 2 participants and give each a different role with `distribute: true`. One gets apples, the other oranges. Open it in two tabs to play both partners.
 
 <div class="card-links">
-<a href="https://pairit.pairium.ai/CONFIG_ID" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
+<a href="https://pairit.pairium.ai/fruit-split-demo" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
 <a href="https://github.com/pairium/pairit/blob/main/configs/fruit-split-demo.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
 </div>
 
