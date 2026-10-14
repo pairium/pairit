@@ -112,6 +112,8 @@ export type GroupDocument = {
 	treatment: string;
 	// Group-scoped randomization results, keyed by stateKey (first writer wins)
 	assignments?: Record<string, string>;
+	// Distributed randomization results, keyed by stateKey then sessionId
+	distributions?: Record<string, Record<string, string>>;
 	matchedAt: Date;
 	status: "active" | "completed";
 };

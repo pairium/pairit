@@ -71,6 +71,7 @@ async function executeOnEnter(
 				conditions: action.conditions,
 				stateKey: action.stateKey,
 				scope: action.scope,
+				distribute: action.distribute,
 			});
 			const key = action.stateKey ?? "treatment";
 			stateUpdates[key] = result.condition;

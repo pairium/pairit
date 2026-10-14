@@ -119,3 +119,28 @@ export async function assignTreatment(
 
 	return opts[0];
 }
+
+/**
+ * Give each group member one entry from conditions, in shuffled order.
+ * Conditions may repeat (e.g. [leader, follower, follower]); the list must
+ * have exactly one entry per member.
+ */
+export function distributeConditions(
+	conditions: string[],
+	memberSessionIds: string[],
+	random: () => number = Math.random,
+): Record<string, string> {
+	if (conditions.length !== memberSessionIds.length) {
+		throw new Error(
+			`distribute needs one condition per group member (got ${conditions.length} conditions for ${memberSessionIds.length} members)`,
+		);
+	}
+	const shuffled = [...conditions];
+	for (let i = shuffled.length - 1; i > 0; i--) {
+		const j = Math.floor(random() * (i + 1));
+		[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+	}
+	return Object.fromEntries(
+		memberSessionIds.map((sid, i) => [sid, shuffled[i]]),
+	);
+}

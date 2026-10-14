@@ -39,6 +39,7 @@ export interface ComponentInstance<
 export type OnEnterAction = {
 	type: "randomize";
 	scope?: "session" | "group";
+	distribute?: boolean;
 	assignmentType?: "random" | "balanced_random" | "block";
 	conditions?: string[];
 	stateKey?: string;
