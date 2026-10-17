@@ -9,7 +9,7 @@ Open a chat view for real-time messaging. Supports human-human chat (via matchma
 | `agents` | string[] | `[]` | List of agent ids to join the chat (see [Agents](agents.md)) |
 | `groupId` | string | - | Explicit chat group identifier for shared contexts |
 | `placeholder` | string | `"Type a message..."` | Placeholder text in the message input |
-| `avatars` | object | - | Optional chat avatar overrides for `self`, `participant`, `agent`, or specific `agents.{id}` |
+| `avatars` | object | - | Avatar overrides for `self`, `participant`, `agent`, or specific `agents.{id}`. See [Avatars](#avatars). |
 
 ## Group Resolution
 
@@ -71,17 +71,14 @@ pages:
 
 ## Avatars
 
-Chat supports optional avatar overrides for:
-- `self`
-- `participant`
-- `agent`
-- `agents.{agentId}` for specific agents
+An avatar is a string. A value with `/` or `:` is an image path or URL. Anything else is a [Lucide](https://lucide.dev/icons) icon name in kebab-case, like `bot`, `sparkles`, or `graduation-cap`.
 
-Each avatar can use either:
-- `icon`: a Lucide icon name
-- `image`: an image URL or public path
+Chat accepts these overrides:
 
-If both are provided, `image` wins.
+- `self`: your own messages, in your own view only
+- `participant`: other participants
+- `agent`: all agents
+- `agents.{agentId}`: one agent
 
 ```yaml
 pages:
@@ -91,38 +88,54 @@ pages:
         props:
           agents: [assistant, tutor]
           avatars:
-            self:
-              icon: user-round
-            participant:
-              icon: leaf
-            agent:
-              icon: bot
+            self: user-round
+            participant: leaf
+            agent: bot
             agents:
-              tutor:
-                image: /images/tutor.png
+              tutor: /images/tutor.png
 
 agents:
   - id: assistant
     model: gpt-6-luna
-    avatar:
-      icon: sparkles
+    avatar: sparkles
     system: You are a helpful assistant.
-
-  - id: tutor
-    model: gpt-6-luna
-    avatar:
-      icon: graduation-cap
-    system: You are a tutor.
 ```
 
-Precedence:
-1. Specific agent override: `props.avatars.agents.{agentId}`
-2. Agent default: `props.avatars.agent`
-3. Built-in default icon
+### Avatars from session state
 
-For icons, use Lucide icon names in kebab-case, like `bot`, `sparkles`, or `graduation-cap`.
+`participant` can use `{{session_state.<key>}}`. The value comes from the **sender's** state when they send a message, and is saved with the message. Everyone in the chat sees the same avatar for that participant, and it is included in the data export.
 
-Agent-level avatars are configured in `agents[].avatar` and act as the natural default for that agent when no chat-level override is present.
+To give each member of a group a different avatar, assign it with a distributed randomization:
+
+```yaml
+pages:
+  - id: chat
+    onEnter:
+      - type: randomize
+        scope: group
+        distribute: true
+        conditions: [leaf, sun]
+        stateKey: avatar
+    components:
+      - type: chat
+        props:
+          avatars:
+            participant: "{{session_state.avatar}}"
+```
+
+Any source of `session_state` works. A survey question with id `avatar` lets participants choose their own. For images, build the path: `participant: "/avatars/{{session_state.role}}.png"`.
+
+An avatar is fixed when the message is sent. If the key is unset or the icon name doesn't exist, the default is used.
+
+### Precedence
+
+Own messages: `self`, then your saved avatar, then the default user icon.
+
+Other participants: the avatar saved on the message, then `participant`, then a nature icon chosen from the sender's ID.
+
+Agents: `agents.{agentId}`, then the agent's own `avatar`, then `agent`, then the bot icon.
+
+The older `{ icon: ..., image: ... }` form still works. If both are set, `image` wins.
 
 ### Explicit Group Sharing
 

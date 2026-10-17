@@ -89,6 +89,7 @@ Conditions can repeat. A group of three with one leader uses `conditions: [leade
 - `assignmentType` is ignored, because every group gets the whole list.
 - Roles are saved, so a participant who refreshes keeps their role.
 - To swap roles in a later round, branch on the same `role` with the pages reversed. You don't need a second randomization.
+- To give group members different chat avatars, distribute icon names and use them in the chat's `avatars.participant`. See [Avatars from session state](chat.md#avatars-from-session-state).
 
 ### Multiple randomizations
 

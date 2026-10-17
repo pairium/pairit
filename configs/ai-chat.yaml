@@ -48,8 +48,7 @@ agents:
   - id: dealer
     model: "gpt-6-luna"
     reasoningEffort: low
-    avatar:
-      icon: badge-dollar-sign
+    avatar: badge-dollar-sign
     system: |
       You are a used car dealer selling a 2019 Honda Civic with 45,000 miles.
       Reserve price: $12,000 (won't sell below). Starting ask: $18,000.

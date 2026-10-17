@@ -12,7 +12,10 @@ import {
 	startChatAgents,
 	submitEvent,
 } from "@app/lib/api";
-import type { ChatAvatarOverrides } from "@app/lib/participant-icons";
+import type {
+	ChatAvatarConfig,
+	ChatAvatarOverrides,
+} from "@app/lib/participant-icons";
 import { sseClient } from "@app/lib/sse";
 import { defineRuntimeComponent } from "@app/runtime/define-runtime-component";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -32,6 +35,7 @@ type SSEChatMessage = {
 	senderType: "participant" | "agent" | "system";
 	content: string;
 	createdAt: string;
+	avatar?: ChatAvatarConfig;
 };
 
 type SSEChatEnded = {
@@ -43,6 +47,7 @@ type SSEChatMessageDelta = {
 	groupId: string;
 	senderId: string;
 	senderType: "agent";
+	avatar?: ChatAvatarConfig;
 	delta: string;
 	fullText: string;
 };
@@ -52,6 +57,7 @@ type StreamingMessage = {
 	senderId: string;
 	senderType: "agent";
 	content: string;
+	avatar?: ChatAvatarConfig;
 };
 
 const START_AGENTS_IDEMPOTENCY_WINDOW_MS = 5_000;
@@ -177,6 +183,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 				content: msg.content,
 				createdAt: msg.createdAt,
 				isOwn: msg.senderId === sessionId,
+				avatar: msg.avatar,
 			}),
 			[sessionId],
 		);
@@ -297,6 +304,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 					senderId: delta.senderId,
 					senderType: delta.senderType,
 					content: delta.fullText,
+					avatar: delta.avatar,
 				});
 			});
 
@@ -405,6 +413,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 								content,
 								createdAt: result.createdAt,
 								isOwn: true,
+								avatar: result.avatar,
 							},
 						]);
 					}

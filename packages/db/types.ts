@@ -86,10 +86,9 @@ export type EventDocument = {
 	createdAt: Date;
 };
 
-export type ChatMessageAvatar = {
-	icon?: string;
-	image?: string;
-};
+// Lucide icon name or image path/URL. Messages stored before avatars were
+// strings may hold the legacy { icon, image } object.
+export type ChatMessageAvatar = string | { icon?: string; image?: string };
 
 export type ChatMessageDocument = {
 	_id?: ObjectId;

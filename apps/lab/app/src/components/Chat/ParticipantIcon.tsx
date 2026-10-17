@@ -2,13 +2,17 @@
  * ParticipantIcon - Displays an icon or image for a chat participant
  */
 
-import type { ChatAvatarOverrides } from "@app/lib/participant-icons";
+import type {
+	ChatAvatarConfig,
+	ChatAvatarOverrides,
+} from "@app/lib/participant-icons";
 import { resolveChatAvatar } from "@app/lib/participant-icons";
 
 type ParticipantIconProps = {
 	senderId: string;
 	senderType: "participant" | "agent" | "system";
 	isOwn: boolean;
+	avatar?: ChatAvatarConfig;
 	avatars?: ChatAvatarOverrides;
 	size?: number;
 	className?: string;
@@ -18,11 +22,18 @@ export function ParticipantIcon({
 	senderId,
 	senderType,
 	isOwn,
+	avatar: messageAvatar,
 	avatars,
 	size = 20,
 	className = "",
 }: ParticipantIconProps) {
-	const avatar = resolveChatAvatar({ senderId, senderType, isOwn, avatars });
+	const avatar = resolveChatAvatar({
+		senderId,
+		senderType,
+		isOwn,
+		avatar: messageAvatar,
+		avatars,
+	});
 
 	if (!avatar) {
 		return null;

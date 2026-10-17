@@ -5,6 +5,7 @@
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { type AvatarInput, toAvatarString } from "./chat-avatar";
 import { getSessionsCollection } from "./db";
 import type { AgentConfig, ReplyCondition, Trigger } from "./llm";
 
@@ -12,10 +13,7 @@ type RawAgent = {
 	id?: string;
 	model?: string;
 	system?: string;
-	avatar?: {
-		icon?: string;
-		image?: string;
-	};
+	avatar?: AvatarInput;
 	sendFirstMessage?: boolean;
 	trigger?: Trigger | Trigger[];
 	replyCondition?: ReplyCondition | ReplyCondition[];
@@ -44,7 +42,7 @@ function toAgentConfig(raw: RawAgent): AgentConfig {
 		id: raw.id ?? "",
 		model: raw.model ?? "",
 		system: raw.system ?? "",
-		avatar: raw.avatar,
+		avatar: toAvatarString(raw.avatar),
 		sendFirstMessage: raw.sendFirstMessage,
 		trigger: raw.trigger,
 		replyCondition: raw.replyCondition,
