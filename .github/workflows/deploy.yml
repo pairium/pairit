@@ -1,7 +1,7 @@
 name: Deploy
 
 # Push to main deploys staging when the repo variable STAGING_AUTO_DEPLOY is "true".
-# Production deploys only by hand. Setup: docs/docs/dev/deployment.md.
+# Production deploys only by hand, then publishes the docs from the same ref. Setup: docs/docs/dev/deployment.md.
 
 on:
   push:
@@ -55,3 +55,14 @@ jobs:
           ENV_FILE: ${{ secrets.ENV_FILE }}
       - run: bash scripts/deploy.sh "$TARGET"
       - run: bash scripts/tests/verify-health.sh "${{ vars.LAB_URL }}" "${{ vars.MANAGER_URL }}"
+
+  docs:
+    needs: deploy
+    if: inputs.target == 'production'
+    uses: ./.github/workflows/docs.yml
+    with:
+      ref: ${{ inputs.ref }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

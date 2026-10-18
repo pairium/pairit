@@ -93,15 +93,32 @@ A 404 from `npm publish` is npm hiding an auth error. Check `npm whoami` — it 
 
 ### Release notes
 
-Every published version gets a GitHub Release and a changelog entry.
+`docs/docs/changelog.md` has two kinds of releases, written for researchers:
+
+- **Platform YYYY.MM.DD**: the lab and manager server. One per production deploy. Nothing to upgrade. Tag `platform-vYYYY.MM.DD` (add `.2` for a second deploy that day).
+- **CLI X.Y.Z**: the npm package. Tag `cli-vX.Y.Z`.
+
+Each researcher-facing PR adds a bullet under `## Unreleased` → `### Platform` or `### CLI`. A feature that needs both (e.g. a new config field that the CLI lints and the lab renders) gets a bullet in each, and the CLI publishes first. A config change that breaks existing configs bumps `schema_version` and its bullet starts with "Action needed:".
+
+After a CLI publish:
 
 1. Tag the commit npm published from. `npm view pairit@X.Y.Z gitHead` prints it. Don't assume it is `main`.
 2. Create the release. The notes are for researchers: an upgrade command, what's new, and any change they must make (e.g. a renamed flag).
    ```bash
    gh release create cli-vX.Y.Z --target <gitHead> --title "Pairit CLI X.Y.Z" --notes-file notes.md
    ```
-3. Add a `## CLI X.Y.Z` section at the top of `docs/docs/changelog.md`. It holds a short summary and a link to the release.
-4. To announce it, draft a plain-text email (Gmail has no code blocks) that links the release. Get recipients from `pairit admin list-users`. Leave out the admins and BCC everyone. The user sends it.
+3. In the changelog, move the Unreleased CLI bullets into a new `## CLI X.Y.Z` section below Unreleased, with a link to the release.
+
+For a production deploy:
+
+1. In a PR, move the Unreleased Platform bullets into a new `## Platform YYYY.MM.DD` section with a link to the release. Merge it, so the docs that `deploy.yml` publishes with production include it.
+2. Deploy production (`gh workflow run deploy.yml -f target=production`).
+3. Tag the deployed commit and create the release:
+   ```bash
+   gh release create platform-vYYYY.MM.DD --target <deployed sha> --title "Pairit Platform YYYY.MM.DD" --notes-file notes.md
+   ```
+
+Announce once per production deploy, covering that Platform release and any CLI releases since the last email. Draft a plain-text email (Gmail has no code blocks) that links the releases. Get recipients from `pairit admin list-users`. Leave out the admins and BCC everyone. The user sends it.
 
 ## Global install
 
@@ -118,10 +135,10 @@ Do not also `bun install -g pairit`. Two copies end up on PATH (`~/.local/bin` v
 Docs are at https://docs.pairium.ai/pairit/ (GitHub Pages + MkDocs).
 
 ```bash
-gh workflow run docs.yml          # Manually deploy docs
+gh workflow run docs.yml          # Republish docs from latest main
 ```
 
-Auto-deploys on push to `docs/**`.
+Docs publish with each production deploy, from the deployed commit, so they match production. `gh workflow run docs.yml` republishes by hand (add `-f ref=<sha>` for a specific commit).
 
 ## Deploy
 
@@ -142,7 +159,7 @@ Two cloud environments. Local dev still uses `.env`. The deploy script never sou
 - `bash scripts/test.sh staging` and `bash scripts/test.sh production` test the public URLs. The integration step reuses your CLI login for that environment. Log in first with `bun run apps/manager/cli/src/index.ts --env staging login` (or `--env production`).
 - Deploy staging before production.
 - CI (`.github/workflows/ci.yml`) runs Biome, type check, tests, and build on every PR.
-- `deploy.yml` deploys staging on every push to `main`, and production only when started by hand:
+- `deploy.yml` deploys staging on every push to `main`, and production only when started by hand. A production deploy also publishes the docs. Then cut a Platform release (see "Release notes"):
   ```bash
   gh workflow run deploy.yml -f target=production                # latest main (what staging runs)
   gh workflow run deploy.yml -f target=production -f ref=<sha>   # a specific commit, e.g. rollback

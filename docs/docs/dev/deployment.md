@@ -105,6 +105,10 @@ gh workflow run deploy.yml -f target=production                # what staging ru
 gh workflow run deploy.yml -f target=production -f ref=<sha>   # an older commit, e.g. to roll back
 ```
 
+A production deploy then publishes the docs from the same commit, so the docs describe what production runs. `docs.yml` no longer runs on push; start it by hand only to republish (`gh workflow run docs.yml -f ref=<sha>`).
+
+Each production deploy is a Platform release. Before deploying, move the `## Unreleased` → `### Platform` bullets in `docs/docs/changelog.md` into a `## Platform YYYY.MM.DD` section and merge that. After the deploy, tag the deployed commit `platform-vYYYY.MM.DD` and create its GitHub Release. The steps are in `AGENTS.md` under "Release notes".
+
 To roll back in seconds without a rebuild, send traffic to an earlier Cloud Run revision: `gcloud run services update-traffic lab --to-revisions=<revision>=100 --region us-central1 --project <project>` (same for `manager`). The next deploy replaces it, so revert the bad commit first.
 
 One-time setup, per environment (`staging`, `production`):
