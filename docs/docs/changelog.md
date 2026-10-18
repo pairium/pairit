@@ -1,12 +1,26 @@
 # Changelog
 
-Releases of the `pairit` CLI. Upgrade with:
+Two kinds of releases appear here:
 
-```bash
-npm install -g pairit
-```
+- **Platform YYYY.MM.DD**: the lab and the manager server. Released each time production is deployed. Nothing to upgrade.
+- **CLI X.Y.Z**: the `pairit` command-line tool on npm. Upgrade with:
+
+    ```bash
+    npm install -g pairit
+    ```
 
 Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/releases).
+
+## Unreleased
+
+Merged, but not released yet.
+
+### Platform
+
+- Chat avatars can come from `session_state`, e.g. a different avatar per group member with a distributed randomization. See [Avatars from session state](components/chat.md#avatars-from-session-state).
+- Action needed: an avatar is now a single string, an icon name or an image path. Replace `avatar: { icon: bot }` with `avatar: bot`, and `avatar: { image: /a.png }` with `avatar: /a.png`, in agents and in chat `avatars`. The old form no longer works; it shows the default avatar.
+
+### CLI
 
 ## CLI 0.3.2
 
