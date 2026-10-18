@@ -17,10 +17,15 @@ Merged, but not released yet.
 
 ### Platform
 
+### CLI
+
+## Platform 2026.10.18
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/platform-v2026.10.18)
+
 - Chat avatars can come from `session_state`, e.g. a different avatar per group member with a distributed randomization. See [Avatars from session state](components/chat.md#avatars-from-session-state).
 - Action needed: an avatar is now a single string, an icon name or an image path. Replace `avatar: { icon: bot }` with `avatar: bot`, and `avatar: { image: /a.png }` with `avatar: /a.png`, in agents and in chat `avatars`. The old form no longer works; it shows the default avatar.
-
-### CLI
+- New example: [Fruit split demo](examples.md#fruit-split).
 
 ## CLI 0.3.2
 
