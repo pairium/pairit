@@ -17,7 +17,8 @@ Merged, but not released yet.
 
 ### Platform
 
-- Chat avatars can come from `session_state`, e.g. a different avatar per group member with a distributed randomization. Avatars are now a single string (icon name or image path); the old `{ icon, image }` form still works. See [Avatars from session state](components/chat.md#avatars-from-session-state).
+- Chat avatars can come from `session_state`, e.g. a different avatar per group member with a distributed randomization. See [Avatars from session state](components/chat.md#avatars-from-session-state).
+- Action needed: an avatar is now a single string, an icon name or an image path. Replace `avatar: { icon: bot }` with `avatar: bot`, and `avatar: { image: /a.png }` with `avatar: /a.png`, in agents and in chat `avatars`. The old form no longer works; it shows the default avatar.
 
 ### CLI
 
