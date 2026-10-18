@@ -10,8 +10,7 @@ Define agents in your experiment config's `agents` array:
 agents:
   - id: assistant
     model: gpt-6-luna
-    avatar:
-      icon: bot
+    avatar: bot
     system: |
       You are a helpful research assistant participating in a group discussion.
       Be concise and stay on topic.
@@ -42,22 +41,19 @@ Agents can define an optional `avatar` used in chat UIs.
 agents:
   - id: tutor
     model: gpt-6-luna
-    avatar:
-      icon: graduation-cap
+    avatar: graduation-cap
     system: You are a tutor.
 
   - id: chef
     model: gpt-6-luna
-    avatar:
-      image: /images/chef.png
+    avatar: /images/chef.png
     system: You are a chef.
 ```
 
 Notes:
-- `avatar.icon` uses a Lucide icon name. Kebab-case like `graduation-cap` is recommended.
-- `avatar.image` can be a relative public path like `/images/chef.png` or another image URL.
-- If both are provided, `image` wins.
+- A value with `/` or `:` is an image path or URL. Anything else is a Lucide icon name in kebab-case.
 - If no avatar is set, agents use the default bot icon.
+- See [Chat avatars](chat.md#avatars) for chat-level overrides and precedence.
 
 ## Models
 
@@ -82,7 +78,7 @@ Provider keys are stored per experiment, encrypted at rest, and resolved by `con
 | `id` | string | required | Unique identifier for the agent |
 | `model` | string | required | Model name (e.g., `gpt-6-luna`, `claude-sonnet-4-5-20250929`) |
 | `system` | string | required | System prompt defining the agent's role and behavior |
-| `avatar` | object | - | Optional chat avatar for this agent. Supports `icon` (Lucide icon name) or `image` (URL/path). |
+| `avatar` | string | - | Lucide icon name or image URL/path. See [Avatars](#avatars). |
 | `trigger` | string \| object \| array | `every_message` | When to potentially run the agent. See [Triggers](#triggers). |
 | `replyCondition` | string \| object \| array | `always` | Whether the agent actually responds once triggered. See [Reply Conditions](#reply-conditions). |
 | `sendFirstMessage` | boolean | `false` | **Legacy.** Sends an opening message when chat loads and room is empty. Ignored if `trigger` is set. |

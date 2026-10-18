@@ -86,10 +86,8 @@ export type EventDocument = {
 	createdAt: Date;
 };
 
-export type ChatMessageAvatar = {
-	icon?: string;
-	image?: string;
-};
+// Lucide icon name or image path/URL
+export type ChatMessageAvatar = string;
 
 export type ChatMessageDocument = {
 	_id?: ObjectId;

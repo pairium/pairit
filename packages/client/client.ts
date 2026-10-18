@@ -55,10 +55,8 @@ export type GetResponse = {
 
 export type SubmitEventResponse = { eventId: string };
 
-export type ChatAvatar = {
-	icon?: string;
-	image?: string;
-};
+// Lucide icon name or image path/URL
+export type ChatAvatar = string;
 
 export type ChatMessage = {
 	messageId: string;
@@ -74,6 +72,7 @@ export type ChatMessage = {
 export type SendChatMessageResponse = {
 	messageId: string;
 	createdAt: string;
+	avatar?: ChatAvatar;
 	deduplicated?: boolean;
 	messagesSent?: number;
 };

@@ -3,7 +3,10 @@
  * Displays messages and input field with auto-scroll
  */
 
-import type { ChatAvatarOverrides } from "@app/lib/participant-icons";
+import type {
+	ChatAvatarConfig,
+	ChatAvatarOverrides,
+} from "@app/lib/participant-icons";
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import { ParticipantIcon } from "./ParticipantIcon";
@@ -15,6 +18,7 @@ export type ChatMessage = {
 	content: string;
 	createdAt: string;
 	isOwn?: boolean;
+	avatar?: ChatAvatarConfig;
 };
 
 type StreamingMessage = {
@@ -22,6 +26,7 @@ type StreamingMessage = {
 	senderId: string;
 	senderType: "agent";
 	content: string;
+	avatar?: ChatAvatarConfig;
 };
 
 export type ChatViewProps = {
@@ -156,6 +161,7 @@ function MessageBubble({
 					senderId={message.senderId}
 					senderType={message.senderType}
 					isOwn={false}
+					avatar={message.avatar}
 					avatars={avatars}
 				/>
 			)}
@@ -196,6 +202,7 @@ function MessageBubble({
 					senderId={message.senderId}
 					senderType={message.senderType}
 					isOwn={true}
+					avatar={message.avatar}
 					avatars={avatars}
 				/>
 			)}
@@ -216,6 +223,7 @@ function StreamingBubble({
 				senderId={message.senderId}
 				senderType={message.senderType}
 				isOwn={false}
+				avatar={message.avatar}
 				avatars={avatars}
 			/>
 			<div className="max-w-[80%] rounded-2xl bg-slate-100 px-4 py-2 text-sm text-slate-900">

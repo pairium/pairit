@@ -14,14 +14,12 @@ import {
 	User,
 } from "lucide-react";
 
-export type ChatAvatarConfig = {
-	icon?: string;
-	image?: string;
-};
+/** A Lucide icon name, or an image path/URL (contains "/" or ":") */
+export type ChatAvatarConfig = string;
 
 export type ChatAvatarOverrides = {
 	self?: ChatAvatarConfig;
-	participant?: ChatAvatarConfig & { style?: "deterministic" };
+	participant?: ChatAvatarConfig;
 	agent?: ChatAvatarConfig;
 	agents?: Record<string, ChatAvatarConfig>;
 };
@@ -78,25 +76,31 @@ function getParticipantIcon(senderId: string): LucideIcon {
 }
 
 function resolveAvatarConfig(config?: ChatAvatarConfig): ResolvedChatAvatar {
-	if (config?.image) {
-		return { type: "image", src: config.image };
+	const value = typeof config === "string" ? config.trim() : undefined;
+	// Unresolved {{session_state.*}} templates are filled in by the server
+	if (!value || value.includes("{{")) return null;
+
+	if (value.includes("/") || value.includes(":")) {
+		return { type: "image", src: value };
 	}
 
-	const icon = getLucideIconByName(config?.icon);
-	if (icon) {
-		return { type: "icon", icon };
-	}
-
-	return null;
+	const icon = getLucideIconByName(value);
+	return icon ? { type: "icon", icon } : null;
 }
 
+/**
+ * Order: the viewer's `self` override (own messages only), then the avatar
+ * stamped on the message, then the config overrides, then defaults. A
+ * specific `agents.{id}` override still beats the agent's own avatar.
+ */
 export function resolveChatAvatar(params: {
 	senderId: string;
 	senderType: "participant" | "agent" | "system";
 	isOwn: boolean;
+	avatar?: ChatAvatarConfig;
 	avatars?: ChatAvatarOverrides;
 }): ResolvedChatAvatar {
-	const { senderId, senderType, isOwn, avatars } = params;
+	const { senderId, senderType, isOwn, avatar, avatars } = params;
 
 	if (senderType === "system") {
 		return null;
@@ -105,6 +109,7 @@ export function resolveChatAvatar(params: {
 	if (isOwn) {
 		return (
 			resolveAvatarConfig(avatars?.self) ??
+			resolveAvatarConfig(avatar) ??
 			({ type: "icon", icon: DEFAULT_SELF_ICON } as const)
 		);
 	}
@@ -115,12 +120,14 @@ export function resolveChatAvatar(params: {
 			: senderId;
 		return (
 			resolveAvatarConfig(avatars?.agents?.[agentId]) ??
+			resolveAvatarConfig(avatar) ??
 			resolveAvatarConfig(avatars?.agent) ??
 			({ type: "icon", icon: DEFAULT_AGENT_ICON } as const)
 		);
 	}
 
 	return (
+		resolveAvatarConfig(avatar) ??
 		resolveAvatarConfig(avatars?.participant) ??
 		({ type: "icon", icon: getParticipantIcon(senderId) } as const)
 	);

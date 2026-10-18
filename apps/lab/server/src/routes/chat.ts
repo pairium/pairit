@@ -7,6 +7,7 @@
 import { Elysia, t } from "elysia";
 import { MongoServerError, type ObjectId } from "mongodb";
 import { triggerAgents, triggerJoinAgents } from "../lib/agent-runner";
+import { resolveParticipantAvatar } from "../lib/chat-avatar";
 import {
 	getChatMessagesCollection,
 	getIdempotencyCollection,
@@ -49,7 +50,14 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 			const sessionsCollection = await getSessionsCollection();
 			const session = await sessionsCollection.findOne(
 				{ id: sessionId },
-				{ projection: { configId: 1 } },
+				{
+					projection: {
+						configId: 1,
+						config: 1,
+						currentPageId: 1,
+						session_state: 1,
+					},
+				},
 			);
 			if (!session) {
 				set.status = 404;
@@ -65,10 +73,21 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 					return {
 						messageId: existing._id?.toString(),
 						createdAt: existing.createdAt.toISOString(),
+						...(existing.avatar && { avatar: existing.avatar }),
 						deduplicated: true,
 					};
 				}
 			}
+
+			const effectiveSenderType = senderType ?? "participant";
+			const avatar =
+				effectiveSenderType === "participant"
+					? resolveParticipantAvatar(
+							session.config,
+							session.currentPageId,
+							session.session_state,
+						)
+					: undefined;
 
 			const now = new Date();
 			const message: ChatMessageDocument = {
@@ -76,9 +95,10 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 				sessionId,
 				configId: session.configId,
 				senderId: sessionId,
-				senderType: senderType ?? "participant",
+				senderType: effectiveSenderType,
 				content,
 				createdAt: now,
+				...(avatar && { avatar }),
 				...(idempotencyKey && { idempotencyKey }),
 			};
 
@@ -94,6 +114,7 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 						return {
 							messageId: existing._id?.toString(),
 							createdAt: existing.createdAt.toISOString(),
+							...(existing.avatar && { avatar: existing.avatar }),
 							deduplicated: true,
 						};
 					}
@@ -103,7 +124,6 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 
 			const messageId = insertedId.toString();
 
-			const effectiveSenderType = senderType ?? "participant";
 			let messagesSent: number | undefined;
 			if (effectiveSenderType === "participant") {
 				const updatedSession = await sessionsCollection.findOneAndUpdate(
@@ -140,9 +160,10 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 				groupId,
 				sessionId,
 				senderId: sessionId,
-				senderType: senderType ?? "participant",
+				senderType: effectiveSenderType,
 				content,
 				createdAt: now.toISOString(),
+				...(avatar && { avatar }),
 			};
 
 			for (const memberId of memberIds) {
@@ -159,6 +180,7 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 			return {
 				messageId,
 				createdAt: now.toISOString(),
+				...(avatar && { avatar }),
 				...(messagesSent !== undefined ? { messagesSent } : {}),
 			};
 		},
