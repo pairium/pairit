@@ -55,8 +55,8 @@ export type GetResponse = {
 
 export type SubmitEventResponse = { eventId: string };
 
-// Lucide icon name or image path/URL; older messages may hold { icon, image }
-export type ChatAvatar = string | { icon?: string; image?: string };
+// Lucide icon name or image path/URL
+export type ChatAvatar = string;
 
 export type ChatMessage = {
 	messageId: string;

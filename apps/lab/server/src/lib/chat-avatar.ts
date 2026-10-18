@@ -1,21 +1,14 @@
 /**
  * Chat avatars
  * An avatar is a string: a Lucide icon name, or an image path/URL (contains "/"
- * or ":"). The legacy { icon, image } object is still accepted.
+ * or ":").
  */
 
 import { interpolate } from "./prompt-resolver";
 
-export type AvatarInput = string | { icon?: string; image?: string };
-
-/** Normalize a config avatar to its string form, or undefined if empty. */
+/** A config avatar as a trimmed string, or undefined if missing or empty. */
 export function toAvatarString(value: unknown): string | undefined {
-	if (typeof value === "string") return value.trim() || undefined;
-	if (!value || typeof value !== "object") return undefined;
-	const { icon, image } = value as { icon?: unknown; image?: unknown };
-	if (typeof image === "string" && image) return image;
-	if (typeof icon === "string" && icon) return icon;
-	return undefined;
+	return typeof value === "string" ? value.trim() || undefined : undefined;
 }
 
 type PageShape = {

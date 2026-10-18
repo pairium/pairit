@@ -5,7 +5,7 @@
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { type AvatarInput, toAvatarString } from "./chat-avatar";
+import { toAvatarString } from "./chat-avatar";
 import { getSessionsCollection } from "./db";
 import type { AgentConfig, ReplyCondition, Trigger } from "./llm";
 
@@ -13,7 +13,7 @@ type RawAgent = {
 	id?: string;
 	model?: string;
 	system?: string;
-	avatar?: AvatarInput;
+	avatar?: unknown;
 	sendFirstMessage?: boolean;
 	trigger?: Trigger | Trigger[];
 	replyCondition?: ReplyCondition | ReplyCondition[];

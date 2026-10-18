@@ -135,8 +135,6 @@ Other participants: the avatar saved on the message, then `participant`, then a 
 
 Agents: `agents.{agentId}`, then the agent's own `avatar`, then `agent`, then the bot icon.
 
-The older `{ icon: ..., image: ... }` form still works. If both are set, `image` wins.
-
 ### Explicit Group Sharing
 
 Use `groupId` to share context across pages within a session:

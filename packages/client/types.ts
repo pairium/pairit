@@ -70,6 +70,6 @@ export type CompiledConfig = {
 	pages: Record<string, Page>;
 	agents?: Array<{
 		id: string;
-		avatar?: string | { icon?: string; image?: string };
+		avatar?: string;
 	}>;
 };

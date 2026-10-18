@@ -8,22 +8,17 @@ describe("toAvatarString", () => {
 		expect(toAvatarString("/avatars/a.png")).toBe("/avatars/a.png");
 		expect(toAvatarString("  ")).toBeUndefined();
 		expect(toAvatarString(undefined)).toBeUndefined();
+		expect(toAvatarString({ icon: "bot" })).toBeUndefined();
 	});
 
-	test("converts the legacy object, image first", () => {
-		expect(toAvatarString({ icon: "bot" })).toBe("bot");
-		expect(toAvatarString({ icon: "bot", image: "/a.png" })).toBe("/a.png");
-		expect(toAvatarString({})).toBeUndefined();
-	});
-
-	test("agents get a string avatar from either form", () => {
+	test("agents keep string avatars and drop anything else", () => {
 		const agents = getAgentsFromConfig({
 			agents: [
 				{ id: "a", model: "m", system: "s", avatar: "sparkles" },
 				{ id: "b", model: "m", system: "s", avatar: { image: "/b.png" } },
 			],
 		});
-		expect(agents.map((a) => a.avatar)).toEqual(["sparkles", "/b.png"]);
+		expect(agents.map((a) => a.avatar)).toEqual(["sparkles", undefined]);
 	});
 });
 
@@ -60,9 +55,6 @@ describe("resolveParticipantAvatar", () => {
 		expect(resolveParticipantAvatar(configWith("leaf"), "chat", {})).toBe(
 			"leaf",
 		);
-		expect(
-			resolveParticipantAvatar(configWith({ icon: "leaf" }), "chat", {}),
-		).toBe("leaf");
 	});
 
 	test("is undefined when the key is unset or nothing is configured", () => {

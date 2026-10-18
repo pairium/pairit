@@ -14,11 +14,8 @@ import {
 	User,
 } from "lucide-react";
 
-/**
- * A Lucide icon name, or an image path/URL (contains "/" or ":"). The legacy
- * { icon, image } object is still accepted; image wins.
- */
-export type ChatAvatarConfig = string | { icon?: string; image?: string };
+/** A Lucide icon name, or an image path/URL (contains "/" or ":") */
+export type ChatAvatarConfig = string;
 
 export type ChatAvatarOverrides = {
 	self?: ChatAvatarConfig;
@@ -78,13 +75,8 @@ function getParticipantIcon(senderId: string): LucideIcon {
 	return PARTICIPANT_ICONS[index];
 }
 
-function toAvatarString(config?: ChatAvatarConfig): string | undefined {
-	if (typeof config === "string") return config.trim() || undefined;
-	return config?.image || config?.icon || undefined;
-}
-
 function resolveAvatarConfig(config?: ChatAvatarConfig): ResolvedChatAvatar {
-	const value = toAvatarString(config);
+	const value = typeof config === "string" ? config.trim() : undefined;
 	// Unresolved {{session_state.*}} templates are filled in by the server
 	if (!value || value.includes("{{")) return null;
 

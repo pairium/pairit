@@ -84,13 +84,4 @@ describe("resolveChatAvatar", () => {
 		});
 		expect(resolveChatAvatar(agent)).toEqual({ type: "icon", icon: Bot });
 	});
-
-	test("legacy objects still work", () => {
-		expect(
-			resolveChatAvatar({
-				...participant,
-				avatar: { icon: "sun", image: "/a.png" },
-			}),
-		).toEqual({ type: "image", src: "/a.png" });
-	});
 });
