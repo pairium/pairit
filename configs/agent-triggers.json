@@ -176,9 +176,7 @@
       "id": "greeter",
       "model": "gpt-6-luna",
       "reasoningEffort": "low",
-      "avatar": {
-        "icon": "hand"
-      },
+      "avatar": "hand",
       "trigger": "on_join",
       "system": "You are a friendly greeter. Say a brief welcome message (one sentence).\n"
     },
@@ -186,9 +184,7 @@
       "id": "coach",
       "model": "gpt-6-luna",
       "reasoningEffort": "low",
-      "avatar": {
-        "icon": "badge-help"
-      },
+      "avatar": "badge-help",
       "trigger": {
         "every": 3
       },
@@ -198,9 +194,7 @@
       "id": "facilitator",
       "model": "gpt-6-luna",
       "reasoningEffort": "low",
-      "avatar": {
-        "image": "https://placehold.co/64x64/png"
-      },
+      "avatar": "https://placehold.co/64x64/png",
       "trigger": "every_message",
       "replyCondition": "Reply only if the participant asked a direct question or seems stuck.",
       "system": "You are a helpful facilitator. Answer questions and offer guidance.\nKeep responses to 1-2 sentences.\n"
