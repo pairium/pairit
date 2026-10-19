@@ -21,3 +21,18 @@ Pairit is a platform for running human‑AI experiments. Author a single YAML fi
 - [Concepts](concepts.md) - Flow logic, state, randomization
 - [CLI](cli.md) - Commands and data export
 
+### Cite Pairit
+
+If you use Pairit in your research, please cite [our paper](https://arxiv.org/abs/2609.09789):
+
+```bibtex
+@misc{ju2026pairit,
+  title={Pairit: A Platform for Live Experiments on Human-AI Collaboration},
+  author={Harang Ju and Sinan Aral},
+  year={2026},
+  eprint={2609.09789},
+  archivePrefix={arXiv},
+  primaryClass={cs.HC},
+  url={https://arxiv.org/abs/2609.09789},
+}
+```
