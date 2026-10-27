@@ -1,0 +1,103 @@
+schema_version: 0.1.0
+allowRetake: true
+requireAuth: false
+initialPageId: matching
+
+pages:
+  - id: matching
+    components:
+      - type: text
+        props:
+          text: |
+            # Shared workspace
+
+            You'll be paired with another participant to write a plan together, with an AI assistant.
+      - type: matchmaking
+        props:
+          poolId: pair
+      - type: buttons
+        props:
+          buttons:
+            - id: go
+              text: "Continue"
+              action:
+                type: go_to
+                target: doc
+
+  - id: timeout
+    end: true
+    components:
+      - type: text
+        props:
+          text: "We couldn't find a partner. Thanks for trying!"
+
+  - id: doc
+    layout: split
+    components:
+      - type: chat
+        props:
+          agents: [writer]
+      - type: live-workspace
+        props:
+          mode: freeform
+          scope: group
+          editableBy: both
+          initialContent: |
+            # Shared plan
+
+            ## Goal
+
+          agents: [writer]
+      - type: buttons
+        props:
+          buttons:
+            - id: next
+              text: "Next"
+              action:
+                type: go_to
+                target: form
+
+  - id: form
+    layout: split
+    components:
+      - type: chat
+      - type: live-workspace
+        props:
+          mode: structured
+          scope: group
+          fields:
+            - id: score
+              label: Score
+              type: number
+            - id: notes
+              label: Notes
+              type: textarea
+      - type: buttons
+        props:
+          buttons:
+            - id: done
+              text: "Done"
+              action:
+                type: go_to
+                target: thanks
+
+  - id: thanks
+    end: true
+    components:
+      - type: text
+        props:
+          text: "Thanks!"
+
+matchmaking:
+  - id: pair
+    num_users: 2
+    timeoutSeconds: 300
+    timeoutTarget: timeout
+
+agents:
+  - id: writer
+    model: "gpt-6-luna"
+    reasoningEffort: low
+    system: |
+      You help two people draft a shared plan in the workspace.
+      Edit the document when asked. Keep chat replies to one sentence.
