@@ -11,6 +11,9 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # A normal run takes about a minute. Without a limit, a stuck test holds a
+    # deploy (deploy.yml runs this first) for GitHub's default of 6 hours.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
