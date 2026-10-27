@@ -17,7 +17,11 @@ Merged, but not released yet.
 
 ### Platform
 
+- For admins: the manager reports which studies have participants right now (`GET /admin/activity`), so production deploys can wait for live group studies to finish.
+
 ### CLI
+
+- `pairit admin activity` (admins) lists studies with recent sessions: owner, active participants in a group or solo, how many wait in matchmaking, and features used. Live group studies come first. `--since 7d` looks further back, `--json` prints the raw report, and `--fail-if-live` exits 2 if a group study is live.
 
 ## Platform 2026.10.27
 

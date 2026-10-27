@@ -17,6 +17,10 @@ on:
         description: Tag or full commit SHA (blank = latest main)
         type: string
         default: ''
+      force:
+        description: Production only. I checked `pairit admin activity` and no group study is live.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -53,7 +57,16 @@ jobs:
       - run: printf '%s\n' "$ENV_FILE" > ".env.$TARGET"
         env:
           ENV_FILE: ${{ secrets.ENV_FILE }}
+      # deploy.sh checks for live group studies with an admin CLI login, which
+      # Actions does not have. Until there is a service credential, warn instead.
+      - name: Live-study check
+        if: env.TARGET == 'production' && !inputs.force
+        run: |
+          echo "::warning title=Live-study check not run::Actions has no admin login for the manager API, so it cannot check for live group studies. Run 'pairit admin activity' before a production deploy, and pass force=true once you have. See docs/docs/dev/deployment.md."
       - run: bash scripts/deploy.sh "$TARGET"
+        env:
+          # The step above stands in for deploy.sh's check
+          FORCE_DEPLOY: '1'
       - run: bash scripts/tests/verify-health.sh "${{ vars.LAB_URL }}" "${{ vars.MANAGER_URL }}"
 
   docs:

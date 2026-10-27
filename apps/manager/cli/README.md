@@ -13,6 +13,7 @@ A lightweight command line utility for working with Pairit experiment configurat
 - `media delete` — delete a media object from Cloud Storage
 - `data export` — export sessions, events, and chat messages for a config as CSV/JSON/JSONL
 - `admin add-user` / `admin remove-user` / `admin list-users` — manage the manager allowlist (admin role required)
+- `admin activity` — show studies with recent sessions, live group studies first (admin role required)
 
 ## Install
    
@@ -95,6 +96,35 @@ Notes:
 - Day-1 migration: on first boot, existing config owners are backfilled as researchers (not the entire user collection, which is shared with lab participants).
 - Self-removal is blocked.
 - The rejection page contact is set by `MANAGER_ADMIN_CONTACT_EMAIL` (defaults to `harang@pairium.ai`).
+
+## Activity (admin)
+
+See what is running before you deploy production. Don't deploy while a group study is live.
+
+```bash
+pairit admin activity                  # studies with sessions in the last 24 h
+pairit admin activity --since 7d       # look further back (30m, 2h, 7d, 1w)
+pairit admin activity --json           # the raw report
+pairit admin activity --fail-if-live   # exit 2 if a group study is live, for scripts
+pairit --env staging admin activity    # staging
+```
+
+```
+1 group study is live. Don't deploy production.
+  omh-test (owner@example.com): 3 active (2 in a group, 1 solo), 1 waiting in matchmaking
+
+  STUDY     OWNER              ACTIVE (GROUP/SOLO)  WAITING  TODAY  TOTAL  FLAGS
+● omh-test  owner@example.com  3 (2/1)              1        5      127    group,chat,live-workspace,agents
+  survey-a  r@example.com      1 (0/1)              0        9      40     html
+```
+
+- **Active**: sessions that have not finished and changed in the last 15 minutes. **Group** sessions have been matched into a group; **solo** ones have not.
+- **Waiting**: active sessions on a page with a `matchmaking` component that have not been matched yet.
+- **Today**: sessions started in the last 24 hours. **Total**: all sessions of the config.
+- **Flags**: `group` (the config has a matchmaking pool or component), then the features it uses: `chat`, `live-workspace`, `html`, `agents`.
+- A group study is **live** when it has any active session. Live group studies come first and are marked `●`.
+
+`scripts/deploy.sh production` runs `admin activity --fail-if-live` and stops if a group study is live. The manager endpoint is `GET /admin/activity` (optional `since`, an ISO date).
 
 ## Per-experiment LLM credentials
 
