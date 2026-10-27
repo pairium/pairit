@@ -15,6 +15,7 @@ import type {
 	WorkspaceDocumentDocument,
 	WorkspaceUpdateDocument,
 } from "../types";
+import type { StartLock } from "./session-start-lock";
 
 export async function getConfigsCollection(): Promise<
 	Collection<ConfigDocument>
@@ -42,6 +43,13 @@ export async function getIdempotencyCollection(): Promise<
 > {
 	const database = await connectDB();
 	return database.collection<IdempotencyRecord>("idempotency_keys");
+}
+
+export async function getSessionStartLocksCollection(): Promise<
+	Collection<StartLock>
+> {
+	const database = await connectDB();
+	return database.collection<StartLock>("session_start_locks");
 }
 
 export async function getChatMessagesCollection(): Promise<
@@ -123,6 +131,15 @@ export async function ensureIndexes(): Promise<void> {
 	await database
 		.collection("sessions")
 		.createIndex({ updatedAt: 1, configId: 1 });
+
+	// One session start at a time per participant (lib/session-start-lock.ts).
+	// Expired locks are cleaned up by TTL; the lock itself checks expiresAt.
+	await database
+		.collection("session_start_locks")
+		.createIndex({ key: 1 }, { unique: true });
+	await database
+		.collection("session_start_locks")
+		.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 	// Session resumption indexes
 	// OAuth user lookup: find sessions by userId + configId
