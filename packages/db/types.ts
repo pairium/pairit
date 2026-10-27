@@ -3,7 +3,7 @@
  * Used by both lab and manager servers
  */
 
-import type { ObjectId } from "mongodb";
+import type { Binary, ObjectId } from "mongodb";
 
 export type EncryptedSecret = {
 	iv: string;
@@ -125,5 +125,19 @@ export type WorkspaceDocument = {
 	updatedBy: string;
 	configId: string;
 	updatedAt: Date;
+	createdAt: Date;
+	// Yjs state as of snapshotAt. Loading replays later workspace_updates on it.
+	snapshot?: Binary;
+	snapshotAt?: Date;
+};
+
+// One Yjs update to a workspace. The log of these is the research record.
+export type WorkspaceUpdateDocument = {
+	_id?: ObjectId;
+	groupId: string;
+	configId: string;
+	// "session:<id>", "agent:<agentId>", "seed" or "migration"
+	origin: string;
+	update: Binary;
 	createdAt: Date;
 };

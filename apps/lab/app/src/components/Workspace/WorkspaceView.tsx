@@ -1,9 +1,20 @@
 /**
  * WorkspaceView - Presentational workspace component
- * Supports freeform (markdown textarea) and structured (labeled fields) editing
+ * Edits a Yjs doc directly: freeform is a CodeMirror markdown editor bound to
+ * its text, structured is labelled fields bound to its fields map.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { defaultKeymap, indentWithTab } from "@codemirror/commands";
+import { markdown } from "@codemirror/lang-markdown";
+import {
+	defaultHighlightStyle,
+	syntaxHighlighting,
+} from "@codemirror/language";
+import { EditorState } from "@codemirror/state";
+import { EditorView, keymap, placeholder } from "@codemirror/view";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
+import { yCollab, yUndoManagerKeymap } from "y-codemirror.next";
+import type * as Y from "yjs";
 
 export type FieldDefinition = {
 	id: string;
@@ -13,149 +24,113 @@ export type FieldDefinition = {
 
 export type WorkspaceViewProps = {
 	mode: "freeform" | "structured";
-	content: string;
-	fields: Record<string, unknown>;
+	doc: Y.Doc;
 	fieldDefinitions?: FieldDefinition[];
 	disabled?: boolean;
-	onChange: (update: {
-		content?: string;
-		fields?: Record<string, unknown>;
-	}) => void;
 };
-
-const DEBOUNCE_MS = 300;
 
 export function WorkspaceView({
 	mode,
-	content,
-	fields,
+	doc,
 	fieldDefinitions = [],
 	disabled = false,
-	onChange,
 }: WorkspaceViewProps) {
 	if (mode === "structured") {
 		return (
 			<StructuredEditor
-				fields={fields}
+				fields={doc.getMap("fields")}
 				fieldDefinitions={fieldDefinitions}
 				disabled={disabled}
-				onChange={onChange}
 			/>
 		);
 	}
 
-	return (
-		<FreeformEditor content={content} disabled={disabled} onChange={onChange} />
-	);
+	return <FreeformEditor text={doc.getText("content")} disabled={disabled} />;
 }
 
+const editorTheme = EditorView.theme({
+	"&": { height: "100%", fontSize: "0.875rem" },
+	"&.cm-focused": { outline: "none" },
+	".cm-scroller": {
+		fontFamily:
+			"ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+		lineHeight: "1.625",
+	},
+	".cm-content": { padding: "0.75rem 1rem" },
+});
+
 function FreeformEditor({
-	content,
+	text,
 	disabled,
-	onChange,
 }: {
-	content: string;
+	text: Y.Text;
 	disabled: boolean;
-	onChange: WorkspaceViewProps["onChange"];
 }) {
-	const [localContent, setLocalContent] = useState(content);
-	const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-		undefined,
-	);
-	const isLocalEdit = useRef(false);
-
-	// Sync from parent when remote update arrives (not during local editing)
-	useEffect(() => {
-		if (!isLocalEdit.current) {
-			setLocalContent(content);
-		}
-		isLocalEdit.current = false;
-	}, [content]);
-
-	const handleChange = useCallback(
-		(e: React.ChangeEvent<HTMLTextAreaElement>) => {
-			const value = e.target.value;
-			isLocalEdit.current = true;
-			setLocalContent(value);
-
-			if (debounceRef.current) {
-				clearTimeout(debounceRef.current);
-			}
-			debounceRef.current = setTimeout(() => {
-				onChange({ content: value });
-			}, DEBOUNCE_MS);
-		},
-		[onChange],
-	);
+	const containerRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
-		return () => {
-			if (debounceRef.current) {
-				clearTimeout(debounceRef.current);
-			}
-		};
-	}, []);
+		if (!containerRef.current) return;
+		const view = new EditorView({
+			parent: containerRef.current,
+			state: EditorState.create({
+				doc: text.toString(),
+				extensions: [
+					// Undo only reverts this participant's own edits.
+					keymap.of([...yUndoManagerKeymap, ...defaultKeymap, indentWithTab]),
+					markdown(),
+					syntaxHighlighting(defaultHighlightStyle),
+					EditorView.lineWrapping,
+					placeholder("Start writing..."),
+					EditorState.readOnly.of(disabled),
+					EditorView.editable.of(!disabled),
+					editorTheme,
+					yCollab(text, null),
+				],
+			}),
+		});
+		return () => view.destroy();
+	}, [text, disabled]);
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
-			<textarea
-				value={localContent}
-				onChange={handleChange}
-				disabled={disabled}
-				className="min-h-0 flex-1 resize-none rounded-lg border border-slate-200 bg-white px-4 py-3 font-mono text-sm leading-relaxed transition-colors focus:border-slate-400 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
-				placeholder="Start writing..."
+			<div
+				ref={containerRef}
+				data-testid="workspace-editor"
+				className={`min-h-0 flex-1 overflow-auto rounded-lg border border-slate-200 transition-colors focus-within:border-slate-400 ${
+					disabled ? "bg-slate-50 text-slate-500" : "bg-white"
+				}`}
 			/>
 		</div>
 	);
+}
+
+function useMapSnapshot(map: Y.Map<unknown>): Record<string, unknown> {
+	const snapshot = useRef(map.toJSON());
+	const subscribe = useCallback(
+		(onChange: () => void) => {
+			const observer = () => {
+				snapshot.current = map.toJSON();
+				onChange();
+			};
+			snapshot.current = map.toJSON();
+			map.observe(observer);
+			return () => map.unobserve(observer);
+		},
+		[map],
+	);
+	return useSyncExternalStore(subscribe, () => snapshot.current);
 }
 
 function StructuredEditor({
 	fields,
 	fieldDefinitions,
 	disabled,
-	onChange,
 }: {
-	fields: Record<string, unknown>;
+	fields: Y.Map<unknown>;
 	fieldDefinitions: FieldDefinition[];
 	disabled: boolean;
-	onChange: WorkspaceViewProps["onChange"];
 }) {
-	const [localFields, setLocalFields] = useState(fields);
-	const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-		undefined,
-	);
-	const isLocalEdit = useRef(false);
-
-	useEffect(() => {
-		if (!isLocalEdit.current) {
-			setLocalFields(fields);
-		}
-		isLocalEdit.current = false;
-	}, [fields]);
-
-	const handleFieldChange = useCallback(
-		(fieldId: string, value: string | number) => {
-			isLocalEdit.current = true;
-			const updated = { ...localFields, [fieldId]: value };
-			setLocalFields(updated);
-
-			if (debounceRef.current) {
-				clearTimeout(debounceRef.current);
-			}
-			debounceRef.current = setTimeout(() => {
-				onChange({ fields: updated });
-			}, DEBOUNCE_MS);
-		},
-		[localFields, onChange],
-	);
-
-	useEffect(() => {
-		return () => {
-			if (debounceRef.current) {
-				clearTimeout(debounceRef.current);
-			}
-		};
-	}, []);
+	const values = useMapSnapshot(fields);
 
 	if (fieldDefinitions.length === 0) {
 		return (
@@ -168,8 +143,9 @@ function StructuredEditor({
 	return (
 		<div className="space-y-4">
 			{fieldDefinitions.map((field) => {
-				const value = localFields[field.id] ?? "";
+				const value = values[field.id] ?? "";
 				const fieldType = field.type ?? "text";
+				const setValue = (next: string | number) => fields.set(field.id, next);
 
 				return (
 					<div key={field.id} className="space-y-1">
@@ -183,7 +159,7 @@ function StructuredEditor({
 							<textarea
 								id={`ws-field-${field.id}`}
 								value={String(value)}
-								onChange={(e) => handleFieldChange(field.id, e.target.value)}
+								onChange={(e) => setValue(e.target.value)}
 								disabled={disabled}
 								rows={4}
 								className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm transition-colors focus:border-slate-400 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
@@ -196,8 +172,7 @@ function StructuredEditor({
 									fieldType === "number" ? (value as number) : String(value)
 								}
 								onChange={(e) =>
-									handleFieldChange(
-										field.id,
+									setValue(
 										fieldType === "number"
 											? Number(e.target.value)
 											: e.target.value,

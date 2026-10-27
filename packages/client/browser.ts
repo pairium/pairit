@@ -3,6 +3,7 @@ import {
 	LabClient,
 	NotAMemberError,
 	SessionBlockedError,
+	WorkspaceRefusedError,
 } from "./client";
 import { SSEClient } from "./sse";
 
@@ -20,7 +21,12 @@ export const sseClient = new SSEClient({
 	withCredentials: true,
 });
 
-export { AuthRequiredError, NotAMemberError, SessionBlockedError };
+export {
+	AuthRequiredError,
+	NotAMemberError,
+	SessionBlockedError,
+	WorkspaceRefusedError,
+};
 export type {
 	CancelMatchmakingResponse,
 	ChatAvatar,
@@ -30,7 +36,7 @@ export type {
 	ProlificParams,
 	RandomizeParams,
 	RandomizeResponse,
-	WorkspaceDocument,
+	SyncWorkspaceResponse,
 } from "./client";
 
 export const startSession = client.startSession.bind(client);
@@ -43,6 +49,6 @@ export const getChatHistory = client.getChatHistory.bind(client);
 export const startChatAgents = client.startChatAgents.bind(client);
 export const joinMatchmaking = client.joinMatchmaking.bind(client);
 export const cancelMatchmaking = client.cancelMatchmaking.bind(client);
-export const getWorkspace = client.getWorkspace.bind(client);
-export const updateWorkspace = client.updateWorkspace.bind(client);
+export const syncWorkspace = client.syncWorkspace.bind(client);
+export const pushWorkspaceUpdate = client.pushWorkspaceUpdate.bind(client);
 export const randomize = client.randomize.bind(client);

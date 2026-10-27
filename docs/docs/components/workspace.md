@@ -1,6 +1,8 @@
 # Workspace
 
-Embed a collaborative, real-time workspace alongside chat or survey pages. Supports freeform (markdown) and structured (individual fields) editing, per-participant or per-group scoping, and agent read/write via tool calls. See the [Workspace example](../examples.md#workspace).
+Embed a shared, real-time workspace alongside chat or survey pages. Supports freeform (markdown) and structured (individual fields) editing, per-participant or per-group scoping, and agent read/write via tool calls. See the [Workspace example](../examples.md#workspace).
+
+Participants and agents edit the same document at the same time. Their edits merge, so nobody's work is lost, and every change is saved with its author. Participants edit markdown in a code-style editor; the markdown is not rendered yet.
 
 ## Props
 
@@ -26,7 +28,7 @@ Embed a collaborative, real-time workspace alongside chat or survey pages. Suppo
 Workspace documents are identified by a `groupId`. The resolution depends on `scope`:
 
 - **`participant`** (default): Uses `{sessionId}:{pageId}` -- each participant has their own document
-- **`group`**: Uses `session_state.chat_group_id` from matchmaking -- all group members share one document
+- **`group`**: Uses `session_state.chat_group_id` from matchmaking -- all group members share one document per page
 
 ## Split Layout
 
@@ -57,7 +59,9 @@ Without `layout: split`, the workspace renders inline with other components.
 
 ## Agent Integration
 
-Agents can read and write workspace content. The current workspace content is automatically injected into the agent's system prompt.
+Agents can read and write workspace content. The current workspace content, including `initialContent` before anyone has edited, is automatically injected into the agent's system prompt.
+
+An agent's edit is merged with what participants typed while the agent was replying, so their typing is kept. Agent edits are recorded as `agent:<agentId>`.
 
 ### write_workspace Tool
 
@@ -181,14 +185,28 @@ pages:
 
 ## Data Export
 
-Workspace documents are exported via `pairit data export <configId>`. The export includes:
+`pairit data export <configId>` writes two workspace files.
+
+`<configId>-workspace-documents` has one row per workspace:
 
 | Field | Description |
 |-------|-------------|
-| `groupId` | Document identifier |
+| `groupId` | Document identifier. A group workspace's is `<chat_group_id>/<pageId>`. |
 | `mode` | `"freeform"` or `"structured"` |
 | `content` | Final freeform content (if applicable) |
+| `authorship` | Freeform: the final text in order, split by who wrote each part, as `[{ origin, text }]` (JSON in CSV) |
 | `fields.*` | Structured field values (flattened in CSV) |
+| `fieldAuthors.*` | Structured: who last set each field |
+| `updateCount` | Number of changes in the update log |
 | `updatedBy` | Session ID or `agent:<agentId>` of last editor |
 | `createdAt` | Document creation timestamp |
 | `updatedAt` | Last update timestamp |
+
+`<configId>-workspace-updates` has every change, in order:
+
+| Field | Description |
+|-------|-------------|
+| `groupId` | Document identifier, as above |
+| `origin` | Who made the change: `session:<sessionId>`, `agent:<agentId>`, `seed` (the `initialContent`) or `migration` |
+| `createdAt` | When the server saved it |
+| `update` | The change as a base64 [Yjs](https://docs.yjs.dev/) update. Applying a document's updates in order with `Y.applyUpdate` rebuilds it at any moment. |

@@ -13,6 +13,7 @@ import type {
 	IdempotencyRecord,
 	SessionDocument,
 	WorkspaceDocumentDocument,
+	WorkspaceUpdateDocument,
 } from "../types";
 
 export async function getConfigsCollection(): Promise<
@@ -62,6 +63,13 @@ export async function getWorkspaceDocumentsCollection(): Promise<
 > {
 	const database = await connectDB();
 	return database.collection<WorkspaceDocumentDocument>("workspace_documents");
+}
+
+export async function getWorkspaceUpdatesCollection(): Promise<
+	Collection<WorkspaceUpdateDocument>
+> {
+	const database = await connectDB();
+	return database.collection<WorkspaceUpdateDocument>("workspace_updates");
 }
 
 export async function ensureIndexes(): Promise<void> {
@@ -131,6 +139,12 @@ export async function ensureIndexes(): Promise<void> {
 	await database
 		.collection("workspace_documents")
 		.createIndex({ configId: 1, updatedAt: 1, _id: 1 });
+	await database
+		.collection("workspace_updates")
+		.createIndex({ groupId: 1, createdAt: 1 });
+	await database
+		.collection("workspace_updates")
+		.createIndex({ configId: 1, createdAt: 1, _id: 1 });
 
 	console.log("[DB] All indexes ensured");
 }

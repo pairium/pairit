@@ -66,23 +66,31 @@ export function getAgentsFromConfig(config: unknown): AgentConfig[] {
 
 type PageShape = {
 	id: string;
-	components?: Array<{ type: string; props?: { agents?: string[] } }>;
+	components?: Array<{ type: string; props?: Record<string, unknown> }>;
 };
+
+/** A page of a compiled config, from `pages` or legacy `nodes`. */
+export function findPageInConfig(
+	config: unknown,
+	pageId: string,
+): PageShape | undefined {
+	if (!config || typeof config !== "object") return undefined;
+	const { pages, nodes } = config as {
+		pages?: Record<string, PageShape>;
+		nodes?: PageShape[];
+	};
+	return (
+		pages?.[pageId] ??
+		(Array.isArray(nodes) ? nodes.find((n) => n.id === pageId) : undefined)
+	);
+}
 
 /** Agent ids referenced by chat and live-workspace components on a page. */
 export function getPageAgentIdsFromConfig(
 	config: unknown,
 	pageId: string,
 ): string[] {
-	if (!config || typeof config !== "object") return [];
-	const { pages, nodes } = config as {
-		pages?: Record<string, PageShape>;
-		nodes?: PageShape[];
-	};
-
-	const page =
-		pages?.[pageId] ??
-		(Array.isArray(nodes) ? nodes.find((n) => n.id === pageId) : undefined);
+	const page = findPageInConfig(config, pageId);
 	if (!page) return [];
 
 	const agentIds: string[] = [];

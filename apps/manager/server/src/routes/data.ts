@@ -3,6 +3,8 @@
  * GET /data/:configId/sessions - Export sessions for a config
  * GET /data/:configId/events - Export events for a config
  * GET /data/:configId/chat-messages - Export chat messages for a config
+ * GET /data/:configId/workspace-documents - Export final workspaces and who wrote what
+ * GET /data/:configId/workspace-updates - Export every workspace change
  */
 import { Elysia, t } from "elysia";
 import { authMiddleware } from "../lib/auth-middleware";
@@ -21,8 +23,10 @@ import {
 	getGroupsCollection,
 	getSessionsCollection,
 	getWorkspaceDocumentsCollection,
+	getWorkspaceUpdatesCollection,
 } from "../lib/db";
 import { toSessionExport } from "../lib/session-export";
+import { rebuildWorkspace } from "../lib/workspace-authorship";
 
 const paginationQuerySchema = t.Object({
 	since: t.Optional(t.String()),
@@ -396,15 +400,41 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 				.limit(limit)
 				.toArray();
 
-			const exportData = documents.map((doc) => ({
-				groupId: doc.groupId,
-				mode: doc.mode,
-				content: doc.content ?? null,
-				fields: doc.fields ?? null,
-				updatedBy: doc.updatedBy,
-				createdAt: doc.createdAt?.toISOString() ?? null,
-				updatedAt: doc.updatedAt?.toISOString() ?? null,
-			}));
+			// The update log is the record; rebuild each doc from it. Docs saved
+			// before the log existed keep their plain copy and no authorship.
+			const updatesCollection = await getWorkspaceUpdatesCollection();
+			const exportData = await Promise.all(
+				documents.map(async (doc) => {
+					const updates = await updatesCollection
+						.find({ groupId: doc.groupId })
+						.sort({ createdAt: 1, _id: 1 })
+						.toArray();
+					const rebuilt =
+						updates.length > 0
+							? rebuildWorkspace(
+									updates.map((u) => ({
+										origin: u.origin,
+										update: u.update.buffer,
+									})),
+								)
+							: null;
+					const freeform = doc.mode === "freeform";
+					return {
+						groupId: doc.groupId,
+						mode: doc.mode,
+						content: freeform
+							? (rebuilt?.content ?? doc.content ?? null)
+							: null,
+						fields: freeform ? null : (rebuilt?.fields ?? doc.fields ?? null),
+						authorship: freeform ? (rebuilt?.authorship ?? null) : null,
+						fieldAuthors: freeform ? null : (rebuilt?.fieldAuthors ?? null),
+						updateCount: updates.length,
+						updatedBy: doc.updatedBy,
+						createdAt: doc.createdAt?.toISOString() ?? null,
+						updatedAt: doc.updatedAt?.toISOString() ?? null,
+					};
+				}),
+			);
 
 			const last = documents.at(-1);
 			const nextCursor =
@@ -413,6 +443,65 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 					: null;
 
 			return { workspaceDocuments: exportData, nextCursor };
+		},
+		{
+			params: t.Object({ configId: t.String() }),
+			query: paginationQuerySchema,
+		},
+	)
+	.get(
+		"/:configId/workspace-updates",
+		async ({ params: { configId }, query, set, user }) => {
+			if (!user) {
+				set.status = 401;
+				return { error: "unauthorized", message: "Not authenticated" };
+			}
+
+			const configsCollection = await getConfigsCollection();
+			const config = await configsCollection.findOne({ configId });
+			if (!config) {
+				set.status = 404;
+				return { error: "not_found", message: "Config not found" };
+			}
+			if (config.owner !== user.id) {
+				set.status = 403;
+				return {
+					error: "forbidden",
+					message: "Not authorized to export this config's data",
+				};
+			}
+
+			const pag = parsePagination(query);
+			if (pag instanceof CursorError) {
+				set.status = 400;
+				return { error: "bad_request", message: pag.message };
+			}
+			const { cursor, limit } = pag;
+
+			const updatesCollection = await getWorkspaceUpdatesCollection();
+			const filter = cursor
+				? { configId, ...cursorFilter("createdAt", cursor) }
+				: { configId };
+			const updates = await updatesCollection
+				.find(filter)
+				.sort({ createdAt: 1, _id: 1 })
+				.limit(limit)
+				.toArray();
+
+			const exportData = updates.map((u) => ({
+				groupId: u.groupId,
+				origin: u.origin,
+				createdAt: u.createdAt.toISOString(),
+				update: Buffer.from(u.update.buffer).toString("base64"),
+			}));
+
+			const last = updates.at(-1);
+			const nextCursor =
+				updates.length === limit && last?.createdAt && last._id
+					? encodeCursor(last.createdAt, last._id)
+					: null;
+
+			return { workspaceUpdates: exportData, nextCursor };
 		},
 		{
 			params: t.Object({ configId: t.String() }),

@@ -12,7 +12,6 @@ import {
 	getChatMessagesCollection,
 	getEventsCollection,
 	getSessionsCollection,
-	getWorkspaceDocumentsCollection,
 } from "./db";
 import { getGroupMembers } from "./groups";
 import type { AgentConfig, ChatMessage, ReplyCondition, Trigger } from "./llm";
@@ -20,6 +19,15 @@ import { streamAgentResponse } from "./llm";
 import { getLlmCredentialsForConfig } from "./llm-credentials";
 import { resolveSystemPrompt } from "./prompt-resolver";
 import { broadcastToSession, getConnectionCount } from "./sse";
+import {
+	editWorkspace,
+	getWorkspaceSettings,
+	openWorkspace,
+	readWorkspace,
+	type Workspace,
+	workspaceGroupId,
+} from "./workspace";
+import type { WorkspaceEdit } from "./workspace-edit";
 
 const AGENT_TIMEOUT_MS = 60_000;
 
@@ -163,6 +171,7 @@ export async function triggerAgents(
 				configId,
 				pageId: currentPageId,
 				sessionState,
+				config,
 			});
 		}
 	});
@@ -214,6 +223,7 @@ export async function triggerJoinAgents(
 					configId,
 					pageId: currentPageId,
 					sessionState,
+					config,
 				});
 			} else if (isLegacy && existingCount === 0) {
 				await runAgent(agent, groupId, sessionId, {
@@ -221,6 +231,7 @@ export async function triggerJoinAgents(
 					configId,
 					pageId: currentPageId,
 					sessionState,
+					config,
 				});
 			}
 		}
@@ -232,7 +243,24 @@ type RunAgentOptions = {
 	configId?: string;
 	pageId?: string;
 	sessionState?: Record<string, unknown>;
+	config?: unknown;
 };
+
+/** The workspace on the agent's page, as the triggering session sees it. */
+async function openPageWorkspace(
+	sessionId: string,
+	options: RunAgentOptions,
+): Promise<Workspace | null> {
+	if (!options.pageId) return null;
+	const settings = getWorkspaceSettings(options.config, options.pageId);
+	if (!settings) return null;
+	return openWorkspace(
+		workspaceGroupId(settings, sessionId, options.pageId, options.sessionState),
+		options.pageId,
+		options.configId ?? "",
+		settings,
+	);
+}
 
 async function runAgent(
 	agent: AgentConfig,
@@ -293,14 +321,13 @@ async function runAgent(
 		}
 
 		// Inject workspace content into agent system prompt if available
-		const workspaceCollection = await getWorkspaceDocumentsCollection();
-		const workspaceDoc = await workspaceCollection.findOne({ groupId });
-		if (workspaceDoc) {
-			const workspaceSection =
-				workspaceDoc.mode === "freeform"
-					? `\n\n--- Current Workspace Content ---\n${workspaceDoc.content ?? "(empty)"}\n--- End Workspace Content ---`
-					: `\n\n--- Current Workspace Fields ---\n${JSON.stringify(workspaceDoc.fields ?? {}, null, 2)}\n--- End Workspace Fields ---`;
-			agentWithContext.system = agentWithContext.system + workspaceSection;
+		const workspace = await openPageWorkspace(sessionId, options);
+		const workspaceRead = workspace ? readWorkspace(workspace) : null;
+		if (workspace && workspaceRead) {
+			const label =
+				workspace.settings.mode === "freeform" ? "Content" : "Fields";
+			const text = workspaceRead.text || "(empty)";
+			agentWithContext.system += `\n\n--- Current Workspace ${label} ---\n${text}\n--- End Workspace ${label} ---`;
 		}
 
 		// Get members early so we can stream deltas to them
@@ -368,6 +395,9 @@ async function runAgent(
 				sessionId,
 				memberIds,
 				configId,
+				agent.id,
+				workspace,
+				workspaceRead?.base,
 			);
 		}
 
@@ -462,6 +492,10 @@ async function handleToolCall(
 	sessionId: string,
 	memberIds: string[],
 	configId: string,
+	agentId: string,
+	workspace: Workspace | null,
+	// The workspace as the agent read it; its write is merged against this
+	workspaceBase: Uint8Array | undefined,
 ): Promise<void> {
 	await logToolCallEvent(name, args, sessionId, configId);
 
@@ -516,45 +550,30 @@ async function handleToolCall(
 
 	if (name === "write_workspace") {
 		const { content, fields } = args as {
-			content?: string;
-			fields?: Record<string, unknown>;
+			content?: unknown;
+			fields?: unknown;
 		};
 		console.log(`[Agent] Tool: write_workspace for group ${groupId}`);
-
-		const wsCollection = await getWorkspaceDocumentsCollection();
-		const now = new Date();
-
-		const updateFields: Record<string, unknown> = {
-			updatedBy: `agent:${sessionId}`,
-			updatedAt: now,
-		};
-		if (content !== undefined) updateFields.content = content;
-		if (fields !== undefined) updateFields.fields = fields;
-
-		await wsCollection.updateOne(
-			{ groupId },
-			{
-				$set: updateFields,
-				$setOnInsert: {
-					groupId,
-					mode: content !== undefined ? "freeform" : "structured",
-					configId,
-					createdAt: now,
-				},
-			},
-			{ upsert: true },
-		);
-
-		const eventData = {
-			groupId,
-			content,
-			fields,
-			updatedBy: `agent:${sessionId}`,
-			updatedAt: now.toISOString(),
-		};
-
-		for (const memberId of memberIds) {
-			broadcastToSession(memberId, "workspace_updated", eventData);
+		if (!workspace) {
+			console.error("[Agent] write_workspace: no workspace on this page");
+			return;
+		}
+		let edit: WorkspaceEdit | null = null;
+		if (typeof content === "string") {
+			edit = { kind: "write", content };
+		} else if (fields && typeof fields === "object") {
+			edit = { kind: "fields", fields: fields as Record<string, unknown> };
+		}
+		if (!edit) {
+			console.error("[Agent] write_workspace: needs content or fields");
+			return;
+		}
+		try {
+			await editWorkspace(workspace, edit, `agent:${agentId}`, workspaceBase);
+		} catch (error) {
+			console.error(
+				`[Agent] write_workspace refused: ${(error as Error).message}`,
+			);
 		}
 	}
 

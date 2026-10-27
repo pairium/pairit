@@ -70,7 +70,7 @@ export class SSEClient {
 			"chat_message_delta",
 			"match_found",
 			"match_timeout",
-			"workspace_updated",
+			"workspace_update",
 			"chat_stream_end",
 		] as const;
 		for (const type of events) {
