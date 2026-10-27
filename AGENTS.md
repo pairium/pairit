@@ -164,7 +164,7 @@ Two cloud environments. Local dev still uses `.env`. The deploy script never sou
   gh workflow run deploy.yml -f target=production                # latest main (what staging runs)
   gh workflow run deploy.yml -f target=production -f ref=<sha>   # a specific commit, e.g. rollback
   ```
-  Don't deploy production while a multi-participant study is live.
+  Don't deploy production while a multi-participant study is live. Check with `pairit admin activity` (admin only; live group studies come first). `scripts/deploy.sh production` runs this check and stops if one is live (`FORCE_DEPLOY=1` overrides). The workflow can't check yet: it warns unless you pass `-f force=true` after checking yourself.
 - GitHub deploys need one-time setup ("Deploying from GitHub Actions" in `docs/docs/dev/deployment.md`). Until `gh variable list` shows `STAGING_AUTO_DEPLOY=true`, nothing deploys from GitHub; use `scripts/deploy.sh`.
 - The published `pairit` CLI talks to production. Add `--env staging` to use staging (e.g. `pairit --env staging login`). Each environment keeps its own saved login.
 

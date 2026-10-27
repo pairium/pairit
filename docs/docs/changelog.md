@@ -26,8 +26,11 @@ Merged, but not released yet.
 - An agent listed on both a page's chat and its workspace now replies once per message instead of twice.
 - A workspace can be any text file (`file: board.json`), drawn by your own HTML page (`renderer`) and checked against a JSON Schema (`schema`). See [Custom renderer](components/workspace.md#custom-renderer).
 - New examples: [Shared workspace and Workspace board](examples.md).
+- For admins: the manager reports which studies have participants right now (`GET /admin/activity`), so production deploys can wait for live group studies to finish.
 
 ### CLI
+
+- `pairit admin activity` (admins) lists studies with recent sessions: owner, active participants in a group or solo, how many wait in matchmaking, and features used. Live group studies come first. `--since 7d` looks further back, `--json` prints the raw report, and `--fail-if-live` exits 2 if a group study is live.
 
 ## CLI 0.3.3
 

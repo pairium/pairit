@@ -4,11 +4,14 @@
  * GET    /admin/users          - list allowlist entries
  * POST   /admin/users          - add or upsert an entry
  * DELETE /admin/users/:email   - remove an entry and revoke their sessions
+ * GET    /admin/activity       - configs with recent sessions, live group studies first
  *
  * All routes require an authenticated user with isAdmin: true.
  */
 
 import { Elysia, t } from "elysia";
+import { DEFAULT_SINCE_MS, summarizeActivity } from "../lib/activity";
+import { loadActivityInput } from "../lib/activity-db";
 import {
 	addUser,
 	listUsers,
@@ -88,4 +91,30 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
 		}
 		await revokeSessionsForEmail(email);
 		return { ok: true };
-	});
+	})
+	.get(
+		"/activity",
+		async ({ user, isAdmin, query, set }) => {
+			if (!user) {
+				set.status = 401;
+				return { error: "unauthorized", message: "Not authenticated" };
+			}
+			if (!isAdmin) {
+				set.status = 403;
+				return { error: "forbidden", message: "Admin role required" };
+			}
+			const now = new Date();
+			const since = query.since
+				? new Date(query.since)
+				: new Date(now.getTime() - DEFAULT_SINCE_MS);
+			if (Number.isNaN(since.getTime()) || since > now) {
+				set.status = 400;
+				return {
+					error: "bad_request",
+					message: "since must be an ISO date in the past",
+				};
+			}
+			return summarizeActivity(await loadActivityInput(since, now));
+		},
+		{ query: t.Object({ since: t.Optional(t.String()) }) },
+	);

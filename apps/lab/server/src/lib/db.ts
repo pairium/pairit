@@ -119,6 +119,11 @@ export async function ensureIndexes(): Promise<void> {
 		.collection("sessions")
 		.createIndex({ configId: 1, createdAt: 1, _id: 1 });
 
+	// Admin activity report (manager GET /admin/activity): recent sessions
+	await database
+		.collection("sessions")
+		.createIndex({ updatedAt: 1, configId: 1 });
+
 	// Session resumption indexes
 	// OAuth user lookup: find sessions by userId + configId
 	await database
