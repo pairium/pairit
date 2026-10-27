@@ -129,7 +129,7 @@ describe("replace", () => {
 				{ kind: "replace", old: "x", new: "z" },
 				"a",
 			),
-		).toThrow("old_string matches 2 times (lines 1, 3)");
+		).toThrow("The text to replace matches 2 times (lines 1, 3)");
 	});
 
 	test("replaceAll replaces every match", () => {

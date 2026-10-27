@@ -92,26 +92,8 @@
     {
       "id": "writer",
       "model": "gpt-6-luna",
-      "reasoningEffort": "none",
-      "system": "You are a writing assistant helping the user draft a project proposal.\nThe shared workspace contains the current document.\nUse the write_workspace tool to update the document when the user asks for edits.\nKeep chat responses SHORT - 1-2 sentences. Do the real work in the workspace.\n",
-      "tools": [
-        {
-          "name": "write_workspace",
-          "description": "Update the workspace document with new content",
-          "parameters": {
-            "type": "object",
-            "properties": {
-              "content": {
-                "type": "string",
-                "description": "The full updated markdown content for the workspace"
-              }
-            },
-            "required": [
-              "content"
-            ]
-          }
-        }
-      ]
+      "reasoningEffort": "low",
+      "system": "You are a writing assistant helping the user draft a project proposal.\nThe shared workspace contains the current document. Edit it when the user asks for edits.\nKeep chat responses SHORT - 1-2 sentences. Do the real work in the workspace.\n"
     }
   ]
 }

@@ -59,29 +59,27 @@ Without `layout: split`, the workspace renders inline with other components.
 
 ## Agent Integration
 
-Agents can read and write workspace content. The current workspace content, including `initialContent` before anyone has edited, is automatically injected into the agent's system prompt.
+An agent listed in the workspace's `agents` prop edits it the way coding agents edit files. It sees the workspace as one file, `workspace.md` (or `fields.json` for structured mode), and gets the file-editing tools its model was trained on. You don't declare any tools.
 
-An agent's edit is merged with what participants typed while the agent was replying, so their typing is kept. Agent edits are recorded as `agent:<agentId>`.
+| Model | Tools |
+|-------|-------|
+| Claude | Claude's text editor (`str_replace_based_edit_tool`): view, replace, insert |
+| GPT-5.1 and later | `apply_patch`, plus `read_workspace` |
+| Other models | `read_workspace`, `edit_workspace` (replace exact text), `write_workspace` (whole file) |
 
-### write_workspace Tool
+- The agent views the file before editing, and each tool's result goes back to it, so it can fix a refused edit and continue. It can make up to 8 model calls per reply.
+- An edit must match the current text exactly once, so it never overwrites text a participant changed. A whole-file write is refused if the file changed since the agent last viewed it.
+- With `editableBy: participant`, agents can view the file but not edit it.
+- In structured mode, an edit that leaves `fields.json` invalid, names an unknown field, or puts text in a number field is refused.
+- Agent edits are recorded as `agent:<agentId>`, and each tool call is logged as a `workspace_tool` event.
 
-Agents can update the workspace using the `write_workspace` tool:
+Other agents on the page, not listed in `agents`, get a copy of the current content in their system prompt and can't edit it.
 
 ```yaml
 agents:
-  - id: dealer
+  - id: writer
     model: gpt-6-luna
-    system: "You are negotiating a deal. Use the workspace to draft terms."
-    tools:
-      - name: write_workspace
-        description: "Update the workspace document with new content"
-        parameters:
-          type: object
-          properties:
-            content:
-              type: string
-              description: "The new markdown content for the workspace"
-          required: [content]
+    system: "You are a writing assistant. Edit the shared document when the user asks."
 ```
 
 ## Examples
@@ -107,15 +105,6 @@ agents:
   - id: writer
     model: gpt-6-luna
     system: "You are a writing assistant. Help the user draft their document."
-    tools:
-      - name: write_workspace
-        description: "Update the workspace document"
-        parameters:
-          type: object
-          properties:
-            content:
-              type: string
-          required: [content]
 ```
 
 ### Structured Fields

@@ -3,6 +3,7 @@
  * Orchestrates AI agent responses to chat messages
  */
 
+import { jsonSchema, type ToolSet, tool } from "ai";
 import {
 	getAgentsFromConfig,
 	getPageAgentIdsFromConfig,
@@ -28,8 +29,14 @@ import {
 	workspaceGroupId,
 } from "./workspace";
 import type { WorkspaceEdit } from "./workspace-edit";
+import {
+	buildWorkspaceTools,
+	type WorkspaceToolContext,
+	workspacePromptLine,
+} from "./workspace-tools";
 
-const AGENT_TIMEOUT_MS = 60_000;
+// Long enough for several rounds of tool calls
+const AGENT_TIMEOUT_MS = 120_000;
 
 const activeGroupRuns = new Set<string>();
 
@@ -320,10 +327,24 @@ async function runAgent(
 			agentWithContext.system = `${guardrailPrefix}\n\n${resolvedSystem}`;
 		}
 
-		// Inject workspace content into agent system prompt if available
+		// An agent listed on the workspace gets file tools and a one-line
+		// pointer to the file. Other agents on the page get a read-only copy.
 		const workspace = await openPageWorkspace(sessionId, options);
 		const workspaceRead = workspace ? readWorkspace(workspace) : null;
-		if (workspace && workspaceRead) {
+		const fileContext: WorkspaceToolContext | null =
+			workspace?.settings.agents.includes(agent.id)
+				? {
+						workspace,
+						agentId: agent.id,
+						model: agent.model,
+						canEdit: workspace.settings.editableBy !== "participant",
+						sessionId,
+						configId,
+					}
+				: null;
+		if (fileContext) {
+			agentWithContext.system += `\n\n${workspacePromptLine(fileContext)}`;
+		} else if (workspace && workspaceRead) {
 			const label =
 				workspace.settings.mode === "freeform" ? "Content" : "Fields";
 			const text = workspaceRead.text || "(empty)";
@@ -348,13 +369,38 @@ async function runAgent(
 			});
 		}
 
-		let fullText = "";
-		const toolCalls: Array<{ name: string; args: Record<string, unknown> }> =
-			[];
+		// Tools run inside the model loop, so each result goes back to the model.
+		const tools: ToolSet = fileContext ? buildWorkspaceTools(fileContext) : {};
+		for (const declared of agent.tools ?? []) {
+			// Agents with file tools edit the workspace with those instead.
+			if (fileContext && declared.name === "write_workspace") continue;
+			tools[declared.name] = tool({
+				description: declared.description,
+				inputSchema: jsonSchema<Record<string, unknown>>(
+					declared.parameters ?? { type: "object", properties: {} },
+				),
+				execute: async (args) => {
+					await handleToolCall(
+						declared.name,
+						args,
+						groupId,
+						sessionId,
+						memberIds,
+						configId,
+						agent.id,
+						workspace,
+						workspaceRead?.base,
+					);
+					return "Done.";
+				},
+			});
+		}
 
+		let fullText = "";
 		for await (const delta of streamAgentResponse(agentWithContext, history, {
 			credentials,
 			signal: abortController.signal,
+			tools,
 		})) {
 			if (delta.type === "text_delta") {
 				fullText += delta.text;
@@ -370,8 +416,6 @@ async function runAgent(
 						fullText,
 					});
 				}
-			} else if (delta.type === "tool_call") {
-				toolCalls.push({ name: delta.name, args: delta.args });
 			}
 		}
 
@@ -384,20 +428,6 @@ async function runAgent(
 				"agent",
 				fullText,
 				agent.avatar,
-			);
-		}
-
-		for (const toolCall of toolCalls) {
-			await handleToolCall(
-				toolCall.name,
-				toolCall.args,
-				groupId,
-				sessionId,
-				memberIds,
-				configId,
-				agent.id,
-				workspace,
-				workspaceRead?.base,
 			);
 		}
 

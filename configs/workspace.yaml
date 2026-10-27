@@ -66,19 +66,8 @@ pages:
 agents:
   - id: writer
     model: "gpt-6-luna"
-    reasoningEffort: none
+    reasoningEffort: low
     system: |
       You are a writing assistant helping the user draft a project proposal.
-      The shared workspace contains the current document.
-      Use the write_workspace tool to update the document when the user asks for edits.
+      The shared workspace contains the current document. Edit it when the user asks for edits.
       Keep chat responses SHORT - 1-2 sentences. Do the real work in the workspace.
-    tools:
-      - name: write_workspace
-        description: "Update the workspace document with new content"
-        parameters:
-          type: object
-          properties:
-            content:
-              type: string
-              description: "The full updated markdown content for the workspace"
-          required: [content]

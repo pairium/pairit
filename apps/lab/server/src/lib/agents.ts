@@ -85,7 +85,10 @@ export function findPageInConfig(
 	);
 }
 
-/** Agent ids referenced by chat and live-workspace components on a page. */
+/**
+ * Agent ids referenced by chat and live-workspace components on a page, each
+ * once: an agent listed on both the chat and the workspace replies once.
+ */
 export function getPageAgentIdsFromConfig(
 	config: unknown,
 	pageId: string,
@@ -93,16 +96,16 @@ export function getPageAgentIdsFromConfig(
 	const page = findPageInConfig(config, pageId);
 	if (!page) return [];
 
-	const agentIds: string[] = [];
+	const agentIds = new Set<string>();
 	for (const c of page.components ?? []) {
 		if (
 			(c.type === "chat" || c.type === "live-workspace") &&
 			Array.isArray(c.props?.agents)
 		) {
-			agentIds.push(...c.props.agents);
+			for (const id of c.props.agents) agentIds.add(id);
 		}
 	}
-	return agentIds;
+	return [...agentIds];
 }
 
 async function readLocalConfig(configId: string): Promise<unknown> {
