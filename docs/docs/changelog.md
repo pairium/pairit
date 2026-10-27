@@ -17,7 +17,11 @@ Merged, but not released yet.
 
 ### Platform
 
+- For admins: the activity report no longer counts a session as active if it started more than 12 hours ago. A browser tab left open on a page whose `html` component saves on a timer kept such a session looking live for days. The report lists these as `staleOpen`.
+
 ### CLI
+
+- `pairit admin activity` names studies whose open sessions are too old to count as active, and says how active is defined.
 
 ## Platform 2026.10.27.2
 

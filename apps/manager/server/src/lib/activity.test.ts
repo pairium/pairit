@@ -57,9 +57,12 @@ function session(
 	currentPageId: string,
 	state: Record<string, unknown> = {},
 	config: unknown = undefined,
+	createdAt = new Date(NOW.getTime() - 30 * 60 * 1000),
 ): ActiveSession {
-	return { configId, currentPageId, session_state: state, config };
+	return { configId, currentPageId, session_state: state, config, createdAt };
 }
+
+const DAYS_AGO_18 = new Date(NOW.getTime() - 18 * 24 * 60 * 60 * 1000);
 
 function input(overrides: Partial<ActivityInput> = {}): ActivityInput {
 	return {
@@ -225,6 +228,54 @@ describe("summarizeActivity", () => {
 			}),
 		);
 		expect(report.configs.map((c) => c.configId)).toEqual(["group", "solo"]);
+	});
+
+	test("a tab left open for days is stale, not active or waiting", () => {
+		// An html component on the matching page saves every minute while open
+		const report = summarizeActivity(
+			input({
+				activeSessions: [
+					session("group", "match", {}, undefined, DAYS_AGO_18),
+					session("solo", "survey", {}, undefined, DAYS_AGO_18),
+					session("solo", "survey"),
+				],
+			}),
+		);
+		const group = report.configs.find((c) => c.configId === "group");
+		const solo = report.configs.find((c) => c.configId === "solo");
+		expect(group).toMatchObject({
+			activeNow: { total: 0, inGroup: 0, solo: 0 },
+			waitingInMatchmaking: 0,
+			staleOpen: 1,
+		});
+		expect(solo).toMatchObject({
+			activeNow: { total: 1, inGroup: 0, solo: 1 },
+			staleOpen: 1,
+		});
+		expect(report.liveGroupStudies).toEqual([]);
+		expect(report.staleAfterHours).toBe(12);
+	});
+
+	test("a session started under 12 hours ago still counts", () => {
+		const elevenHoursAgo = new Date(NOW.getTime() - 11 * 60 * 60 * 1000);
+		const report = summarizeActivity(
+			input({
+				activeSessions: [
+					session("group", "match", {}, undefined, elevenHoursAgo),
+				],
+			}),
+		);
+		expect(report.liveGroupStudies.map((c) => c.configId)).toEqual(["group"]);
+		expect(report.configs[0].staleOpen).toBe(0);
+	});
+
+	test("a session without createdAt counts as fresh", () => {
+		const legacy = {
+			...session("group", "match"),
+			createdAt: undefined,
+		} as unknown as ActiveSession;
+		const report = summarizeActivity(input({ activeSessions: [legacy] }));
+		expect(report.liveGroupStudies).toHaveLength(1);
 	});
 
 	test("keeps sessions whose config was deleted", () => {

@@ -99,7 +99,7 @@ Do not deploy production while a multi-participant study is live (see [Lab runs 
 pairit admin activity
 ```
 
-It lists every study with sessions in the last 24 hours, live group studies first, with the owner, active participants (in a group or solo), and how many are waiting in matchmaking. A group study is live when it has a session that has not finished and changed in the last 15 minutes. Only admins can run it. See the [CLI README](https://github.com/pairium/pairit/tree/main/apps/manager/cli#activity-admin) for the columns.
+It lists every study with sessions in the last 24 hours, live group studies first, with the owner, active participants (in a group or solo), and how many are waiting in matchmaking. A group study is live when it has a session that has not finished, changed in the last 15 minutes, and started in the last 12 hours. The 12-hour limit leaves out browser tabs left open for days on a page whose `html` component saves every few seconds or minutes. Almost every real session finishes within an hour of starting. Only admins can run it. See the [CLI README](https://github.com/pairium/pairit/tree/main/apps/manager/cli#activity-admin) for the columns.
 
 `./scripts/deploy.sh production` runs the same check with your production CLI login before it builds anything:
 

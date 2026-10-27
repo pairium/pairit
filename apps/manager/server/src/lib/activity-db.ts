@@ -39,6 +39,7 @@ export async function loadActivityInput(
 					_id: 0,
 					configId: 1,
 					currentPageId: 1,
+					createdAt: 1,
 					"session_state.chat_group_id": 1,
 					"config.pages": 1,
 				},

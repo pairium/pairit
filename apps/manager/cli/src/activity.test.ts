@@ -103,6 +103,19 @@ describe("formatActivity", () => {
 		expect(text).toContain("No sessions since 2026-10-26T12:00:00.000Z.");
 	});
 
+	test("names studies with stale open sessions", () => {
+		const text = formatActivity({
+			...report([entry({ configId: "group-study", staleOpen: 1 })]),
+			staleAfterHours: 12,
+		});
+		expect(text).toContain(
+			"Not counted: sessions that started over 12 h ago but still change, usually a tab left open: group-study (1).",
+		);
+		expect(text).toContain(
+			"Active: not finished, changed in the last 15 min, and started in the last 12 h.",
+		);
+	});
+
 	test("an idle group study is not live", () => {
 		const text = formatActivity(
 			report([entry({ configId: "idle", isGroupStudy: true })]),

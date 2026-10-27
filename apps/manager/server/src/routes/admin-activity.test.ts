@@ -53,12 +53,14 @@ mock.module("../lib/activity-db", () => ({
 					currentPageId: "chat",
 					session_state: { chat_group_id: "g1" },
 					config: undefined,
+					createdAt: now,
 				},
 				{
 					configId: "omh-test",
 					currentPageId: "wait",
 					session_state: {},
 					config: undefined,
+					createdAt: now,
 				},
 			],
 			counts: new Map([

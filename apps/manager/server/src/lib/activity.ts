@@ -8,12 +8,16 @@ import type { ConfigDocument, SessionDocument } from "../types";
 
 // A session counts as active if it changed this recently and has not ended.
 export const ACTIVE_WINDOW_MS = 15 * 60 * 1000;
+// ...and started this recently. A tab left open on a page whose html
+// component saves on a timer keeps changing its session for days; nearly
+// every real session finishes within an hour of starting.
+export const STALE_SESSION_MS = 12 * 60 * 60 * 1000;
 export const STARTED_TODAY_MS = 24 * 60 * 60 * 1000;
 export const DEFAULT_SINCE_MS = 24 * 60 * 60 * 1000;
 
 export type ActiveSession = Pick<
 	SessionDocument,
-	"configId" | "currentPageId" | "session_state" | "config"
+	"configId" | "currentPageId" | "session_state" | "config" | "createdAt"
 >;
 
 export type SessionCounts = {
@@ -53,6 +57,9 @@ export type ConfigActivity = {
 	lastActivityAt: string | null;
 	activeNow: { total: number; inGroup: number; solo: number };
 	waitingInMatchmaking: number;
+	// Unfinished sessions that changed recently but started more than
+	// STALE_SESSION_MS ago. Not counted in activeNow.
+	staleOpen: number;
 	startedToday: number;
 	totalSessions: number;
 	prolificSessions: number;
@@ -64,6 +71,7 @@ export type ActivityReport = {
 	generatedAt: string;
 	since: string;
 	activeWindowMinutes: number;
+	staleAfterHours: number;
 	configs: ConfigActivity[];
 	liveGroupStudies: ConfigActivity[];
 };
@@ -148,6 +156,14 @@ function toIso(date: Date | null | undefined): string | null {
 	return date instanceof Date ? date.toISOString() : null;
 }
 
+// Sessions with no createdAt count as fresh, so a live study is never hidden
+function isStale(session: ActiveSession, now: Date): boolean {
+	return (
+		session.createdAt instanceof Date &&
+		now.getTime() - session.createdAt.getTime() > STALE_SESSION_MS
+	);
+}
+
 export function isLiveGroupStudy(entry: ConfigActivity): boolean {
 	return entry.isGroupStudy && entry.activeNow.total > 0;
 }
@@ -159,9 +175,10 @@ export function summarizeActivity(input: ActivityInput): ActivityReport {
 	const entries: ConfigActivity[] = [];
 	for (const configId of configIds) {
 		const doc = input.configs.get(configId) ?? null;
-		const sessions = input.activeSessions.filter(
+		const recent = input.activeSessions.filter(
 			(session) => session.configId === configId,
 		);
+		const sessions = recent.filter((session) => !isStale(session, input.now));
 		const inGroup = sessions.filter(isInGroup).length;
 		const counts = input.counts.get(configId);
 		const ownerId = doc?.owner ?? null;
@@ -182,6 +199,7 @@ export function summarizeActivity(input: ActivityInput): ActivityReport {
 			waitingInMatchmaking: sessions.filter((session) =>
 				isWaitingInMatchmaking(session, doc?.config),
 			).length,
+			staleOpen: recent.length - sessions.length,
 			startedToday: counts?.startedToday ?? 0,
 			totalSessions: counts?.total ?? 0,
 			prolificSessions: counts?.prolific ?? 0,
@@ -202,6 +220,7 @@ export function summarizeActivity(input: ActivityInput): ActivityReport {
 		generatedAt: input.now.toISOString(),
 		since: input.since.toISOString(),
 		activeWindowMinutes: ACTIVE_WINDOW_MS / 60_000,
+		staleAfterHours: STALE_SESSION_MS / 3_600_000,
 		configs: entries,
 		liveGroupStudies: entries.filter(isLiveGroupStudy),
 	};

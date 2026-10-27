@@ -13,6 +13,8 @@ export type ConfigActivity = {
 	lastActivityAt: string | null;
 	activeNow: { total: number; inGroup: number; solo: number };
 	waitingInMatchmaking: number;
+	// Open sessions that started too long ago to count as active (newer servers)
+	staleOpen?: number;
 	startedToday: number;
 	totalSessions: number;
 	prolificSessions: number;
@@ -29,6 +31,7 @@ export type ActivityReport = {
 	generatedAt: string;
 	since: string;
 	activeWindowMinutes: number;
+	staleAfterHours?: number;
 	configs: ConfigActivity[];
 	liveGroupStudies: ConfigActivity[];
 };
@@ -143,8 +146,18 @@ export function formatActivity(
 		lines.push(row.live ? paint("1;31", `● ${text}`) : `  ${text}`);
 	}
 	lines.push("");
+
+	const stale = report.configs.filter((entry) => (entry.staleOpen ?? 0) > 0);
+	if (stale.length > 0 && report.staleAfterHours) {
+		lines.push(
+			`Not counted: sessions that started over ${report.staleAfterHours} h ago but still change, usually a tab left open: ${stale.map((entry) => `${entry.configId} (${entry.staleOpen})`).join(", ")}.`,
+		);
+	}
+	const started = report.staleAfterHours
+		? `, changed in the last ${report.activeWindowMinutes} min, and started in the last ${report.staleAfterHours} h`
+		: ` and changed in the last ${report.activeWindowMinutes} min`;
 	lines.push(
-		`Since ${report.since}. Active: not finished and changed in the last ${report.activeWindowMinutes} min. Today: started in the last 24 h.`,
+		`Since ${report.since}. Active: not finished${started}. Today: started in the last 24 h.`,
 	);
 	return lines.join("\n");
 }
