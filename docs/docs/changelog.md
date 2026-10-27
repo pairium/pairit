@@ -22,6 +22,10 @@ Merged, but not released yet.
 
 ### CLI
 
+## CLI 0.3.4
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/cli-v0.3.4)
+
 - `pairit admin activity` (admins) lists studies with recent sessions: owner, active participants in a group or solo, how many wait in matchmaking, and features used. Live group studies come first. `--since 7d` looks further back, `--json` prints the raw report, and `--fail-if-live` exits 2 if a group study is live.
 
 ## Platform 2026.10.27
