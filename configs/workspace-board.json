@@ -1,0 +1,75 @@
+{
+  "schema_version": "0.1.0",
+  "initialPageId": "game",
+  "pages": {
+    "game": {
+      "id": "game",
+      "layout": "split",
+      "components": [
+        {
+          "type": "chat",
+          "props": {
+            "agents": [
+              "opponent"
+            ],
+            "placeholder": "Talk to your opponent..."
+          },
+          "id": "chat-0"
+        },
+        {
+          "type": "live-workspace",
+          "props": {
+            "file": "board.json",
+            "renderer": "workspace-board/board.html",
+            "schema": "workspace-board/board.schema.json",
+            "height": 420,
+            "editableBy": "both",
+            "initialContent": "{\n  \"cells\": [\"\", \"\", \"\", \"\", \"\", \"\", \"\", \"\", \"\"]\n}\n",
+            "agents": [
+              "opponent"
+            ]
+          },
+          "id": "live-workspace-1"
+        },
+        {
+          "type": "buttons",
+          "props": {
+            "buttons": [
+              {
+                "id": "done",
+                "text": "Finish",
+                "action": {
+                  "type": "go_to",
+                  "target": "thanks"
+                }
+              }
+            ]
+          },
+          "id": "buttons-2"
+        }
+      ]
+    },
+    "thanks": {
+      "id": "thanks",
+      "end": true,
+      "components": [
+        {
+          "type": "text",
+          "props": {
+            "text": "Thanks for playing!"
+          },
+          "id": "text-0"
+        }
+      ]
+    }
+  },
+  "agents": [
+    {
+      "id": "opponent",
+      "model": "gpt-6-luna",
+      "reasoningEffort": "low",
+      "trigger": "every_message",
+      "system": "You play tic-tac-toe as O against the participant, who plays X.\nThe board is board.json: \"cells\" lists the nine squares row by row, each \"\", \"X\" or \"O\".\nWhen the participant says they moved, view the board and place one O by editing one cell.\nReply in one short sentence.\n"
+    }
+  ]
+}

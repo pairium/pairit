@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 24px; color: #0f172a; }
+  .board { display: grid; grid-template-columns: repeat(3, 96px); gap: 8px; }
+  button { height: 96px; font-size: 40px; font-weight: 700; border: 1px solid #cbd5e1;
+           border-radius: 12px; background: white; cursor: pointer; }
+  button:disabled { cursor: default; }
+  .o { color: #2563eb; }
+  p { color: #64748b; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="board" id="board"></div>
+<p id="status">Click a square to place an X, then tell your opponent in the chat.</p>
+<script>
+  var board = document.getElementById("board");
+  var message = document.getElementById("status");
+
+  // Redraw whenever the board changes, from you, the agent or the server.
+  pairit.workspace.onChange(function (text) {
+    var cells = JSON.parse(text).cells;
+    board.innerHTML = "";
+    cells.forEach(function (cell, i) {
+      var button = document.createElement("button");
+      button.textContent = cell;
+      button.className = cell === "O" ? "o" : "";
+      button.disabled = cell !== "";
+      button.onclick = function () { move(i); };
+      board.appendChild(button);
+    });
+  });
+
+  // Place an X: replace the board as you last saw it with the new board.
+  // If someone changed it since, the edit is refused and the board redraws.
+  function move(i) {
+    var text = pairit.workspace.text;
+    var next = JSON.parse(text);
+    next.cells[i] = "X";
+    pairit.workspace.replace(text, JSON.stringify(next, null, 2) + "\n").then(function (result) {
+      message.textContent = result.ok
+        ? "Placed. Tell your opponent in the chat."
+        : "The board changed; try again.";
+    });
+  }
+</script>
+</body>
+</html>

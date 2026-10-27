@@ -32,6 +32,10 @@ function WorkspaceLoading() {
 
 type WorkspaceProps = {
 	mode?: "freeform" | "structured";
+	file?: string;
+	// Bundled at upload from the `renderer` file
+	rendererHtml?: string;
+	height?: number;
 	editableBy?: "participant" | "agent" | "both";
 	initialContent?: string;
 	scope?: "participant" | "group";
@@ -195,6 +199,16 @@ export const WorkspaceRuntime = defineRuntimeComponent<
 				<WorkspaceView
 					mode={state.mode}
 					doc={doc}
+					file={component.props.file}
+					renderer={
+						component.props.rendererHtml
+							? {
+									html: component.props.rendererHtml,
+									height: component.props.height ?? 480,
+								}
+							: undefined
+					}
+					target={{ groupId, sessionId, pageId: pageId ?? "" }}
 					fieldDefinitions={component.props.fields}
 					disabled={editableBy === "agent"}
 				/>

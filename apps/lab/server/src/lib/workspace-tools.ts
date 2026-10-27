@@ -25,9 +25,7 @@ export type WorkspaceToolContext = {
 
 /** The one path agents may use. */
 export function workspaceFileName(workspace: Workspace): string {
-	return workspace.settings.mode === "freeform"
-		? "workspace.md"
-		: "fields.json";
+	return workspace.settings.file;
 }
 
 /** The system prompt line that replaces a pasted copy of the doc. */

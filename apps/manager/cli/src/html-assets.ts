@@ -138,3 +138,103 @@ export async function attachHtmlToCompiledConfig(
 	}
 	return sources;
 }
+
+function listWorkspaceComponents(config: {
+	pages?: unknown;
+}): Array<{ id: string; props: AnyRecord }> {
+	const pages = config.pages;
+	const pageList: AnyRecord[] = Array.isArray(pages)
+		? pages.filter(isRecord)
+		: isRecord(pages)
+			? Object.values(pages).filter(isRecord)
+			: [];
+	const result: Array<{ id: string; props: AnyRecord }> = [];
+	for (const page of pageList) {
+		if (!Array.isArray(page.components)) continue;
+		for (const comp of page.components) {
+			if (!isRecord(comp) || comp.type !== "live-workspace") continue;
+			const props = isRecord(comp.props) ? comp.props : {};
+			const id = typeof comp.id === "string" ? comp.id : "live-workspace";
+			result.push({ id, props });
+		}
+	}
+	return result;
+}
+
+async function resolveWorkspaceSchema(
+	schema: unknown,
+	componentId: string,
+	configDir: string,
+): Promise<string> {
+	if (typeof schema !== "string" || !schema.trim().endsWith(".json")) {
+		throw new Error(
+			`live-workspace ${componentId}: schema must be a .json file`,
+		);
+	}
+	const absolutePath = path.resolve(configDir, schema.trim());
+	const rel = path.relative(configDir, absolutePath);
+	if (rel.startsWith("..") || path.isAbsolute(rel)) {
+		throw new Error(
+			`live-workspace ${componentId}: schema must stay inside the config directory`,
+		);
+	}
+	try {
+		JSON.parse(await readFile(absolutePath, "utf8"));
+	} catch (error) {
+		throw new Error(
+			`live-workspace ${componentId}: can't read schema ${schema}: ${(error as Error).message}`,
+		);
+	}
+	return absolutePath;
+}
+
+/** Check a workspace's renderer and schema files exist; for lint. */
+export async function inspectWorkspaceFiles(
+	configPath: string,
+	config: { pages?: unknown },
+): Promise<void> {
+	const configDir = await resolveConfigDir(configPath);
+	const errors: string[] = [];
+	for (const comp of listWorkspaceComponents(config)) {
+		try {
+			if (comp.props.renderer !== undefined) {
+				await resolveHtmlSource(comp.props.renderer, comp.id, configDir);
+			}
+			if (comp.props.schema !== undefined) {
+				await resolveWorkspaceSchema(comp.props.schema, comp.id, configDir);
+			}
+		} catch (error) {
+			errors.push(error instanceof Error ? error.message : String(error));
+		}
+	}
+	if (errors.length) throw new Error(errors.join("\n"));
+}
+
+/**
+ * Bundle each workspace's `renderer` HTML into `rendererHtml` and its
+ * `schema` file into `schema`, like the html component's `src`.
+ */
+export async function attachWorkspaceFilesToCompiledConfig(
+	configPath: string,
+	compiled: { pages?: unknown },
+): Promise<void> {
+	const configDir = await resolveConfigDir(configPath);
+	for (const comp of listWorkspaceComponents(compiled)) {
+		if (comp.props.renderer !== undefined) {
+			const resolved = await resolveHtmlSource(
+				comp.props.renderer,
+				comp.id,
+				configDir,
+			);
+			comp.props.rendererHtml = await readFile(resolved.absolutePath, "utf8");
+		}
+		if (comp.props.schema !== undefined) {
+			const schemaPath = await resolveWorkspaceSchema(
+				comp.props.schema,
+				comp.id,
+				configDir,
+			);
+			comp.props.schema = JSON.parse(await readFile(schemaPath, "utf8"));
+		}
+	}
+}

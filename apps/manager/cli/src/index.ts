@@ -11,9 +11,11 @@ import { getAuthHeaders, login } from "./auth.js";
 import { getApiUrl, getLabUrl, parseEnvName, setEnv } from "./env.js";
 import {
 	attachHtmlToCompiledConfig,
+	attachWorkspaceFilesToCompiledConfig,
 	formatBytes,
 	type HtmlSourceInfo,
 	inspectHtmlSources,
+	inspectWorkspaceFiles,
 } from "./html-assets.js";
 import { lintRandomization } from "./randomize-lint.js";
 
@@ -607,6 +609,7 @@ async function lintConfig(configPath: string): Promise<HtmlSourceInfo[]> {
 		throw new Error(errors.join(", "));
 	}
 
+	await inspectWorkspaceFiles(configPath, config);
 	return inspectHtmlSources(configPath, config);
 }
 
@@ -734,6 +737,7 @@ async function buildUploadPayload(
 	const compiledContent = await readFile(compiledPath, "utf8");
 	const parsed = JSON.parse(compiledContent) as { pages?: unknown };
 	const attachments = await attachHtmlToCompiledConfig(configPath, parsed);
+	await attachWorkspaceFilesToCompiledConfig(configPath, parsed);
 	const hashBuffer = createHash("sha256")
 		.update(JSON.stringify(parsed))
 		.digest();

@@ -24,9 +24,12 @@ Merged, but not released yet.
 - Agents listed on a workspace now edit it with file tools, like coding agents: they view the file, make targeted edits, and see each result, for up to 8 steps per reply. No tool declarations needed; an existing `write_workspace` declaration is ignored for these agents. See [Agent Integration](components/workspace.md#agent-integration).
 - Agents use OpenAI's Responses API, so `gpt-6-luna` agents can use tools together with `reasoningEffort`.
 - An agent listed on both a page's chat and its workspace now replies once per message instead of twice.
+- A workspace can be any text file (`file: board.json`), drawn by your own HTML page (`renderer`) and checked against a JSON Schema (`schema`). See [Custom renderer](components/workspace.md#custom-renderer).
+- New examples: [Shared workspace and Workspace board](examples.md).
 
 ### CLI
 
+- `pairit config upload` bundles a workspace's `renderer` and `schema` files, and `pairit config lint` checks they exist.
 - `pairit data export` also writes `<configId>-workspace-updates`, and the workspace documents file gains `authorship`, `fieldAuthors` and `updateCount`. See [Data Export](components/workspace.md#data-export).
 
 ## Platform 2026.10.18

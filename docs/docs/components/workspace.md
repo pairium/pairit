@@ -14,6 +14,10 @@ Participants and agents edit the same document at the same time. Their edits mer
 | `scope` | `"participant"` \| `"group"` | `"participant"` | Document scoping (see below) |
 | `fields` | FieldDefinition[] | `[]` | Field definitions for structured mode |
 | `agents` | string[] | `[]` | List of agent IDs that can read/write this workspace |
+| `file` | string | `"workspace.md"` | File name agents see, e.g. `board.json`. A `.json` file must stay valid JSON. Only `.md` files get the formatted markdown view; others get a code editor. |
+| `renderer` | string | | Your own HTML page that draws the workspace (see [Custom renderer](#custom-renderer)) |
+| `schema` | string | | JSON Schema file a `.json` workspace must match |
+| `height` | number | `480` | Height in pixels of a custom renderer |
 
 ### FieldDefinition
 
@@ -50,6 +54,35 @@ pages:
 ```
 
 Without `layout: split`, the workspace renders inline with other components.
+
+## Custom renderer
+
+Draw a workspace your own way, e.g. a game board from `board.json`, with `renderer`. The page runs in the same sandbox as the [html component](html.md) and stays live-synced: it redraws whenever a participant, an agent or the server changes the file. Agents still edit the text file with their file tools.
+
+```yaml
+- type: live-workspace
+  props:
+    file: board.json
+    renderer: workspace-board/board.html   # bundled at upload, like html's src
+    schema: workspace-board/board.schema.json   # optional
+    initialContent: |
+      { "cells": ["", "", "", "", "", "", "", "", ""] }
+    agents: [opponent]
+```
+
+Your page gets `pairit.workspace`:
+
+| Call | Use |
+|------|-----|
+| `onChange(text => ...)` | Called with the file's text on load and after every change. Redraw from it. |
+| `text` | The latest text |
+| `replace(old, new)` | Replace text that appears exactly once. Resolves to `{ ok: true }`, or `{ ok: false, error }` if `old` isn't there once (someone changed it), or the result would break the JSON or `schema`. Then redraw from the latest text and try again. |
+
+The usual pattern for a click is to read `text`, change the parsed value, and replace the whole text with the new version. If someone else changed the file in between, the edit is refused instead of overwriting their change. Every edit is saved with the participant as its author.
+
+`replace` suits clicks and moves. It fits poorly when two people type in the same custom text field; use the built-in editor for that.
+
+See the [workspace-board example](https://github.com/pairium/pairit/blob/main/configs/workspace-board.yaml): tic-tac-toe where the participant clicks and an agent answers by editing `board.json`.
 
 ## Events
 

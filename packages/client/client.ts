@@ -318,6 +318,29 @@ export class LabClient {
 		if (!r.ok) throw new Error("Failed to save workspace");
 	}
 
+	/** A custom renderer's checked edit; refused if `old` doesn't match once. */
+	async replaceInWorkspace(
+		groupId: string,
+		sessionId: string,
+		pageId: string,
+		oldText: string,
+		newText: string,
+	): Promise<{ ok: true } | { ok: false; error: string }> {
+		const r = await this.jsonRequest(`/workspace/${groupId}/replace`, {
+			sessionId,
+			pageId,
+			old: oldText,
+			new: newText,
+		});
+		if (r.status === 409) {
+			const body = (await r.json()) as { message?: string };
+			return { ok: false, error: body.message ?? "Refused" };
+		}
+		await throwIfWorkspaceRefused(r);
+		if (!r.ok) throw new Error("Failed to edit workspace");
+		return { ok: true };
+	}
+
 	async randomize(
 		sessionId: string,
 		params: RandomizeParams = {},
