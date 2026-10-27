@@ -12,6 +12,7 @@ export type {
 	ProlificParams,
 	SessionDocument,
 	WorkspaceDocument as WorkspaceDocumentDocument,
+	WorkspaceUpdateDocument,
 } from "@pairit/db/types";
 
 export type MediaListItem = {

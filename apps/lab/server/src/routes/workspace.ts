@@ -1,139 +1,111 @@
 /**
  * Workspace routes for lab server
- * GET /workspace/:groupId - Fetch workspace document
- * POST /workspace/:groupId/update - Upsert workspace content/fields
+ * POST /workspace/:groupId/sync - Swap state vectors; returns what the client lacks
+ * POST /workspace/:groupId/update - Apply a participant's Yjs update
  */
 
 import { Elysia, t } from "elysia";
+import * as Y from "yjs";
+import { verifyMembership } from "../lib/groups";
 import {
-	getEventsCollection,
-	getWorkspaceDocumentsCollection,
-} from "../lib/db";
-import { getGroupMembers, verifyMembership } from "../lib/groups";
-import { broadcastToSession } from "../lib/sse";
+	applyClientUpdate,
+	diffForClient,
+	openWorkspaceForSession,
+} from "../lib/workspace";
+
+const toBase64 = (bytes: Uint8Array) => Buffer.from(bytes).toString("base64");
+const fromBase64 = (text: string) =>
+	new Uint8Array(Buffer.from(text, "base64"));
 
 export const workspaceRoutes = new Elysia({ prefix: "/workspace" })
-	.get(
-		"/:groupId",
-		async ({ params: { groupId }, query, set }) => {
-			const { sessionId } = query;
+	.post(
+		"/:groupId/sync",
+		async ({ params: { groupId }, body, set }) => {
+			const { sessionId, pageId, stateVector } = body;
 
-			const isMember = await verifyMembership(sessionId, groupId);
-			if (!isMember) {
+			if (!(await verifyMembership(sessionId, groupId))) {
 				set.status = 403;
 				return { error: "not_a_member" };
 			}
 
-			const collection = await getWorkspaceDocumentsCollection();
-			const doc = await collection.findOne({ groupId });
-
-			if (!doc) {
-				return { document: null };
+			const workspace = await openWorkspaceForSession(
+				sessionId,
+				groupId,
+				pageId,
+			);
+			if (!workspace) {
+				set.status = 404;
+				return { error: "no_workspace" };
 			}
 
+			const diff = diffForClient(
+				workspace,
+				stateVector ? fromBase64(stateVector) : undefined,
+			);
 			return {
-				document: {
-					groupId: doc.groupId,
-					mode: doc.mode,
-					content: doc.content,
-					fields: doc.fields,
-					updatedBy: doc.updatedBy,
-					updatedAt: doc.updatedAt.toISOString(),
-				},
+				mode: workspace.settings.mode,
+				update: toBase64(diff.update),
+				stateVector: toBase64(diff.stateVector),
 			};
 		},
 		{
 			params: t.Object({ groupId: t.String() }),
-			query: t.Object({
+			body: t.Object({
 				sessionId: t.String({ minLength: 1 }),
+				pageId: t.String({ minLength: 1 }),
+				stateVector: t.Optional(t.String()),
 			}),
 		},
 	)
 	.post(
 		"/:groupId/update",
 		async ({ params: { groupId }, body, set }) => {
-			const { sessionId, content, fields, mode, configId } = body;
+			const { sessionId, pageId, update } = body;
 
-			const isMember = await verifyMembership(sessionId, groupId);
-			if (!isMember) {
+			if (!(await verifyMembership(sessionId, groupId))) {
 				set.status = 403;
 				return { error: "not_a_member" };
 			}
 
-			const collection = await getWorkspaceDocumentsCollection();
-			const now = new Date();
-
-			const updateFields: Record<string, unknown> = {
-				updatedBy: sessionId,
-				updatedAt: now,
-			};
-
-			if (content !== undefined) {
-				updateFields.content = content;
-			}
-			if (fields !== undefined) {
-				updateFields.fields = fields;
-			}
-
-			await collection.updateOne(
-				{ groupId },
-				{
-					$set: updateFields,
-					$setOnInsert: {
-						groupId,
-						mode: mode ?? "freeform",
-						configId: configId ?? "",
-						createdAt: now,
-					},
-				},
-				{ upsert: true },
-			);
-
-			// Broadcast to all group members
-			const memberIds = await getGroupMembers(groupId);
-			const eventData = {
+			const workspace = await openWorkspaceForSession(
+				sessionId,
 				groupId,
-				content,
-				fields,
-				updatedBy: sessionId,
-				updatedAt: now.toISOString(),
-			};
-
-			for (const memberId of memberIds) {
-				broadcastToSession(memberId, "workspace_updated", eventData);
+				pageId,
+			);
+			if (!workspace) {
+				set.status = 404;
+				return { error: "no_workspace" };
+			}
+			if (workspace.settings.editableBy === "agent") {
+				set.status = 403;
+				return { error: "read_only" };
 			}
 
-			// Log workspace_edit event
+			const bytes = fromBase64(update);
 			try {
-				const eventsCollection = await getEventsCollection();
-				await eventsCollection.insertOne({
-					type: "workspace_edit",
-					timestamp: now.toISOString(),
-					sessionId,
-					configId: configId ?? "",
-					pageId: "",
-					componentType: "live-workspace",
-					componentId: "",
-					data: { groupId, content, fields },
-					idempotencyKey: `ws-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-					createdAt: now,
-				});
-			} catch (error) {
-				console.error("[Workspace] Failed to log edit event:", error);
+				Y.decodeUpdate(bytes);
+			} catch {
+				set.status = 400;
+				return { error: "bad_update" };
 			}
 
-			return { ok: true, updatedAt: now.toISOString() };
+			try {
+				await applyClientUpdate(workspace, bytes, sessionId);
+			} catch (error) {
+				// Not saved; the client keeps the update and sends it again.
+				console.error("[Workspace] Failed to save update:", error);
+				set.status = 500;
+				return { error: "save_failed" };
+			}
+
+			return { ok: true };
 		},
 		{
 			params: t.Object({ groupId: t.String() }),
 			body: t.Object({
 				sessionId: t.String({ minLength: 1 }),
-				content: t.Optional(t.String()),
-				fields: t.Optional(t.Record(t.String(), t.Unknown())),
-				mode: t.Optional(
-					t.Union([t.Literal("freeform"), t.Literal("structured")]),
-				),
-				configId: t.Optional(t.String()),
+				pageId: t.String({ minLength: 1 }),
+				update: t.String({ minLength: 1 }),
 			}),
 		},
 	);

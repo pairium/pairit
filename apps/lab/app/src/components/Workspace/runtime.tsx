@@ -1,20 +1,34 @@
 /**
  * Workspace Runtime - Connects WorkspaceView to the runtime system
- * Handles SSE subscription, workspace loading, and event emission
+ * Resolves the workspace's group, syncs its Yjs doc, and emits onEdit
  */
 
-import {
-	getSession,
-	getWorkspace,
-	NotAMemberError,
-	submitEvent,
-	updateWorkspace,
-} from "@app/lib/api";
-import { sseClient } from "@app/lib/sse";
+import { getSession, submitEvent } from "@app/lib/api";
 import { defineRuntimeComponent } from "@app/runtime/define-runtime-component";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	lazy,
+	Suspense,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
+import type * as Y from "yjs";
+import { useWorkspaceDoc } from "./useWorkspaceDoc";
 import type { FieldDefinition } from "./WorkspaceView";
-import { WorkspaceView } from "./WorkspaceView";
+
+// The editor (CodeMirror) loads only on pages that have a workspace.
+const WorkspaceView = lazy(() =>
+	import("./WorkspaceView").then((m) => ({ default: m.WorkspaceView })),
+);
+
+function WorkspaceLoading() {
+	return (
+		<div className="flex h-64 items-center justify-center rounded-3xl border border-slate-200 bg-white">
+			<div className="text-sm text-slate-400">Loading workspace...</div>
+		</div>
+	);
+}
 
 type WorkspaceProps = {
 	mode?: "freeform" | "structured";
@@ -23,14 +37,6 @@ type WorkspaceProps = {
 	scope?: "participant" | "group";
 	fields?: FieldDefinition[];
 	agents?: string[];
-};
-
-type SSEWorkspaceUpdated = {
-	groupId: string;
-	content?: string;
-	fields?: Record<string, unknown>;
-	updatedBy: string;
-	updatedAt: string;
 };
 
 export const WorkspaceRuntime = defineRuntimeComponent<
@@ -43,12 +49,6 @@ export const WorkspaceRuntime = defineRuntimeComponent<
 		const mode = component.props.mode ?? "freeform";
 		const editableBy = component.props.editableBy ?? "both";
 		const scope = component.props.scope ?? "participant";
-
-		const [content, setContent] = useState(
-			component.props.initialContent ?? "",
-		);
-		const [fields, setFields] = useState<Record<string, unknown>>({});
-		const [loading, setLoading] = useState(true);
 
 		// Resolve groupId
 		const [resolvedGroupId, setResolvedGroupId] = useState<string | null>(
@@ -110,123 +110,67 @@ export const WorkspaceRuntime = defineRuntimeComponent<
 
 		const groupId = resolvedGroupId ?? "";
 
-		// Load workspace on mount
-		useEffect(() => {
-			if (!sessionId || !groupId) return;
-
-			let canceled = false;
-
-			async function loadWorkspace() {
-				try {
-					const { document } = await getWorkspace(groupId, sessionId as string);
-					if (canceled) return;
-
-					if (document) {
-						if (document.content !== undefined) {
-							setContent(document.content);
-						}
-						if (document.fields) {
-							setFields(document.fields);
-						}
-					}
-				} catch (error) {
-					if (canceled) return;
-
-					if (error instanceof NotAMemberError) {
-						try {
-							const session = await getSession(sessionId as string);
-							if (canceled) return;
-							const serverGroupId = session.session_state?.chat_group_id as
-								| string
-								| undefined;
-							if (serverGroupId && serverGroupId !== groupId) {
-								setResolvedGroupId(serverGroupId);
-								onSessionStateChange?.({ chat_group_id: serverGroupId });
-								return;
-							}
-						} catch (fetchError) {
-							console.error(
-								"[Workspace] Failed to re-fetch session after 403:",
-								fetchError,
-							);
-						}
-					}
-					console.error("[Workspace] Failed to load workspace:", error);
-				} finally {
-					if (!canceled) setLoading(false);
-				}
-			}
-
-			loadWorkspace();
-			return () => {
-				canceled = true;
-			};
-		}, [sessionId, groupId, onSessionStateChange]);
-
-		// Subscribe to SSE workspace_updated events
-		const lastUpdateRef = useRef<string>("");
-
-		useEffect(() => {
-			if (!sessionId || !groupId) return;
-
-			const unsubscribe = sseClient.on("workspace_updated", (data) => {
-				const event = data as SSEWorkspaceUpdated;
-				if (event.groupId !== groupId) return;
-
-				// Ignore own edits
-				if (event.updatedBy === sessionId) return;
-
-				if (event.content !== undefined) {
-					setContent(event.content);
-				}
-				if (event.fields !== undefined) {
-					setFields(event.fields);
-				}
-			});
-
-			return unsubscribe;
-		}, [sessionId, groupId]);
-
-		// Handle workspace changes
-		const handleChange = useCallback(
-			(update: { content?: string; fields?: Record<string, unknown> }) => {
-				if (!sessionId || !groupId) return;
-
-				if (update.content !== undefined) {
-					setContent(update.content);
-				}
-				if (update.fields !== undefined) {
-					setFields(update.fields);
-				}
-
-				// Prevent duplicate server calls with same content
-				const updateKey = JSON.stringify(update);
-				if (updateKey === lastUpdateRef.current) return;
-				lastUpdateRef.current = updateKey;
-
-				updateWorkspace(groupId, sessionId, { ...update, mode }).catch(
-					(error) => {
-						console.error("[Workspace] Failed to save:", error);
-					},
-				);
-
-				// Emit onEdit event if configured
-				if (component.events?.onEdit) {
+		// Emit onEdit at most every 300 ms, after the server has the edit
+		const onEditTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+			undefined,
+		);
+		useEffect(() => () => clearTimeout(onEditTimer.current), []);
+		const handleSaved = useCallback(
+			(doc: Y.Doc) => {
+				const onEdit = component.events?.onEdit;
+				if (!onEdit || !sessionId) return;
+				clearTimeout(onEditTimer.current);
+				onEditTimer.current = setTimeout(() => {
 					void submitEvent(sessionId, {
-						type: component.events.onEdit.type ?? "workspace_edit",
+						type: onEdit.type ?? "workspace_edit",
 						timestamp: new Date().toISOString(),
 						componentType: "live-workspace",
 						componentId: component.id ?? "unknown",
 						data: {
-							...component.events.onEdit.data,
+							...onEdit.data,
 							groupId,
-							...update,
+							...(mode === "freeform"
+								? { content: doc.getText("content").toString() }
+								: { fields: doc.getMap("fields").toJSON() }),
 						},
 					});
-				}
+				}, 300);
 			},
 			[sessionId, groupId, mode, component.events, component.id],
 		);
+
+		const { doc, state } = useWorkspaceDoc(
+			groupId,
+			sessionId,
+			pageId,
+			handleSaved,
+		);
+
+		// A 403 can mean the group changed after matchmaking; re-resolve it.
+		useEffect(() => {
+			if (state.status !== "not_a_member" || !sessionId) return;
+			let canceled = false;
+			getSession(sessionId)
+				.then((session) => {
+					if (canceled) return;
+					const serverGroupId = session.session_state?.chat_group_id as
+						| string
+						| undefined;
+					if (serverGroupId && serverGroupId !== groupId) {
+						setResolvedGroupId(serverGroupId);
+						onSessionStateChange?.({ chat_group_id: serverGroupId });
+					}
+				})
+				.catch((error) => {
+					console.error(
+						"[Workspace] Failed to re-fetch session after 403:",
+						error,
+					);
+				});
+			return () => {
+				canceled = true;
+			};
+		}, [state.status, sessionId, groupId, onSessionStateChange]);
 
 		if (!sessionId) {
 			return (
@@ -236,25 +180,25 @@ export const WorkspaceRuntime = defineRuntimeComponent<
 			);
 		}
 
-		if (!resolvedGroupId || loading) {
+		if (state.status === "error") {
 			return (
-				<div className="flex h-64 items-center justify-center rounded-3xl border border-slate-200 bg-white">
-					<div className="text-sm text-slate-400">Loading workspace...</div>
+				<div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+					The workspace could not be loaded. Reload the page to try again.
 				</div>
 			);
 		}
 
-		const disabled = editableBy === "agent";
+		if (state.status !== "ready") return <WorkspaceLoading />;
 
 		return (
-			<WorkspaceView
-				mode={mode}
-				content={content}
-				fields={fields}
-				fieldDefinitions={component.props.fields}
-				disabled={disabled}
-				onChange={handleChange}
-			/>
+			<Suspense fallback={<WorkspaceLoading />}>
+				<WorkspaceView
+					mode={state.mode}
+					doc={doc}
+					fieldDefinitions={component.props.fields}
+					disabled={editableBy === "agent"}
+				/>
+			</Suspense>
 		);
 	},
 });

@@ -1070,6 +1070,17 @@ async function exportData(
 		"workspace documents",
 	);
 
+	await fetchAndWriteExport<WorkspaceUpdateExport>(
+		`/data/${cfg}/workspace-updates`,
+		path.join(outDir, `${configId}-workspace-updates`),
+		(r) =>
+			(r as { workspaceUpdates?: WorkspaceUpdateExport[] }).workspaceUpdates ??
+			[],
+		format,
+		(update) => update as unknown as Record<string, unknown>,
+		"workspace updates",
+	);
+
 	console.log(`\nFiles written to: ${outDir}`);
 }
 
@@ -1145,9 +1156,22 @@ type WorkspaceDocumentExport = {
 	mode: string;
 	content: string | null;
 	fields: Record<string, unknown> | null;
+	// Freeform: the final text split by who inserted it
+	authorship: Array<{ origin: string; text: string }> | null;
+	// Structured: who last set each field
+	fieldAuthors: Record<string, string> | null;
+	updateCount: number;
 	updatedBy: string;
 	createdAt: string | null;
 	updatedAt: string | null;
+};
+
+type WorkspaceUpdateExport = {
+	groupId: string;
+	origin: string;
+	createdAt: string;
+	// Base64 Yjs update; replaying a group's updates rebuilds its doc
+	update: string;
 };
 
 function flattenSession(session: SessionExport): Record<string, unknown> {
@@ -1222,12 +1246,20 @@ function flattenSurveyResponse(
 function flattenWorkspaceDocument(
 	doc: WorkspaceDocumentExport,
 ): Record<string, unknown> {
-	const { fields, ...rest } = doc;
-	const flattened: Record<string, unknown> = { ...rest };
+	const { fields, authorship, fieldAuthors, ...rest } = doc;
+	const flattened: Record<string, unknown> = {
+		...rest,
+		authorship: serializeValue(authorship),
+	};
 
 	if (fields && typeof fields === "object") {
 		for (const [key, value] of Object.entries(fields)) {
 			flattened[`fields.${key}`] = serializeValue(value);
+		}
+	}
+	if (fieldAuthors && typeof fieldAuthors === "object") {
+		for (const [key, origin] of Object.entries(fieldAuthors)) {
+			flattened[`fieldAuthors.${key}`] = origin;
 		}
 	}
 

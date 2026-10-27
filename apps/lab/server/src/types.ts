@@ -15,6 +15,7 @@ export type {
 	GroupDocument,
 	ProlificParams,
 	WorkspaceDocument as WorkspaceDocumentDocument,
+	WorkspaceUpdateDocument,
 } from "@pairit/db/types";
 
 type ButtonAction = {

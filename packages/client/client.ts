@@ -32,6 +32,14 @@ export class NotAMemberError extends Error {
 	}
 }
 
+/** The server refused a workspace request; sending it again won't help. */
+export class WorkspaceRefusedError extends Error {
+	constructor(readonly code: string) {
+		super(`Workspace request refused: ${code}`);
+		this.name = "WorkspaceRefusedError";
+	}
+}
+
 export type StartResponse = {
 	status?: "created" | "resumed" | "blocked";
 	sessionId: string;
@@ -98,22 +106,12 @@ export type CancelMatchmakingResponse =
 	| { status: "cancelled" }
 	| { status: "not_found" };
 
-export type WorkspaceDocument = {
-	groupId: string;
+export type SyncWorkspaceResponse = {
 	mode: "freeform" | "structured";
-	content?: string;
-	fields?: Record<string, unknown>;
-	updatedBy: string;
-	updatedAt: string;
-};
-
-export type GetWorkspaceResponse = {
-	document: WorkspaceDocument | null;
-};
-
-export type UpdateWorkspaceResponse = {
-	ok: boolean;
-	updatedAt: string;
+	// Base64 Yjs update with what the client lacks
+	update: string;
+	// Base64 state vector of the server's doc
+	stateVector: string;
 };
 
 export type RandomizeParams = {
@@ -145,8 +143,13 @@ export class LabClient {
 		});
 	}
 
-	private jsonRequest(path: string, body: unknown): Promise<Response> {
+	private jsonRequest(
+		path: string,
+		body: unknown,
+		init: RequestInit = {},
+	): Promise<Response> {
 		return this.request(path, {
+			...init,
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(body),
@@ -282,35 +285,37 @@ export class LabClient {
 		return r.json();
 	}
 
-	async getWorkspace(
+	async syncWorkspace(
 		groupId: string,
 		sessionId: string,
-	): Promise<GetWorkspaceResponse> {
-		const r = await this.request(
-			`/workspace/${groupId}?sessionId=${encodeURIComponent(sessionId)}`,
-		);
-		if (r.status === 403) throw new NotAMemberError();
-		if (!r.ok) throw new Error("Failed to get workspace");
+		pageId: string,
+		stateVector: string,
+	): Promise<SyncWorkspaceResponse> {
+		const r = await this.jsonRequest(`/workspace/${groupId}/sync`, {
+			sessionId,
+			pageId,
+			stateVector,
+		});
+		await throwIfWorkspaceRefused(r);
+		if (!r.ok) throw new Error("Failed to sync workspace");
 		return r.json();
 	}
 
-	async updateWorkspace(
+	async pushWorkspaceUpdate(
 		groupId: string,
 		sessionId: string,
-		update: {
-			content?: string;
-			fields?: Record<string, unknown>;
-			mode?: "freeform" | "structured";
-			configId?: string;
-		},
-	): Promise<UpdateWorkspaceResponse> {
-		const r = await this.jsonRequest(`/workspace/${groupId}/update`, {
-			sessionId,
-			...update,
-		});
-		if (r.status === 403) throw new NotAMemberError();
-		if (!r.ok) throw new Error("Failed to update workspace");
-		return r.json();
+		pageId: string,
+		update: string,
+		// For a last save as the page closes; the browser caps the body at 64 KB.
+		options: { keepalive?: boolean } = {},
+	): Promise<void> {
+		const r = await this.jsonRequest(
+			`/workspace/${groupId}/update`,
+			{ sessionId, pageId, update },
+			{ keepalive: options.keepalive },
+		);
+		await throwIfWorkspaceRefused(r);
+		if (!r.ok) throw new Error("Failed to save workspace");
 	}
 
 	async randomize(
@@ -324,4 +329,11 @@ export class LabClient {
 		if (!r.ok) throw new Error("Failed to randomize");
 		return r.json();
 	}
+}
+
+async function throwIfWorkspaceRefused(r: Response): Promise<void> {
+	if (r.status < 400 || r.status >= 500) return;
+	const body = (await r.json().catch(() => ({}))) as { error?: string };
+	if (body.error === "not_a_member") throw new NotAMemberError();
+	throw new WorkspaceRefusedError(body.error ?? String(r.status));
 }

@@ -13,6 +13,7 @@ import type {
 	GroupDocument,
 	SessionDocument,
 	WorkspaceDocumentDocument,
+	WorkspaceUpdateDocument,
 } from "../types";
 
 export { connectDB } from "@pairit/db";
@@ -81,4 +82,11 @@ export async function getWorkspaceDocumentsCollection(): Promise<
 > {
 	const database = await connectDB();
 	return database.collection<WorkspaceDocumentDocument>("workspace_documents");
+}
+
+export async function getWorkspaceUpdatesCollection(): Promise<
+	Collection<WorkspaceUpdateDocument>
+> {
+	const database = await connectDB();
+	return database.collection<WorkspaceUpdateDocument>("workspace_updates");
 }
