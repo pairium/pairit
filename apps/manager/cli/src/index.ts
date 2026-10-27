@@ -7,6 +7,11 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { Command, InvalidArgumentError } from "commander";
 import YAML from "yaml";
+import {
+	type ActivityReport,
+	formatActivity,
+	parseDuration,
+} from "./activity.js";
 import { getAuthHeaders, login } from "./auth.js";
 import { getApiUrl, getLabUrl, parseEnvName, setEnv } from "./env.js";
 import {
@@ -407,7 +412,7 @@ dataCommand
 
 const adminCommand = program
 	.command("admin")
-	.description("Manage manager allowlist (admin only)");
+	.description("Manage the manager allowlist and see activity (admin only)");
 
 adminCommand
 	.command("add-user")
@@ -480,6 +485,52 @@ adminCommand
 		}
 	});
 
+adminCommand
+	.command("activity")
+	.description(
+		"Show studies with recent sessions, live group studies first (check before deploying production)",
+	)
+	.option(
+		"--since <duration>",
+		"How far back to look, e.g. 2h, 7d",
+		(value) => {
+			try {
+				return parseDuration(value);
+			} catch (error) {
+				throw new InvalidArgumentError((error as Error).message);
+			}
+		},
+	)
+	.option("--json", "Print the raw report as JSON")
+	.option(
+		"--fail-if-live",
+		"Exit with code 2 if any group study has active participants",
+	)
+	.action(async (options: AdminActivityOptions) => {
+		try {
+			const query = options.since
+				? `?since=${encodeURIComponent(new Date(Date.now() - options.since).toISOString())}`
+				: "";
+			const report = (await callFunctions(`/admin/activity${query}`, {
+				method: "GET",
+			})) as ActivityReport;
+			if (options.json) {
+				console.log(JSON.stringify(report, null, 2));
+			} else {
+				console.log(
+					formatActivity(report, {
+						color: Boolean(process.stdout.isTTY) && !process.env.NO_COLOR,
+					}),
+				);
+			}
+			if (options.failIfLive && report.liveGroupStudies.length > 0) {
+				process.exitCode = 2;
+			}
+		} catch (error) {
+			reportCliError("Activity failed", error);
+		}
+	});
+
 program.parseAsync(process.argv).catch((err) => {
 	console.error(err);
 	process.exit(1);
@@ -519,6 +570,12 @@ type AdminAddOptions = {
 
 type AdminRemoveOptions = {
 	force?: boolean;
+};
+
+type AdminActivityOptions = {
+	since?: number;
+	json?: boolean;
+	failIfLive?: boolean;
 };
 
 type AllowlistEntry = {

@@ -83,12 +83,33 @@ To deploy both services to Cloud Run:
 Optional second argument is the region (default `us-central1`).
 
 This script will:
+1.  For production, stop if a group study is live (see [Live-study check](#live-study-check)).
 1.  Refuse to run with uncommitted changes, and record the commit (`GIT_SHA`) on both services. Set `ALLOW_DIRTY=1` to deploy anyway; the version then ends in `-dirty`.
 1.  Source `.env.staging` or `.env.production`. It never sources `.env`.
 2.  Refuse to run if staging would use the live database, or production would use the staging database. It also refuses if the two env files share a `PROJECT_ID`, a database name, or a media bucket.
 3.  Enable Artifact Registry.
 4.  Build Docker images using Cloud Build.
 5.  Deploy the `manager` and `lab` services to Cloud Run.
+
+### Live-study check
+
+Do not deploy production while a multi-participant study is live (see [Lab runs on one instance](#lab-runs-on-one-instance)). Check first:
+
+```bash
+pairit admin activity
+```
+
+It lists every study with sessions in the last 24 hours, live group studies first, with the owner, active participants (in a group or solo), and how many are waiting in matchmaking. A group study is live when it has a session that has not finished and changed in the last 15 minutes. Only admins can run it. See the [CLI README](https://github.com/pairium/pairit/tree/main/apps/manager/cli#activity-admin) for the columns.
+
+`./scripts/deploy.sh production` runs the same check with your production CLI login before it builds anything:
+
+- No group study live: the deploy goes ahead.
+- A group study live: it stops and lists them. Wait, or deploy anyway with `FORCE_DEPLOY=1 ./scripts/deploy.sh production`.
+- The check fails (not logged in, not an admin, manager down): it stops and says how to fix it. Log in with `bun run apps/manager/cli/src/index.ts --env production login`. `FORCE_DEPLOY=1` skips the check.
+
+Staging deploys skip the check.
+
+**GitHub Actions does not run the check yet.** The endpoint needs an admin login, and the workflow has no credential for the manager API. A CLI login is a Better Auth session that expires, so it cannot be stored as a secret. A production run of `deploy.yml` instead shows a warning, unless you pass `force=true` to say you ran `pairit admin activity` yourself. To make the workflow check blocking, the manager needs a service credential that can call `GET /admin/activity`, for example an admin API key stored as a `production` environment secret. Then replace the warning step in `deploy.yml` with a call that fails when `liveGroupStudies` is not empty.
 
 ### Deploying from GitHub Actions
 
@@ -103,7 +124,10 @@ This script will:
 ```bash
 gh workflow run deploy.yml -f target=production                # what staging runs
 gh workflow run deploy.yml -f target=production -f ref=<sha>   # an older commit, e.g. to roll back
+gh workflow run deploy.yml -f target=production -f force=true  # you checked: no group study is live
 ```
+
+Run `pairit admin activity` before a production run. The workflow cannot check for live studies itself (see [Live-study check](#live-study-check)), so it shows a warning unless `force=true`.
 
 A production deploy then publishes the docs from the same commit, so the docs describe what production runs. `docs.yml` no longer runs on push; start it by hand only to republish (`gh workflow run docs.yml -f ref=<sha>`).
 

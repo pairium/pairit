@@ -17,9 +17,12 @@ Merged, but not released yet.
 
 ### Platform
 
+- For admins: the manager reports which studies have participants right now (`GET /admin/activity`), so production deploys can wait for live group studies to finish.
 - A participant who starts the same study twice at once (two tabs, a quick reload) now gets one session instead of two. Before, both starts could create a session, so the sessions export could list a participant twice, one of them stuck on the first page.
 
 ### CLI
+
+- `pairit admin activity` (admins) lists studies with recent sessions: owner, active participants in a group or solo, how many wait in matchmaking, and features used. Live group studies come first. `--since 7d` looks further back, `--json` prints the raw report, and `--fail-if-live` exits 2 if a group study is live.
 
 ## Platform 2026.10.27
 

@@ -141,6 +141,45 @@ if [ -f "$OTHER_FILE" ]; then
     fi
 fi
 
+# Don't deploy production while a multi-participant study is live: Cloud Run
+# can briefly run two lab instances, and matchmaking and chat live in memory.
+# Uses your production CLI login, which must be an admin. FORCE_DEPLOY=1 skips.
+if [ "$TARGET" = "production" ]; then
+    if [ "${FORCE_DEPLOY:-}" = "1" ]; then
+        echo "⚠️  FORCE_DEPLOY=1: skipping the live-study check."
+    else
+        echo "🔎 Checking production for live group studies..."
+        set +e
+        ACTIVITY=$(bun run apps/manager/cli/src/index.ts --env production admin activity --since 1h --fail-if-live 2>&1)
+        ACTIVITY_STATUS=$?
+        set -e
+        case $ACTIVITY_STATUS in
+            0)
+                echo "✅ No group study is live."
+                ;;
+            2)
+                echo "❌ Production deploy stopped. A deploy can split or drop live groups."
+                echo ""
+                echo "$ACTIVITY"
+                echo ""
+                echo "Wait until they finish, or deploy anyway: FORCE_DEPLOY=1 ./scripts/deploy.sh production"
+                exit 1
+                ;;
+            *)
+                echo "❌ Could not check production for live group studies:"
+                echo "$ACTIVITY"
+                if echo "$ACTIVITY" | grep -q "HTTP 401"; then
+                    echo "Log in first: bun run apps/manager/cli/src/index.ts --env production login"
+                elif echo "$ACTIVITY" | grep -q "HTTP 403"; then
+                    echo "The check needs an admin login. Ask an admin to run: pairit admin add-user <your-email> --admin"
+                fi
+                echo "To deploy without the check: FORCE_DEPLOY=1 ./scripts/deploy.sh production"
+                exit 1
+                ;;
+        esac
+    fi
+fi
+
 echo "🚀 Deploying $TARGET"
 echo "   Project: $PROJECT_ID"
 echo "   Region:  $REGION"

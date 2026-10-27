@@ -127,6 +127,11 @@ export async function ensureIndexes(): Promise<void> {
 		.collection("sessions")
 		.createIndex({ configId: 1, createdAt: 1, _id: 1 });
 
+	// Admin activity report (manager GET /admin/activity): recent sessions
+	await database
+		.collection("sessions")
+		.createIndex({ updatedAt: 1, configId: 1 });
+
 	// One session start at a time per participant (lib/session-start-lock.ts).
 	// Expired locks are cleaned up by TTL; the lock itself checks expiresAt.
 	await database

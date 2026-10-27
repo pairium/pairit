@@ -32,13 +32,23 @@ td > span[id] {
   scroll-margin-top: calc(var(--header-height, 3.5rem) + 1.75rem);
 }
 
-/* Examples tables: descriptions wrap, so the links stay on screen */
-table:has(td > span[id]) td {
-  white-space: normal;
+/* Examples tables: the same column widths in every section, and text
+   wraps so nothing scrolls sideways */
+table:has(td > span[id]) {
+  table-layout: fixed;
+  width: 100%;
 }
 
-table:has(td > span[id]) td:first-child,
-table:has(td > span[id]) td:last-child {
-  white-space: nowrap;
+table:has(td > span[id]) th:first-child {
+  width: 24%;
+}
+
+table:has(td > span[id]) th:last-child {
+  width: 30%;
+}
+
+table:has(td > span[id]) td {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
