@@ -9,15 +9,16 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@anthropic-ai/sdk": "^0.74.0",
+		"@ai-sdk/anthropic": "^4",
+		"@ai-sdk/openai": "^4",
 		"@elysiajs/cors": "^1.1.1",
 		"@elysiajs/static": "^1.4.7",
 		"@pairit/auth": "workspace:*",
 		"@pairit/db": "workspace:*",
+		"ai": "^7",
 		"better-auth": "^1.4.7",
 		"elysia": "^1.1.25",
 		"mongodb": "^6.12.0",
-		"openai": "^6.21.0",
 		"yjs": "^13.6"
 	},
 	"devDependencies": {

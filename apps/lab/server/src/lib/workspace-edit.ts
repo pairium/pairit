@@ -134,7 +134,9 @@ function replaceText(
 	origin: string,
 ): void {
 	if (oldText === "") {
-		throw new EditError("old_string is empty. Quote the text to replace.");
+		throw new EditError(
+			"The text to replace is empty. Quote the text to replace.",
+		);
 	}
 	const text = getText(doc);
 	const current = text.toString();
@@ -148,13 +150,13 @@ function replaceText(
 	}
 	if (positions.length === 0) {
 		throw new EditError(
-			"old_string was not found. The text may have changed; view the workspace again.",
+			"The text to replace was not found. The file may have changed; view it again.",
 		);
 	}
 	if (positions.length > 1 && !replaceAll) {
 		const lines = positions.map((p) => lineOf(current, p)).join(", ");
 		throw new EditError(
-			`old_string matches ${positions.length} times (lines ${lines}). Add surrounding lines to make it unique.`,
+			`The text to replace matches ${positions.length} times (lines ${lines}). Add surrounding lines to make it unique.`,
 		);
 	}
 	doc.transact(() => {

@@ -30,6 +30,8 @@ export type WorkspaceSettings = {
 	scope: "participant" | "group";
 	initialContent: string;
 	fields: WorkspaceField[];
+	// Agents that get file tools for this workspace
+	agents: string[];
 };
 
 export type Workspace = {
@@ -82,6 +84,9 @@ export function getWorkspaceSettings(
 			? props.fields.filter(
 					(f): f is WorkspaceField => typeof f?.id === "string",
 				)
+			: [],
+		agents: Array.isArray(props.agents)
+			? props.agents.filter((a): a is string => typeof a === "string")
 			: [],
 	};
 }

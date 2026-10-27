@@ -21,6 +21,9 @@ Merged, but not released yet.
 - Each group-scoped workspace now has its own document per page. Before, two group workspaces on different pages shared one.
 - The workspace data export adds who wrote each part of the final text, and a full log of every change. See [Data Export](components/workspace.md#data-export).
 - The server no longer logs a `workspace_edit` event with the full text on every save; the change log replaces it. A workspace's `onEdit` event still fires if you set one.
+- Agents listed on a workspace now edit it with file tools, like coding agents: they view the file, make targeted edits, and see each result, for up to 8 steps per reply. No tool declarations needed; an existing `write_workspace` declaration is ignored for these agents. See [Agent Integration](components/workspace.md#agent-integration).
+- Agents use OpenAI's Responses API, so `gpt-6-luna` agents can use tools together with `reasoningEffort`.
+- An agent listed on both a page's chat and its workspace now replies once per message instead of twice.
 
 ### CLI
 

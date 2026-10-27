@@ -49,6 +49,21 @@ describe("getPageAgentIdsFromConfig", () => {
 		]);
 	});
 
+	test("an agent on both the chat and the workspace is listed once", () => {
+		const shared = {
+			pages: {
+				p: {
+					id: "p",
+					components: [
+						{ type: "chat", props: { agents: ["writer"] } },
+						{ type: "live-workspace", props: { agents: ["writer"] } },
+					],
+				},
+			},
+		};
+		expect(getPageAgentIdsFromConfig(shared, "p")).toEqual(["writer"]);
+	});
+
 	test("page without agent components", () => {
 		expect(getPageAgentIdsFromConfig(config, "intro")).toEqual([]);
 	});
