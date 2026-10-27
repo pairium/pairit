@@ -118,7 +118,8 @@ pairit --env staging admin activity    # staging
   survey-a  r@example.com      1 (0/1)              0        9      40     html
 ```
 
-- **Active**: sessions that have not finished and changed in the last 15 minutes. **Group** sessions have been matched into a group; **solo** ones have not.
+- **Active**: sessions that have not finished, changed in the last 15 minutes, and started in the last 12 hours. **Group** sessions have been matched into a group; **solo** ones have not.
+- Older sessions that still change are listed under "Not counted". This is usually a browser tab left open on a page whose `html` component saves on a timer.
 - **Waiting**: active sessions on a page with a `matchmaking` component that have not been matched yet.
 - **Today**: sessions started in the last 24 hours. **Total**: all sessions of the config.
 - **Flags**: `group` (the config has a matchmaking pool or component), then the features it uses: `chat`, `live-workspace`, `html`, `agents`.
