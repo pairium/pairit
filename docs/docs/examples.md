@@ -1,239 +1,56 @@
 # Examples
 
-Ready-to-use experiment templates. Click "Try it" to run the live demo.
+Ready-to-use experiment templates. "Try it" runs the live demo; "Config" is the file to copy.
 
-<div class="card-grid" markdown>
+## Surveys and flow
 
-<div class="card" markdown>
+Pages, questions and timing, no agents.
 
-### Hello World
+| Example | What it shows | |
+|---|---|---|
+| <span id="hello-world"></span>Hello World | The simplest experiment: one question, one button. | [Try it](https://pairit.pairium.ai/hello-world) · [Config](https://github.com/pairium/pairit/blob/main/configs/hello-world.yaml) |
+| <span id="survey"></span>Survey | Multi-page survey with different question types. | [Try it](https://pairit.pairium.ai/survey-only) · [Config](https://github.com/pairium/pairit/blob/main/configs/survey-only.yaml) |
+| <span id="randomization"></span>Randomization | Randomly assign participants to conditions using `onEnter` hooks. | [Try it](https://pairit.pairium.ai/randomization-demo) · [Config](https://github.com/pairium/pairit/blob/main/configs/randomization-demo.yaml) |
+| <span id="timer"></span>Timer | Countdown timer with warning state and auto-navigation on expiry. | [Try it](https://pairit.pairium.ai/timer-demo) · [Config](https://github.com/pairium/pairit/blob/main/configs/timer-demo.yaml) |
+| <span id="mermaid"></span>Mermaid | Render a diagram from a mermaid fence in a Text component. | [Try it](https://pairit.pairium.ai/mermaid-demo) · [Config](https://github.com/pairium/pairit/blob/main/configs/mermaid-demo.yaml) |
+| <span id="component-events"></span>Component Events | Track custom analytics events on user interactions. | [Config](https://github.com/pairium/pairit/blob/main/configs/component-events.yaml) |
 
-The simplest experiment: one question, one button.
+## AI agents
 
-<div class="card-links">
-<a href="https://pairit.pairium.ai/hello-world" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
-<a href="https://github.com/pairium/pairit/blob/main/configs/hello-world.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
+One participant talking with an AI agent.
 
-</div>
+| Example | What it shows | |
+|---|---|---|
+| <span id="ai-chat"></span>AI Chat | One-on-one conversation with an AI agent. | [Try it](https://pairit.pairium.ai/ai-chat) · [Config](https://github.com/pairium/pairit/blob/main/configs/ai-chat.yaml) |
+| <span id="multi-chat"></span>Multi-Chat | Share or isolate chat history across pages using `groupId`. | [Try it](https://pairit.pairium.ai/multi-chat) · [Config](https://github.com/pairium/pairit/blob/main/configs/multi-chat.yaml) |
+| <span id="agent-triggers"></span>Agent Triggers | Control when and whether agents reply using `trigger` and `replyCondition`. | [Try it](https://pairit.pairium.ai/agent-triggers) · [Config](https://github.com/pairium/pairit/blob/main/configs/agent-triggers.yaml) |
+| <span id="conditional-agent"></span>Conditional Agent | Adapt agent prompts based on survey answers using conditional `prompts`. | [Try it](https://pairit.pairium.ai/conditional-agent) · [Config](https://github.com/pairium/pairit/blob/main/configs/conditional-agent.yaml) |
+| <span id="split-layout"></span>Split Layout | Negotiate with an AI dealer while the car listing stays on screen beside the chat. | [Try it](https://pairit.pairium.ai/split-demo) · [Config](https://github.com/pairium/pairit/blob/main/configs/split-demo.yaml) |
 
-<div class="card" markdown>
+## Groups
 
-### Mermaid
+Matched participants together, with or without an agent. Open two tabs to play both partners.
 
-Render a diagram from a mermaid fence in a Text component.
+| Example | What it shows | |
+|---|---|---|
+| <span id="team-decision"></span>Team Decision | Match 2 participants and let them chat together. | [Try it](https://pairit.pairium.ai/team-decision) · [Config](https://github.com/pairium/pairit/blob/main/configs/team-decision.yaml) |
+| <span id="fruit-split"></span>Fruit Split | Give each matched partner a different role with `distribute: true`: one gets apples, the other oranges. | [Try it](https://pairit.pairium.ai/fruit-split-demo) · [Config](https://github.com/pairium/pairit/blob/main/configs/fruit-split-demo.yaml) |
+| <span id="ai-mediation"></span>AI Mediation | Two participants chat with an AI facilitator observing and guiding. | [Try it](https://pairit.pairium.ai/ai-mediation) · [Config](https://github.com/pairium/pairit/blob/main/configs/ai-mediation.yaml) |
 
-<div class="card-links">
-<a href="https://pairit.pairium.ai/mermaid-demo" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
-<a href="https://github.com/pairium/pairit/blob/main/configs/mermaid-demo.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
+## Live workspace
 
-</div>
+A live document that participants and agents edit at the same time.
 
-<div class="card" markdown>
+| Example | What it shows | |
+|---|---|---|
+| <span id="workspace"></span>Workspace | A participant and an AI agent edit one document; the agent makes targeted edits while the participant types. | [Try it](https://pairit.pairium.ai/workspace) · [Config](https://github.com/pairium/pairit/blob/main/configs/workspace.yaml) |
+| <span id="shared-workspace"></span>Shared workspace | Two matched participants and an AI agent edit one document at the same time, then fill in a shared form. | [Config](https://github.com/pairium/pairit/blob/main/configs/workspace-group.yaml) |
+| <span id="workspace-board"></span>Workspace board | Tic-tac-toe on a JSON workspace drawn by a custom renderer: the participant clicks, the agent answers by editing the file. | [Config](https://github.com/pairium/pairit/blob/main/configs/workspace-board.yaml) |
 
-### Survey
+## Custom UI
 
-Multi-page survey with different question types.
+Your own HTML, in a locked-down frame.
 
-<div class="card-links">
-<a href="https://pairit.pairium.ai/survey-only" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
-<a href="https://github.com/pairium/pairit/blob/main/configs/survey-only.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
-
-</div>
-
-<div class="card" markdown>
-
-### Randomization
-
-Randomly assign participants to conditions using `onEnter` hooks.
-
-<div class="card-links">
-<a href="https://pairit.pairium.ai/randomization-demo" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
-<a href="https://github.com/pairium/pairit/blob/main/configs/randomization-demo.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
-
-</div>
-
-<div class="card" markdown>
-
-### AI Chat
-
-One-on-one conversation with an AI agent.
-
-<div class="card-links">
-<a href="https://pairit.pairium.ai/ai-chat" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
-<a href="https://github.com/pairium/pairit/blob/main/configs/ai-chat.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
-
-</div>
-
-<div class="card" markdown>
-
-### Multi-Chat
-
-Share or isolate chat history across pages using `groupId`.
-
-<div class="card-links">
-<a href="https://pairit.pairium.ai/multi-chat" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
-<a href="https://github.com/pairium/pairit/blob/main/configs/multi-chat.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
-
-</div>
-
-<div class="card" markdown>
-
-### Team Decision
-
-Match 2 participants and let them chat together.
-
-<div class="card-links">
-<a href="https://pairit.pairium.ai/team-decision" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
-<a href="https://github.com/pairium/pairit/blob/main/configs/team-decision.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
-
-</div>
-
-<div class="card" markdown>
-
-### Fruit Split
-
-Pair 2 participants and give each a different role with `distribute: true`. One gets apples, the other oranges. Open it in two tabs to play both partners.
-
-<div class="card-links">
-<a href="https://pairit.pairium.ai/fruit-split-demo" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
-<a href="https://github.com/pairium/pairit/blob/main/configs/fruit-split-demo.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
-
-</div>
-
-<div class="card" markdown>
-
-### AI Mediation
-
-Two participants chat with an AI facilitator observing and guiding.
-
-<div class="card-links">
-<a href="https://pairit.pairium.ai/ai-mediation" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
-<a href="https://github.com/pairium/pairit/blob/main/configs/ai-mediation.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
-
-</div>
-
-<div class="card" markdown>
-
-### Workspace
-
-A participant and an AI agent edit one live document; the agent makes targeted edits while the participant types.
-
-<div class="card-links">
-<a href="https://pairit.pairium.ai/workspace" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
-<a href="https://github.com/pairium/pairit/blob/main/configs/workspace.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
-
-</div>
-
-<div class="card" markdown>
-
-### Shared workspace
-
-Two matched participants and an AI agent edit one document at the same time, then fill in a shared form.
-
-<div class="card-links">
-<a href="https://github.com/pairium/pairit/blob/main/configs/workspace-group.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
-
-</div>
-
-<div class="card" markdown>
-
-### Workspace board
-
-Tic-tac-toe on a JSON workspace drawn by a custom renderer: the participant clicks, the agent answers by editing the file.
-
-<div class="card-links">
-<a href="https://github.com/pairium/pairit/blob/main/configs/workspace-board.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
-
-</div>
-
-<div class="card" markdown>
-
-### HTML
-
-Custom slider UI uploaded with the config and shown in a locked-down frame.
-
-<div class="card-links">
-<a href="https://pairit.pairium.ai/html-demo" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
-<a href="https://github.com/pairium/pairit/blob/main/configs/html-demo.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
-
-</div>
-
-<div class="card" markdown>
-
-### Split Layout
-
-Negotiate with an AI dealer while the car listing stays on screen beside the chat.
-
-<div class="card-links">
-<a href="https://pairit.pairium.ai/split-demo" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
-<a href="https://github.com/pairium/pairit/blob/main/configs/split-demo.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
-
-</div>
-
-<div class="card" markdown>
-
-### Timer
-
-Countdown timer with warning state and auto-navigation on expiry.
-
-<div class="card-links">
-<a href="https://pairit.pairium.ai/timer-demo" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
-<a href="https://github.com/pairium/pairit/blob/main/configs/timer-demo.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
-
-</div>
-
-<div class="card" markdown>
-
-### Agent Triggers
-
-Control when and whether agents reply using `trigger` and `replyCondition`.
-
-<div class="card-links">
-<a href="https://pairit.pairium.ai/agent-triggers" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
-<a href="https://github.com/pairium/pairit/blob/main/configs/agent-triggers.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
-
-</div>
-
-<div class="card" markdown>
-
-### Conditional Agent
-
-Adapt agent prompts based on survey answers using conditional `prompts`.
-
-<div class="card-links">
-<a href="https://pairit.pairium.ai/conditional-agent" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
-<a href="https://github.com/pairium/pairit/blob/main/configs/conditional-agent.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
-
-</div>
-
-<div class="card" markdown>
-
-### Component Events
-
-Track custom analytics events on user interactions.
-
-<div class="card-links">
-<a href="https://github.com/pairium/pairit/blob/main/configs/component-events.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
-</div>
-
-</div>
-
-</div>
-
+| Example | What it shows | |
+|---|---|---|
+| <span id="html"></span>HTML | Custom slider UI uploaded with the config. | [Try it](https://pairit.pairium.ai/html-demo) · [Config](https://github.com/pairium/pairit/blob/main/configs/html-demo.yaml) |
