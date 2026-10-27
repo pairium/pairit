@@ -17,6 +17,8 @@ Merged, but not released yet.
 
 ### Platform
 
+- A participant who starts the same study twice at once (two tabs, a quick reload) now gets one session instead of two. Before, both starts could create a session, so the sessions export could list a participant twice, one of them stuck on the first page.
+
 ### CLI
 
 ## Platform 2026.10.27

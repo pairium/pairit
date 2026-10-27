@@ -12,9 +12,11 @@ import { getAuthUser } from "../lib/auth-middleware";
 import {
 	getConfigsCollection,
 	getIdempotencyCollection,
+	getSessionStartLocksCollection,
 	getSessionsCollection,
 } from "../lib/db";
 import { buildProvenance, type Provenance } from "../lib/provenance";
+import { startLockKey, withStartLock } from "../lib/session-start-lock";
 import { hasOverlappingPaths } from "../lib/session-state";
 import { resolveSimulationFields } from "../lib/simulation";
 import type {
@@ -276,88 +278,101 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 			const userId = user ? user.id : null;
 			const prolificPid = body.prolific?.prolificPid ?? null;
 
-			// Check for existing session (for resumption or blocking)
-			const existingSession = await findExistingSession(
-				body.configId,
-				userId,
-				prolificPid,
-			);
+			// Find or create under a per-participant lock, so overlapping starts
+			// resume one session instead of each creating one.
+			const startOrResume = async () => {
+				// Check for existing session (for resumption or blocking)
+				const existingSession = await findExistingSession(
+					body.configId,
+					userId,
+					prolificPid,
+				);
 
-			if (existingSession) {
-				const isCompleted = !!existingSession.endedAt;
-				// A returning participant keeps the config revision they started
-				// on, even if the researcher re-uploaded since.
-				const sessionConfig = coerceConfig(existingSession.config)
-					? existingSession.config
-					: config;
+				if (existingSession) {
+					const isCompleted = !!existingSession.endedAt;
+					// A returning participant keeps the config revision they started
+					// on, even if the researcher re-uploaded since.
+					const sessionConfig = coerceConfig(existingSession.config)
+						? existingSession.config
+						: config;
 
-				if (!isCompleted) {
-					// Session in progress → resume
-					const page = sessionConfig.pages[existingSession.currentPageId];
-					return {
-						status: "resumed" as const,
-						sessionId: existingSession.id,
-						configId: body.configId,
-						config: sessionConfig,
-						currentPageId: existingSession.currentPageId,
-						page,
-						session_state: existingSession.session_state,
-						endedAt: existingSession.endedAt,
-					};
+					if (!isCompleted) {
+						// Session in progress → resume
+						const page = sessionConfig.pages[existingSession.currentPageId];
+						return {
+							status: "resumed" as const,
+							sessionId: existingSession.id,
+							configId: body.configId,
+							config: sessionConfig,
+							currentPageId: existingSession.currentPageId,
+							page,
+							session_state: existingSession.session_state,
+							endedAt: existingSession.endedAt,
+						};
+					}
+
+					if (isCompleted && !allowRetake) {
+						// Session completed and retakes not allowed → block
+						set.status = 409;
+						return {
+							status: "blocked" as const,
+							sessionId: existingSession.id,
+							configId: body.configId,
+							config: sessionConfig,
+							currentPageId: existingSession.currentPageId,
+							page: sessionConfig.pages[existingSession.currentPageId],
+							endedAt: existingSession.endedAt,
+							error: "session_completed",
+							message: "You have already completed this experiment.",
+						};
+					}
+
+					// Session completed but retakes allowed → fall through to create new
 				}
 
-				if (isCompleted && !allowRetake) {
-					// Session completed and retakes not allowed → block
-					set.status = 409;
-					return {
-						status: "blocked" as const,
-						sessionId: existingSession.id,
-						configId: body.configId,
-						config: sessionConfig,
-						currentPageId: existingSession.currentPageId,
-						page: sessionConfig.pages[existingSession.currentPageId],
-						endedAt: existingSession.endedAt,
-						error: "session_completed",
-						message: "You have already completed this experiment.",
-					};
-				}
+				// Create new session
+				const prolific: ProlificParams | null = body.prolific ?? null;
+				const simulation = resolveSimulationFields({
+					simulated: body.simulated,
+					simulationRunId: body.simulationRunId,
+					personaId: body.personaId,
+					prolificPid,
+				});
 
-				// Session completed but retakes allowed → fall through to create new
-			}
+				const id = uid();
+				const session: Session & { userId?: string | null } = {
+					id,
+					configId: body.configId,
+					config,
+					currentPageId: config.initialPageId,
+					session_state: {},
+					prolific,
+					userId,
+					...simulation,
+					...provenance,
+				};
+				await createSession(session);
+				const page = config.pages[session.currentPageId];
 
-			// Create new session
-			const prolific: ProlificParams | null = body.prolific ?? null;
-			const simulation = resolveSimulationFields({
-				simulated: body.simulated,
-				simulationRunId: body.simulationRunId,
-				personaId: body.personaId,
-				prolificPid,
-			});
-
-			const id = uid();
-			const session: Session & { userId?: string | null } = {
-				id,
-				configId: body.configId,
-				config,
-				currentPageId: config.initialPageId,
-				session_state: {},
-				prolific,
-				userId,
-				...simulation,
-				...provenance,
+				return {
+					status: "created" as const,
+					sessionId: id,
+					configId: body.configId,
+					config,
+					currentPageId: session.currentPageId,
+					page,
+					session_state: session.session_state,
+				};
 			};
-			await createSession(session);
-			const page = config.pages[session.currentPageId];
 
-			return {
-				status: "created" as const,
-				sessionId: id,
-				configId: body.configId,
-				config,
-				currentPageId: session.currentPageId,
-				page,
-				session_state: session.session_state,
-			};
+			const lockKey = startLockKey(body.configId, { prolificPid, userId });
+			return lockKey
+				? withStartLock(
+						await getSessionStartLocksCollection(),
+						lockKey,
+						startOrResume,
+					)
+				: startOrResume();
 		},
 		{
 			body: t.Object({
