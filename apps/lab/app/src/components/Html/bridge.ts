@@ -120,8 +120,78 @@ export function filterWritePayload(
 	return pickKeys(data as Record<string, unknown>, writeKeys);
 }
 
-export function wrapHtmlSrcdoc(userHtml: string): string {
-	const inject = `<meta http-equiv="Content-Security-Policy" content="${HTML_CSP}"><script>${PAIRIT_HELPER_SCRIPT}</script>`;
+/**
+ * The helper a workspace's custom renderer gets as `pairit.workspace`:
+ * `text`, `onChange(fn)` called with the text on load and every change, and
+ * `replace(old, new)` which resolves to { ok } or { ok: false, error }.
+ */
+export const WORKSPACE_HELPER_SCRIPT = `(function(){
+  var text = null;
+  var changeFns = [];
+  var pending = {};
+  var nextId = 1;
+  function emit() {
+    for (var i = 0; i < changeFns.length; i++) {
+      try { changeFns[i](text); } catch (err) { console.error(err); }
+    }
+  }
+  window.pairit = window.pairit || {};
+  window.pairit.workspace = {
+    get text() { return text; },
+    onChange: function(fn) {
+      if (typeof fn !== "function") return;
+      changeFns.push(fn);
+      if (text !== null) { try { fn(text); } catch (err) { console.error(err); } }
+    },
+    replace: function(oldText, newText) {
+      var id = nextId++;
+      return new Promise(function(resolve) {
+        pending[id] = resolve;
+        parent.postMessage({ type: "pairit:workspace:replace", id: id, old: String(oldText), new: String(newText) }, "*");
+      });
+    }
+  };
+  window.addEventListener("message", function(event) {
+    var data = event.data;
+    if (!data) return;
+    if (data.type === "pairit:workspace") { text = data.text; emit(); return; }
+    if (data.type === "pairit:workspace:result" && pending[data.id]) {
+      var resolve = pending[data.id];
+      delete pending[data.id];
+      resolve(data.ok ? { ok: true } : { ok: false, error: data.error });
+    }
+  });
+})();`;
+
+export type WorkspaceReplaceMessage = {
+	type: "pairit:workspace:replace";
+	id: number;
+	old: string;
+	new: string;
+};
+
+export function parseWorkspaceMessage(
+	event: { source: unknown; data: unknown },
+	expectedSource: unknown,
+): WorkspaceReplaceMessage | null {
+	if (!expectedSource || event.source !== expectedSource) return null;
+	const data = event.data as Partial<WorkspaceReplaceMessage> | null;
+	if (
+		data?.type !== "pairit:workspace:replace" ||
+		typeof data.id !== "number" ||
+		typeof data.old !== "string" ||
+		typeof data.new !== "string"
+	) {
+		return null;
+	}
+	return data as WorkspaceReplaceMessage;
+}
+
+export function wrapHtmlSrcdoc(
+	userHtml: string,
+	helperScript: string = PAIRIT_HELPER_SCRIPT,
+): string {
+	const inject = `<meta http-equiv="Content-Security-Policy" content="${HTML_CSP}"><script>${helperScript}</script>`;
 	if (/<head[\s>]/i.test(userHtml)) {
 		return userHtml.replace(/<head([^>]*)>/i, `<head$1>${inject}`);
 	}

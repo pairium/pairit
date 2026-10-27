@@ -1,0 +1,51 @@
+schema_version: 0.1.0
+allowRetake: true
+requireAuth: false
+initialPageId: game
+
+pages:
+  - id: game
+    layout: split
+    components:
+      - type: chat
+        props:
+          agents: [opponent]
+          placeholder: "Talk to your opponent..."
+      - type: live-workspace
+        props:
+          file: board.json
+          renderer: workspace-board/board.html
+          schema: workspace-board/board.schema.json
+          height: 420
+          editableBy: both
+          initialContent: |
+            {
+              "cells": ["", "", "", "", "", "", "", "", ""]
+            }
+          agents: [opponent]
+      - type: buttons
+        props:
+          buttons:
+            - id: done
+              text: "Finish"
+              action:
+                type: go_to
+                target: thanks
+
+  - id: thanks
+    end: true
+    components:
+      - type: text
+        props:
+          text: "Thanks for playing!"
+
+agents:
+  - id: opponent
+    model: "gpt-6-luna"
+    reasoningEffort: low
+    trigger: every_message
+    system: |
+      You play tic-tac-toe as O against the participant, who plays X.
+      The board is board.json: "cells" lists the nine squares row by row, each "", "X" or "O".
+      When the participant says they moved, view the board and place one O by editing one cell.
+      Reply in one short sentence.

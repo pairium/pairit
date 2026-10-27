@@ -16,6 +16,7 @@ import { getGroupMembers } from "./groups";
 import { broadcastToSession } from "./sse";
 import {
 	applyEdit,
+	EditError,
 	getFields,
 	getText,
 	seedUpdate,
@@ -23,6 +24,7 @@ import {
 	type WorkspaceField,
 	type WorkspaceMode,
 } from "./workspace-edit";
+import { checkWorkspaceText } from "./workspace-validate";
 
 export type WorkspaceSettings = {
 	mode: WorkspaceMode;
@@ -32,6 +34,10 @@ export type WorkspaceSettings = {
 	fields: WorkspaceField[];
 	// Agents that get file tools for this workspace
 	agents: string[];
+	// The file agents see: workspace.md, fields.json, or the researcher's `file`
+	file: string;
+	// Optional JSON Schema a .json file must match
+	schema?: object;
 };
 
 export type Workspace = {
@@ -88,6 +94,14 @@ export function getWorkspaceSettings(
 		agents: Array.isArray(props.agents)
 			? props.agents.filter((a): a is string => typeof a === "string")
 			: [],
+		file:
+			props.mode === "structured"
+				? "fields.json"
+				: typeof props.file === "string" && /^[\w.-]+$/.test(props.file)
+					? props.file
+					: "workspace.md",
+		...(typeof props.schema === "object" &&
+			props.schema !== null && { schema: props.schema }),
 	};
 }
 
@@ -286,16 +300,22 @@ export async function editWorkspace(
 	origin: string,
 	base?: Uint8Array,
 ): Promise<void> {
-	await applyAndSave(workspace, () =>
-		applyEdit(
-			workspace.doc,
-			workspace.settings.mode,
-			workspace.settings.fields,
-			edit,
-			origin,
-			base,
-		),
-	);
+	const { mode, fields, file, schema } = workspace.settings;
+	const apply = (doc: Y.Doc) =>
+		applyEdit(doc, mode, fields, edit, origin, base);
+
+	// Try the edit on a copy first. Refuse it if it would make a valid file
+	// invalid; a file that is already invalid (from typing) can still be fixed.
+	if (mode === "freeform") {
+		const copy = new Y.Doc();
+		Y.applyUpdate(copy, Y.encodeStateAsUpdate(workspace.doc));
+		const before = checkWorkspaceText(file, getText(copy).toString(), schema);
+		apply(copy);
+		const after = checkWorkspaceText(file, getText(copy).toString(), schema);
+		copy.destroy();
+		if (!before && after) throw new EditError(`${after} Nothing was changed.`);
+	}
+	await applyAndSave(workspace, () => apply(workspace.doc));
 }
 
 /** What a client with this state vector is missing, and what we have. */

@@ -2,6 +2,7 @@
  * Workspace routes for lab server
  * POST /workspace/:groupId/sync - Swap state vectors; returns what the client lacks
  * POST /workspace/:groupId/update - Apply a participant's Yjs update
+ * POST /workspace/:groupId/replace - A custom renderer's checked edit
  */
 
 import { Elysia, t } from "elysia";
@@ -10,8 +11,10 @@ import { verifyMembership } from "../lib/groups";
 import {
 	applyClientUpdate,
 	diffForClient,
+	editWorkspace,
 	openWorkspaceForSession,
 } from "../lib/workspace";
+import { EditError } from "../lib/workspace-edit";
 
 const toBase64 = (bytes: Uint8Array) => Buffer.from(bytes).toString("base64");
 const fromBase64 = (text: string) =>
@@ -106,6 +109,54 @@ export const workspaceRoutes = new Elysia({ prefix: "/workspace" })
 				sessionId: t.String({ minLength: 1 }),
 				pageId: t.String({ minLength: 1 }),
 				update: t.String({ minLength: 1 }),
+			}),
+		},
+	)
+	.post(
+		"/:groupId/replace",
+		async ({ params: { groupId }, body, set }) => {
+			const { sessionId, pageId } = body;
+
+			if (!(await verifyMembership(sessionId, groupId))) {
+				set.status = 403;
+				return { error: "not_a_member" };
+			}
+
+			const workspace = await openWorkspaceForSession(
+				sessionId,
+				groupId,
+				pageId,
+			);
+			if (!workspace) {
+				set.status = 404;
+				return { error: "no_workspace" };
+			}
+			if (workspace.settings.editableBy === "agent") {
+				set.status = 403;
+				return { error: "read_only" };
+			}
+
+			try {
+				await editWorkspace(
+					workspace,
+					{ kind: "replace", old: body.old, new: body.new },
+					`session:${sessionId}`,
+				);
+			} catch (error) {
+				if (!(error instanceof EditError)) throw error;
+				// The page shows this to the participant or redraws.
+				set.status = 409;
+				return { error: "refused", message: error.message };
+			}
+			return { ok: true };
+		},
+		{
+			params: t.Object({ groupId: t.String() }),
+			body: t.Object({
+				sessionId: t.String({ minLength: 1 }),
+				pageId: t.String({ minLength: 1 }),
+				old: t.String({ minLength: 1 }),
+				new: t.String(),
 			}),
 		},
 	);

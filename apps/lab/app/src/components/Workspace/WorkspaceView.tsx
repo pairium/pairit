@@ -14,6 +14,7 @@ import { yCollab, yUndoManagerKeymap } from "y-codemirror.next";
 import type * as Y from "yjs";
 import { agentHighlight, watchAgentEdits } from "./agentHighlight";
 import { documentStyle, livePreview } from "./livePreview";
+import { WorkspaceRenderer } from "./WorkspaceRenderer";
 
 export type FieldDefinition = {
 	id: string;
@@ -24,6 +25,12 @@ export type FieldDefinition = {
 export type WorkspaceViewProps = {
 	mode: "freeform" | "structured";
 	doc: Y.Doc;
+	// The file's name; only .md files get markdown preview
+	file?: string;
+	// A researcher's renderer, bundled from the `renderer` prop
+	renderer?: { html: string; height: number };
+	// Where a renderer's edits go
+	target: { groupId: string; sessionId: string; pageId: string };
 	fieldDefinitions?: FieldDefinition[];
 	disabled?: boolean;
 };
@@ -31,6 +38,9 @@ export type WorkspaceViewProps = {
 export function WorkspaceView({
 	mode,
 	doc,
+	file = "workspace.md",
+	renderer,
+	target,
 	fieldDefinitions = [],
 	disabled = false,
 }: WorkspaceViewProps) {
@@ -44,7 +54,25 @@ export function WorkspaceView({
 		);
 	}
 
-	return <FreeformEditor text={doc.getText("content")} disabled={disabled} />;
+	if (renderer) {
+		return (
+			<WorkspaceRenderer
+				text={doc.getText("content")}
+				html={renderer.html}
+				height={renderer.height}
+				readOnly={disabled}
+				target={target}
+			/>
+		);
+	}
+
+	return (
+		<FreeformEditor
+			text={doc.getText("content")}
+			disabled={disabled}
+			preview={file.toLowerCase().endsWith(".md")}
+		/>
+	);
 }
 
 const editorTheme = EditorView.theme({
@@ -54,12 +82,21 @@ const editorTheme = EditorView.theme({
 	".cm-content": { padding: "0.75rem 1rem" },
 });
 
+const codeTheme = EditorView.theme({
+	".cm-scroller": {
+		fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
+	},
+});
+
 function FreeformEditor({
 	text,
 	disabled,
+	preview,
 }: {
 	text: Y.Text;
 	disabled: boolean;
+	// Markdown with live preview; otherwise a plain code editor
+	preview: boolean;
 }) {
 	const containerRef = useRef<HTMLDivElement>(null);
 
@@ -72,9 +109,9 @@ function FreeformEditor({
 				extensions: [
 					// Undo only reverts this participant's own edits.
 					keymap.of([...yUndoManagerKeymap, ...defaultKeymap, indentWithTab]),
-					markdown(),
-					syntaxHighlighting(documentStyle),
-					livePreview,
+					preview
+						? [markdown(), syntaxHighlighting(documentStyle), livePreview]
+						: codeTheme,
 					agentHighlight,
 					EditorView.lineWrapping,
 					placeholder("Start writing..."),
@@ -90,7 +127,7 @@ function FreeformEditor({
 			stopWatching();
 			view.destroy();
 		};
-	}, [text, disabled]);
+	}, [text, disabled, preview]);
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">

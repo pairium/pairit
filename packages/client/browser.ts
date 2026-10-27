@@ -51,4 +51,5 @@ export const joinMatchmaking = client.joinMatchmaking.bind(client);
 export const cancelMatchmaking = client.cancelMatchmaking.bind(client);
 export const syncWorkspace = client.syncWorkspace.bind(client);
 export const pushWorkspaceUpdate = client.pushWorkspaceUpdate.bind(client);
+export const replaceInWorkspace = client.replaceInWorkspace.bind(client);
 export const randomize = client.randomize.bind(client);
