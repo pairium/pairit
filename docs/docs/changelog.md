@@ -25,6 +25,7 @@ Merged, but not released yet.
 - Agents use OpenAI's Responses API, so `gpt-6-luna` agents can use tools together with `reasoningEffort`.
 - An agent listed on both a page's chat and its workspace now replies once per message instead of twice.
 - A workspace can be any text file (`file: board.json`), drawn by your own HTML page (`renderer`) and checked against a JSON Schema (`schema`). See [Custom renderer](components/workspace.md#custom-renderer).
+- New examples: [Shared workspace and Workspace board](examples.md).
 
 ### CLI
 

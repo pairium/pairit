@@ -125,11 +125,35 @@ Two participants chat with an AI facilitator observing and guiding.
 
 ### Workspace
 
-AI-assisted document editing with a split-panel layout.
+A participant and an AI agent edit one live document; the agent makes targeted edits while the participant types.
 
 <div class="card-links">
 <a href="https://pairit.pairium.ai/workspace" class="card-link" target="_blank"><i data-lucide="external-link"></i> Try it</a>
 <a href="https://github.com/pairium/pairit/blob/main/configs/workspace.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
+</div>
+
+</div>
+
+<div class="card" markdown>
+
+### Shared workspace
+
+Two matched participants and an AI agent edit one document at the same time, then fill in a shared form.
+
+<div class="card-links">
+<a href="https://github.com/pairium/pairit/blob/main/configs/workspace-group.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
+</div>
+
+</div>
+
+<div class="card" markdown>
+
+### Workspace board
+
+Tic-tac-toe on a JSON workspace drawn by a custom renderer: the participant clicks, the agent answers by editing the file.
+
+<div class="card-links">
+<a href="https://github.com/pairium/pairit/blob/main/configs/workspace-board.yaml" class="card-link" target="_blank"><i data-lucide="file-code"></i> Config</a>
 </div>
 
 </div>
