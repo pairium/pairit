@@ -2,7 +2,7 @@
 
 Embed a shared, real-time workspace alongside chat or survey pages. Supports freeform (markdown) and structured (individual fields) editing, per-participant or per-group scoping, and agent read/write via tool calls. See the [Workspace example](../examples.md#workspace).
 
-Participants and agents edit the same document at the same time. Their edits merge, so nobody's work is lost, and every change is saved with its author. Participants edit markdown in a code-style editor; the markdown is not rendered yet.
+Participants and agents edit the same document at the same time. Their edits merge, so nobody's work is lost, and every change is saved with its author. The markdown is shown formatted: headings, bold, links and lists look like a document, and their markdown symbols appear only on the line being edited. Text an agent just added is highlighted for a few seconds.
 
 ## Props
 
