@@ -17,7 +17,7 @@ Merged, but not released yet.
 
 ### Platform
 
-- The workspace is now live-synced: participants and agents can edit at the same time without losing each other's work. The editor is a markdown code editor instead of a plain text box. Agents see `initialContent` before anyone edits, and their edits are recorded as `agent:<agentId>`. See [Workspace](components/workspace.md).
+- The workspace is now live-synced: participants and agents can edit at the same time without losing each other's work. The editor shows markdown formatted, like a document, instead of a plain text box, and highlights text an agent just added. Agents see `initialContent` before anyone edits, and their edits are recorded as `agent:<agentId>`. See [Workspace](components/workspace.md).
 - Each group-scoped workspace now has its own document per page. Before, two group workspaces on different pages shared one.
 - The workspace data export adds who wrote each part of the final text, and a full log of every change. See [Data Export](components/workspace.md#data-export).
 - The server no longer logs a `workspace_edit` event with the full text on every save; the change log replaces it. A workspace's `onEdit` event still fires if you set one.

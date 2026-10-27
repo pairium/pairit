@@ -6,15 +6,14 @@
 
 import { defaultKeymap, indentWithTab } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
-import {
-	defaultHighlightStyle,
-	syntaxHighlighting,
-} from "@codemirror/language";
+import { syntaxHighlighting } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, placeholder } from "@codemirror/view";
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { yCollab, yUndoManagerKeymap } from "y-codemirror.next";
 import type * as Y from "yjs";
+import { agentHighlight, watchAgentEdits } from "./agentHighlight";
+import { documentStyle, livePreview } from "./livePreview";
 
 export type FieldDefinition = {
 	id: string;
@@ -51,11 +50,7 @@ export function WorkspaceView({
 const editorTheme = EditorView.theme({
 	"&": { height: "100%", fontSize: "0.875rem" },
 	"&.cm-focused": { outline: "none" },
-	".cm-scroller": {
-		fontFamily:
-			"ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-		lineHeight: "1.625",
-	},
+	".cm-scroller": { lineHeight: "1.625" },
 	".cm-content": { padding: "0.75rem 1rem" },
 });
 
@@ -78,7 +73,9 @@ function FreeformEditor({
 					// Undo only reverts this participant's own edits.
 					keymap.of([...yUndoManagerKeymap, ...defaultKeymap, indentWithTab]),
 					markdown(),
-					syntaxHighlighting(defaultHighlightStyle),
+					syntaxHighlighting(documentStyle),
+					livePreview,
+					agentHighlight,
 					EditorView.lineWrapping,
 					placeholder("Start writing..."),
 					EditorState.readOnly.of(disabled),
@@ -88,7 +85,11 @@ function FreeformEditor({
 				],
 			}),
 		});
-		return () => view.destroy();
+		const stopWatching = watchAgentEdits(text, view);
+		return () => {
+			stopWatching();
+			view.destroy();
+		};
 	}, [text, disabled]);
 
 	return (

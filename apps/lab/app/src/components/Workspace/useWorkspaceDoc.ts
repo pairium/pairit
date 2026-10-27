@@ -20,8 +20,28 @@ const SEND_EVERY_MS = 50;
 const MAX_RETRY_MS = 5_000;
 // A safety net for a stream that died without the browser noticing.
 const RESYNC_EVERY_MS = 15_000;
-// Changes applied from the server; these are never sent back.
+// Changes applied from the server are never sent back. Live updates carry
+// who made them, so the editor can highlight an agent's edits.
 const REMOTE = Symbol("remote");
+type RemoteOrigin = { remote: true; author: string };
+
+export function isAgentOrigin(origin: unknown): boolean {
+	return (
+		typeof origin === "object" &&
+		origin !== null &&
+		(origin as RemoteOrigin).remote === true &&
+		(origin as RemoteOrigin).author.startsWith("agent:")
+	);
+}
+
+function isRemote(origin: unknown): boolean {
+	return (
+		origin === REMOTE ||
+		(typeof origin === "object" &&
+			origin !== null &&
+			(origin as RemoteOrigin).remote === true)
+	);
+}
 
 export type WorkspaceDocState =
 	| { status: "loading" }
@@ -97,7 +117,7 @@ export function useWorkspaceDoc(
 		};
 
 		const onUpdate = (update: Uint8Array, origin: unknown) => {
-			if (origin === REMOTE) return;
+			if (isRemote(origin)) return;
 			pending.push(update);
 			schedule();
 		};
@@ -139,7 +159,8 @@ export function useWorkspaceDoc(
 		const offUpdate = sseClient.on("workspace_update", (data) => {
 			const event = data as SSEWorkspaceUpdate;
 			if (event.groupId !== groupId || event.pageId !== pageId) return;
-			Y.applyUpdate(ydoc, fromBase64(event.update), REMOTE);
+			const origin: RemoteOrigin = { remote: true, author: event.author };
+			Y.applyUpdate(ydoc, fromBase64(event.update), origin);
 		});
 		// Catch up on anything missed while the stream was down.
 		const offConnected = sseClient.on("connected", () => void sync());
