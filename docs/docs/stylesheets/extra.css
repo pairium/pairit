@@ -19,71 +19,26 @@ code {
   max-width: 100%;
 }
 
-/* Card grid for examples page */
-.card-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  margin-top: 1.5rem;
+/* Examples page: highlight the row a link points to */
+tr:has(:target) {
+  box-shadow: inset 3px 0 0 var(--foreground, #18181b);
 }
 
-@media (max-width: 640px) {
-  .card-grid {
-    grid-template-columns: 1fr;
-  }
+tr:has(:target) td {
+  background: color-mix(in srgb, var(--foreground, #18181b) 6%, transparent);
 }
 
-.card {
-  border: 1px solid var(--border, #e4e4e7);
-  border-radius: 0.5rem;
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-}
-
-.card h3 {
-  margin: 0 0 0.25rem 0 !important;
-  font-size: 1.1rem !important;
+td > span[id] {
   scroll-margin-top: calc(var(--header-height, 3.5rem) + 1.75rem);
 }
 
-.card:has(:target) {
-  border-color: var(--foreground, #18181b);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--foreground, #18181b) 14%, transparent);
+/* Examples tables: descriptions wrap, so the links stay on screen */
+table:has(td > span[id]) td {
+  white-space: normal;
 }
 
-.card p {
-  margin: 0 0 0 0;
-  font-size: 0.9rem;
-  color: var(--foreground-muted, #71717a);
-  flex: 1;
-}
-
-.card .card-links {
-  position: absolute;
-  top: 1.25rem;
-  right: 1.25rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.75rem;
-}
-
-.card .card-links a {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  color: var(--foreground-muted, #71717a);
-  text-decoration: none;
-}
-
-.card .card-links a:hover {
-  color: var(--foreground, #18181b);
-}
-
-.card .card-links svg {
-  width: 12px;
-  height: 12px;
+table:has(td > span[id]) td:first-child,
+table:has(td > span[id]) td:last-child {
+  white-space: nowrap;
 }
 

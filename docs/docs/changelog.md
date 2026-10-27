@@ -17,20 +17,25 @@ Merged, but not released yet.
 
 ### Platform
 
+- For admins: the manager reports which studies have participants right now (`GET /admin/activity`), so production deploys can wait for live group studies to finish.
+
+### CLI
+
+- `pairit admin activity` (admins) lists studies with recent sessions: owner, active participants in a group or solo, how many wait in matchmaking, and features used. Live group studies come first. `--since 7d` looks further back, `--json` prints the raw report, and `--fail-if-live` exits 2 if a group study is live.
+
+## Platform 2026.10.27
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/platform-v2026.10.27)
+
 - The workspace is now live-synced: participants and agents can edit at the same time without losing each other's work. The editor shows markdown formatted, like a document, instead of a plain text box, and highlights text an agent just added. Agents see `initialContent` before anyone edits, and their edits are recorded as `agent:<agentId>`. See [Workspace](components/workspace.md).
-- Each group-scoped workspace now has its own document per page. Before, two group workspaces on different pages shared one.
+- Each group-scoped workspace now has its own document per page. Before, two group workspaces on different pages shared one. Group workspaces saved before this release start fresh; per-participant ones carry over.
 - The workspace data export adds who wrote each part of the final text, and a full log of every change. See [Data Export](components/workspace.md#data-export).
 - The server no longer logs a `workspace_edit` event with the full text on every save; the change log replaces it. A workspace's `onEdit` event still fires if you set one.
 - Agents listed on a workspace now edit it with file tools, like coding agents: they view the file, make targeted edits, and see each result, for up to 8 steps per reply. No tool declarations needed; an existing `write_workspace` declaration is ignored for these agents. See [Agent Integration](components/workspace.md#agent-integration).
 - Agents use OpenAI's Responses API, so `gpt-6-luna` agents can use tools together with `reasoningEffort`.
 - An agent listed on both a page's chat and its workspace now replies once per message instead of twice.
 - A workspace can be any text file (`file: board.json`), drawn by your own HTML page (`renderer`) and checked against a JSON Schema (`schema`). See [Custom renderer](components/workspace.md#custom-renderer).
-- New examples: [Shared workspace and Workspace board](examples.md).
-- For admins: the manager reports which studies have participants right now (`GET /admin/activity`), so production deploys can wait for live group studies to finish.
-
-### CLI
-
-- `pairit admin activity` (admins) lists studies with recent sessions: owner, active participants in a group or solo, how many wait in matchmaking, and features used. Live group studies come first. `--since 7d` looks further back, `--json` prints the raw report, and `--fail-if-live` exits 2 if a group study is live.
+- New examples: [Shared workspace](examples.md#shared-workspace) and [Workspace board](examples.md#workspace-board).
 
 ## CLI 0.3.3
 
