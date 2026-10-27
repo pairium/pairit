@@ -44,8 +44,8 @@ A live document that participants and agents edit at the same time.
 | Example | What it shows | |
 |---|---|---|
 | <span id="workspace"></span>Workspace | A participant and an AI agent edit one document; the agent makes targeted edits while the participant types. | [Try it](https://pairit.pairium.ai/workspace) · [Config](https://github.com/pairium/pairit/blob/main/configs/workspace.yaml) |
-| <span id="shared-workspace"></span>Shared workspace | Two matched participants and an AI agent edit one document at the same time, then fill in a shared form. | [Config](https://github.com/pairium/pairit/blob/main/configs/workspace-group.yaml) |
-| <span id="workspace-board"></span>Workspace board | Tic-tac-toe on a JSON workspace drawn by a custom renderer: the participant clicks, the agent answers by editing the file. | [Config](https://github.com/pairium/pairit/blob/main/configs/workspace-board.yaml) |
+| <span id="shared-workspace"></span>Shared workspace | Two matched participants and an AI agent edit one document at the same time, then fill in a shared form. | [Try it](https://pairit.pairium.ai/workspace-group-plpgp7u9r2) · [Config](https://github.com/pairium/pairit/blob/main/configs/workspace-group.yaml) |
+| <span id="workspace-board"></span>Workspace board | Tic-tac-toe on a JSON workspace drawn by a custom renderer: the participant clicks, the agent answers by editing the file. | [Try it](https://pairit.pairium.ai/workspace-board-2v1vs7xk0l) · [Config](https://github.com/pairium/pairit/blob/main/configs/workspace-board.yaml) |
 
 ## Custom UI
 
