@@ -29,6 +29,10 @@ Merged, but not released yet.
 
 ### CLI
 
+## CLI 0.3.3
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/cli-v0.3.3)
+
 - `pairit config upload` bundles a workspace's `renderer` and `schema` files, and `pairit config lint` checks they exist.
 - `pairit data export` also writes `<configId>-workspace-updates`, and the workspace documents file gains `authorship`, `fieldAuthors` and `updateCount`. See [Data Export](components/workspace.md#data-export).
 
