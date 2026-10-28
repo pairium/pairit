@@ -10,6 +10,7 @@ import { initAllowlist } from "./lib/allowlist-boot";
 import { getContactEmail } from "./lib/allowlist-hooks";
 import { auth } from "./lib/auth";
 import { ensureConfigIndexes } from "./lib/db";
+import { errorResponse } from "./lib/error-response";
 import { renderPage } from "./lib/html";
 import { adminRoutes } from "./routes/admin";
 import { configsRoutes } from "./routes/configs";
@@ -97,17 +98,7 @@ const app = new Elysia()
 			maxAge: 86400,
 		}),
 	)
-	.onError(({ code, error, set }) => {
-		console.error(`[Elysia Error] ${code}:`, error);
-		set.status = 500;
-		// Check if error has message property safely
-		const message = error instanceof Error ? error.message : "Unknown error";
-		return {
-			status: "error",
-			code,
-			message,
-		};
-	})
+	.onError(errorResponse)
 	// Mount Better Auth handler at /api/auth/*
 	.all("/api/auth/*", async ({ request, set }) => {
 		try {
