@@ -15,6 +15,10 @@ Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/re
 
 Merged, but not released yet.
 
+### Platform
+
+- The manager answers an unknown address with 404 and a request it can't read with 422, instead of 500 for every error. CLI errors now say which it was.
+
 ### CLI
 
 - `pairit admin activity` names studies whose open sessions are too old to count as active, and says how active is defined.
