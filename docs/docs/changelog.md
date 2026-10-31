@@ -17,6 +17,8 @@ Merged, but not released yet.
 
 ### Platform
 
+- Agents with `trigger: on_join` send their opening message again. Since Platform 2026.10.27 it failed, and participants saw "Sorry, I encountered an error" instead.
+- An agent no longer reads the chat's error notice as something the participant wrote.
 - The manager answers an unknown address with 404 and a request it can't read with 422, instead of 500 for every error. CLI errors now say which it was.
 
 ## CLI 0.3.5

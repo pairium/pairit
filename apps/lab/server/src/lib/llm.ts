@@ -91,6 +91,17 @@ function getModel(
 		: createOpenAI({ apiKey }).responses(agent.model);
 }
 
+// The SDK rejects an empty prompt. An on_join agent speaks before anyone
+// has written, so it gets this instead.
+const OPENING_MESSAGE: ChatMessage = {
+	role: "user",
+	content: "(The participant has joined the chat. Start the conversation.)",
+};
+
+export function promptMessages(history: ChatMessage[]): ChatMessage[] {
+	return history.length > 0 ? history : [OPENING_MESSAGE];
+}
+
 export async function* streamAgentResponse(
 	agent: AgentConfig,
 	history: ChatMessage[],
@@ -99,7 +110,7 @@ export async function* streamAgentResponse(
 	const result = streamText({
 		model: getModel(agent, options.credentials),
 		system: agent.system,
-		messages: history,
+		messages: promptMessages(history),
 		tools: options.tools,
 		stopWhen: stepCountIs(MAX_STEPS),
 		maxOutputTokens: MAX_OUTPUT_TOKENS,

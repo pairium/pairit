@@ -4,6 +4,7 @@
  */
 
 import { jsonSchema, type ToolSet, tool } from "ai";
+import type { ChatMessageDocument } from "../types";
 import {
 	getAgentsFromConfig,
 	getPageAgentIdsFromConfig,
@@ -467,10 +468,19 @@ async function loadChatHistory(groupId: string): Promise<ChatMessage[]> {
 		.sort({ createdAt: 1 })
 		.toArray();
 
-	return messages.map((msg) => ({
-		role: msg.senderType === "agent" ? "assistant" : "user",
-		content: msg.content,
-	}));
+	return toChatHistory(messages);
+}
+
+/** System messages, like the error notice, are for participants, not the model. */
+export function toChatHistory(
+	messages: Array<Pick<ChatMessageDocument, "senderType" | "content">>,
+): ChatMessage[] {
+	return messages
+		.filter((msg) => msg.senderType !== "system")
+		.map((msg) => ({
+			role: msg.senderType === "agent" ? "assistant" : "user",
+			content: msg.content,
+		}));
 }
 
 async function persistAndBroadcastMessage(
