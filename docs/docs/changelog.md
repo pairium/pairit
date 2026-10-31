@@ -18,6 +18,7 @@ Merged, but not released yet.
 ### Platform
 
 - The manager answers an unknown address with 404 and a request it can't read with 422, instead of 500 for every error. CLI errors now say which it was.
+- Likert scales can label their two ends with `min_label` and `max_label` (e.g. "Not at all" … "Extremely") instead of "Strongly disagree" … "Strongly agree". The survey docs now also show how to relabel every point with `choices`.
 
 ## CLI 0.3.5
 

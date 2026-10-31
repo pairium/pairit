@@ -109,12 +109,13 @@ export interface RadioGroupScaleItemProps
 	extends ComponentPropsWithoutRef<"input"> {
 	value: string;
 	label: ReactNode;
+	description?: ReactNode;
 }
 
 export const RadioGroupScaleItem = forwardRef<
 	ElementRef<"input">,
 	RadioGroupScaleItemProps
->(({ value, label, className, disabled, ...props }, ref) => {
+>(({ value, label, description, className, disabled, ...props }, ref) => {
 	const context = useContext(RadioGroupContext);
 	if (!context) {
 		throw new Error("RadioGroupScaleItem must be used within a RadioGroup");
@@ -150,6 +151,11 @@ export const RadioGroupScaleItem = forwardRef<
 			<span className="mt-2 text-center text-xs leading-4 text-slate-600">
 				{label}
 			</span>
+			{description ? (
+				<span className="mt-1 text-center text-xs leading-4 text-slate-500">
+					{description}
+				</span>
+			) : null}
 		</label>
 	);
 });

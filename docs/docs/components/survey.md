@@ -30,8 +30,40 @@ Event Data
 - `multiple_choice`: accepts a list of options and renders radio buttons (single select).
 - `dropdown`: accepts a list of options and renders a compact select menu (single select).
 - `multi_select`: accepts a list of options and renders checkboxes (multi select).
-- `likert5` and `likert7`: predefined radio scales with consistent labeling.
+- `likert5` and `likert7`: 5- and 7-point radio scales. Answers are saved as `"1"` through `"5"` (or `"7"`). The labels run from "Strongly disagree" to "Strongly agree" unless you change them (see [Likert labels](#likert-labels)).
 - You can extend answer types with custom components. Provide `component` and any `props` the renderer requires.
+
+### Likert labels
+
+To label only the two ends, set `min_label` and `max_label`. Every point then shows its number, and the first and last points also show your label. Answers are still saved as numbers. You can set one or both.
+
+```yaml
+- id: interest
+  text: "How interested are you in this topic?"
+  answer:
+    likert7:
+      layout: horizontal
+      min_label: "Not at all"
+      max_label: "Extremely"
+```
+
+To relabel every point, list `choices`. Give each one a `value` and a `label` so the saved answer stays a number. A plain string like `"Never"` is saved as the text `"Never"`.
+
+```yaml
+- id: frequency
+  text: "How often do you exercise?"
+  answer:
+    likert5:
+      layout: horizontal
+      choices:
+        - { value: "1", label: "Never" }
+        - { value: "2", label: "Rarely" }
+        - { value: "3", label: "Sometimes" }
+        - { value: "4", label: "Often" }
+        - { value: "5", label: "Always" }
+```
+
+`min_label` and `max_label` also work with `choices`. They add a second line under the first and last choice.
 
 ### Layout
 

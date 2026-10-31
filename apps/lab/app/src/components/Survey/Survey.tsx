@@ -28,6 +28,7 @@ import { z } from "zod";
 export interface SurveyItemChoice {
 	value: string;
 	label: string;
+	description?: string;
 }
 
 const LIKERT5_CHOICES: SurveyItemChoice[] = [
@@ -294,6 +295,7 @@ function renderAnswerInput({
 									key={choice.value}
 									value={choice.value}
 									label={choice.label}
+									description={choice.description}
 								/>
 							))}
 						</FieldSet>
@@ -312,6 +314,7 @@ function renderAnswerInput({
 								key={choice.value}
 								value={choice.value}
 								label={choice.label}
+								description={choice.description}
 							/>
 						))}
 					</FieldSet>
@@ -681,12 +684,14 @@ function normalizeSurveyAnswer(
 
 		case "likert5":
 		case "likert_5": {
-			const choices =
+			const choices = applyLikertAnchors(
 				normalizeSurveyChoices(
 					(numericBoundsSource as { choices?: unknown }).choices,
-				) ??
-				normalizeSurveyChoices((record as { choices?: unknown }).choices) ??
-				LIKERT5_CHOICES;
+				) ?? normalizeSurveyChoices((record as { choices?: unknown }).choices),
+				LIKERT5_CHOICES,
+				numericBoundsSource,
+				record,
+			);
 
 			return {
 				type: "likert5",
@@ -698,12 +703,14 @@ function normalizeSurveyAnswer(
 
 		case "likert7":
 		case "likert_7": {
-			const choices =
+			const choices = applyLikertAnchors(
 				normalizeSurveyChoices(
 					(numericBoundsSource as { choices?: unknown }).choices,
-				) ??
-				normalizeSurveyChoices((record as { choices?: unknown }).choices) ??
-				LIKERT7_CHOICES;
+				) ?? normalizeSurveyChoices((record as { choices?: unknown }).choices),
+				LIKERT7_CHOICES,
+				numericBoundsSource,
+				record,
+			);
 
 			return {
 				type: "likert7",
@@ -716,6 +723,32 @@ function normalizeSurveyAnswer(
 		default:
 			return null;
 	}
+}
+
+// min_label / max_label number every point and label the two ends.
+function applyLikertAnchors(
+	choices: SurveyItemChoice[] | null,
+	defaults: SurveyItemChoice[],
+	config: Record<string, unknown>,
+	record: Record<string, unknown>,
+): SurveyItemChoice[] {
+	const readLabel = (key: "min_label" | "max_label") => {
+		const raw = config[key] ?? record[key];
+		return typeof raw === "string" && raw.trim().length
+			? raw.trim()
+			: undefined;
+	};
+	const minLabel = readLabel("min_label");
+	const maxLabel = readLabel("max_label");
+	if (!minLabel && !maxLabel) return choices ?? defaults;
+
+	const base =
+		choices ?? defaults.map((choice) => ({ ...choice, label: choice.value }));
+	return base.map((choice, index) => {
+		const description =
+			index === 0 ? minLabel : index === base.length - 1 ? maxLabel : undefined;
+		return description ? { ...choice, description } : choice;
+	});
 }
 
 function normalizeSurveyChoices(raw: unknown): SurveyItemChoice[] | null {
