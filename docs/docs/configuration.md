@@ -185,6 +185,7 @@ The expression evaluator currently supports `session_state.{key} {op} {value}` p
 Context roots available:
 
 - `session_state` -- participant-scoped state fields
+- `group` -- what the participant may see about their matched group: `group.others.0.<key>` and `group.ws.<field>`. See [Share answers with the group](components/matchmaking.md#share-answers-with-the-group).
 
 Planned (not yet implemented):
 

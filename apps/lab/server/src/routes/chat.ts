@@ -13,6 +13,7 @@ import {
 	getIdempotencyCollection,
 	getSessionsCollection,
 } from "../lib/db";
+import { sessionStateChanged } from "../lib/group-view";
 import { getGroupMembers, verifyMembership } from "../lib/groups";
 import { broadcastToSession } from "../lib/sse";
 import type { ChatMessageDocument } from "../types";
@@ -149,6 +150,9 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 					broadcastToSession(sessionId, "state_updated", {
 						path: "chat.messages_sent",
 						value: messagesSent,
+					});
+					sessionStateChanged(sessionId, ["chat"]).catch((error) => {
+						console.error("[Group] Failed to share state:", error);
 					});
 				}
 			}

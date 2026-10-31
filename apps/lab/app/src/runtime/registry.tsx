@@ -7,12 +7,14 @@ export type NavigationGuard = (
 ) => boolean | undefined | Promise<boolean | undefined>;
 
 import type { CompiledConfig } from "./config";
+import type { GroupView } from "./expression";
 
 export interface RuntimeComponentContext {
 	onAction: (action: ButtonAction) => void | Promise<void>;
 	registerNavigationGuard: (guard: NavigationGuard) => () => void;
 	sessionId?: string | null;
 	sessionState?: Record<string, unknown>;
+	group?: GroupView;
 	onSessionStateChange?: (updates: Record<string, unknown>) => void;
 	pageId?: string;
 	compiledConfig?: CompiledConfig | null;

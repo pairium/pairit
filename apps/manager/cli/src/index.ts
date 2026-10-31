@@ -14,6 +14,7 @@ import {
 } from "./activity.js";
 import { getAuthHeaders, login } from "./auth.js";
 import { getApiUrl, getLabUrl, parseEnvName, setEnv } from "./env.js";
+import { lintGroupView } from "./group-lint.js";
 import {
 	attachHtmlToCompiledConfig,
 	attachWorkspaceFilesToCompiledConfig,
@@ -661,6 +662,7 @@ async function lintConfig(configPath: string): Promise<HtmlSourceInfo[]> {
 		});
 	}
 	errors.push(...lintRandomization(config));
+	errors.push(...lintGroupView(config));
 
 	if (errors.length) {
 		throw new Error(errors.join(", "));

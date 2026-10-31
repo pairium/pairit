@@ -2,6 +2,23 @@
  * Simple expression evaluator for branching conditions like "session_state.age < 18"
  */
 
+/** What a session may read about its matched group (built by the server). */
+export type GroupView = {
+	ws: Record<string, unknown>;
+	others: Record<string, unknown>[];
+};
+
+export const EMPTY_GROUP: GroupView = { ws: {}, others: [] };
+
+/** What expressions and templates can read. */
+export type Scope = {
+	session_state: Record<string, unknown>;
+	group?: GroupView;
+};
+
+/** A readable path, like session_state.age or group.others.0.r1_estimate. */
+export const SCOPE_PATH = String.raw`(?:session_state|group)\.[A-Za-z0-9_.]+`;
+
 type ComparisonOp = "==" | "!=" | "<=" | ">=" | "<" | ">";
 
 function parseValue(raw: string): unknown {
@@ -21,15 +38,11 @@ function parseValue(raw: string): unknown {
 	return raw;
 }
 
-function getNestedValue(
-	obj: Record<string, unknown> | undefined,
-	path: string,
-): unknown {
-	if (!obj) return undefined;
+export function getScopePath(scope: Scope, path: string): unknown {
 	return path.split(".").reduce<unknown>((current, key) => {
 		if (current == null || typeof current !== "object") return undefined;
 		return (current as Record<string, unknown>)[key];
-	}, obj);
+	}, scope);
 }
 
 function compare(left: unknown, op: ComparisonOp, right: unknown): boolean {
@@ -59,17 +72,14 @@ function compare(left: unknown, op: ComparisonOp, right: unknown): boolean {
 	}
 }
 
-export function evaluateExpression(
-	expr: string,
-	context: { session_state: Record<string, unknown> },
-): boolean {
+export function evaluateExpression(expr: string, scope: Scope): boolean {
 	const match = expr.match(
-		/^session_state\.([A-Za-z0-9_.]+)\s*(==|!=|<=|>=|<|>)\s*(.+)$/,
+		new RegExp(`^(${SCOPE_PATH})\\s*(==|!=|<=|>=|<|>)\\s*(.+)$`),
 	);
 	if (!match) return false;
 
 	const [, path, op, rawValue] = match;
-	const left = getNestedValue(context.session_state, path);
+	const left = getScopePath(scope, path);
 	const right = parseValue(rawValue.trim());
 
 	return compare(left, op as ComparisonOp, right);

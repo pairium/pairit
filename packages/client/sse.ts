@@ -72,6 +72,7 @@ export class SSEClient {
 			"match_timeout",
 			"workspace_update",
 			"chat_stream_end",
+			"group_updated",
 		] as const;
 		for (const type of events) {
 			this.eventSource.addEventListener(type, (event) => {

@@ -40,7 +40,9 @@ export function resolveParticipantAvatar(
 	const template = toAvatarString(avatars?.participant);
 	if (!template) return undefined;
 
-	const resolved = interpolate(template, sessionState).trim();
+	const resolved = interpolate(template, {
+		session_state: sessionState,
+	}).trim();
 	if (!resolved || resolved.includes("{{")) return undefined;
 	return resolved;
 }

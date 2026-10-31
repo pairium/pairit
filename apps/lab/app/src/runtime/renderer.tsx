@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@components/ui/Card";
 
 import { useCallback, useMemo, useRef } from "react";
-import { evaluateExpression } from "./expression";
+import { evaluateExpression, type GroupView, type Scope } from "./expression";
 import {
 	getComponentRenderer,
 	type NavigationGuard,
@@ -47,22 +47,19 @@ const SPLIT_COLUMN_CLASS = [
 
 function isComponentVisible(
 	component: ComponentInstance,
-	sessionState: Record<string, unknown>,
+	scope: Scope,
 ): boolean {
 	if (!component.when) return true;
-	return evaluateExpression(component.when, { session_state: sessionState });
+	return evaluateExpression(component.when, scope);
 }
 
-function resolveTarget(
-	action: ButtonAction,
-	sessionState: Record<string, unknown>,
-): string {
+function resolveTarget(action: ButtonAction, scope: Scope): string {
 	if (action.target) return action.target;
 	if (!action.branches) throw new Error("No target or branches");
 
 	for (const branch of action.branches) {
 		if (!branch.when) return branch.target; // default branch
-		if (evaluateExpression(branch.when, { session_state: sessionState })) {
+		if (evaluateExpression(branch.when, scope)) {
 			return branch.target;
 		}
 	}
@@ -74,6 +71,7 @@ interface PageRendererProps {
 	onAction: (action: ButtonAction) => Promise<void> | void;
 	sessionId?: string | null;
 	sessionState?: Record<string, unknown>;
+	group?: GroupView;
 	onSessionStateChange?: (updates: Record<string, unknown>) => void;
 	compiledConfig?: import("./config").CompiledConfig | null;
 	isNavigating?: boolean;
@@ -84,15 +82,19 @@ export function PageRenderer({
 	onAction,
 	sessionId,
 	sessionState,
+	group,
 	onSessionStateChange,
 	compiledConfig,
 	isNavigating,
 }: PageRendererProps) {
 	const guardsRef = useRef<Set<NavigationGuard>>(new Set());
 	const sessionStateRef = useRef<Record<string, unknown>>(sessionState ?? {});
+	const groupRef = useRef(group);
 
-	// Keep ref in sync with prop
+	// Keep refs in sync with props
 	sessionStateRef.current = sessionState ?? {};
+	groupRef.current = group;
+	const scope: Scope = { session_state: sessionState ?? {}, group };
 
 	const registerNavigationGuard = useCallback((guard: NavigationGuard) => {
 		guardsRef.current.add(guard);
@@ -117,7 +119,10 @@ export function PageRenderer({
 		async (action: ButtonAction) => {
 			if (action.skipValidation) {
 				// Resolve target using current sessionState
-				const target = resolveTarget(action, sessionStateRef.current);
+				const target = resolveTarget(action, {
+					session_state: sessionStateRef.current,
+					group: groupRef.current,
+				});
 				await onAction({ ...action, target });
 				return;
 			}
@@ -136,7 +141,10 @@ export function PageRenderer({
 				}
 			}
 			// Resolve target AFTER guards have run (they may have updated sessionState)
-			const target = resolveTarget(action, sessionStateRef.current);
+			const target = resolveTarget(action, {
+				session_state: sessionStateRef.current,
+				group: groupRef.current,
+			});
 			await onAction({ ...action, target });
 		},
 		[onAction],
@@ -148,6 +156,7 @@ export function PageRenderer({
 			registerNavigationGuard,
 			sessionId,
 			sessionState,
+			group,
 			onSessionStateChange: wrappedOnSessionStateChange,
 			pageId: page.id,
 			compiledConfig,
@@ -158,6 +167,7 @@ export function PageRenderer({
 			registerNavigationGuard,
 			sessionId,
 			sessionState,
+			group,
 			wrappedOnSessionStateChange,
 			page.id,
 			compiledConfig,
@@ -167,9 +177,7 @@ export function PageRenderer({
 
 	if (page.layout === "split") {
 		const visibleComponents =
-			page.components?.filter((c) =>
-				isComponentVisible(c, sessionState ?? {}),
-			) ?? [];
+			page.components?.filter((c) => isComponentVisible(c, scope)) ?? [];
 		// An explicit `column` wins. Otherwise the workspace goes right,
 		// buttons go below both columns, and everything else goes left.
 		const placementOf = (c: ComponentInstance) =>
@@ -235,8 +243,7 @@ export function PageRenderer({
 	}
 
 	const visibleComponents =
-		page.components?.filter((c) => isComponentVisible(c, sessionState ?? {})) ??
-		[];
+		page.components?.filter((c) => isComponentVisible(c, scope)) ?? [];
 
 	return (
 		<div key={page.id} className="page-enter flex justify-center">

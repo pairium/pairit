@@ -15,6 +15,7 @@ import { useSession } from "./lib/auth-client";
 import { sseClient } from "./lib/sse";
 import "./runtime"; // Register component renderers
 import type { CompiledConfig } from "./runtime/config";
+import { EMPTY_GROUP, type GroupView } from "./runtime/expression";
 import { PageRenderer } from "./runtime/renderer";
 import type { ButtonAction, OnEnterAction, Page } from "./runtime/types";
 
@@ -110,6 +111,7 @@ export default function App() {
 	const [endedAt, setEndedAt] = useState<string | null>(null);
 	const [endRedirectUrl, setEndRedirectUrl] = useState<string | null>(null);
 	const [sessionState, setSessionState] = useState<Record<string, unknown>>({});
+	const [group, setGroup] = useState<GroupView>(EMPTY_GROUP);
 	const [bootstrapping, setBootstrapping] = useState(true);
 	const [transitioning, setTransitioning] = useState(false);
 	const transitioningRef = useRef(false);
@@ -146,6 +148,7 @@ export default function App() {
 			setEndedAt(null);
 			setEndRedirectUrl(null);
 			setSessionState({});
+			setGroup(EMPTY_GROUP);
 			setAuthRequired(false);
 			setSessionBlocked(false);
 			setBootstrapping(true);
@@ -213,6 +216,15 @@ export default function App() {
 		});
 
 		return unsubscribe;
+	}, [sessionId]);
+
+	// The server sends the group view on connect and whenever it changes
+	useEffect(() => {
+		if (!sessionId) return;
+		return sseClient.on("group_updated", (data: unknown) => {
+			const next = (data as { group?: GroupView }).group;
+			if (next) setGroup(next);
+		});
 	}, [sessionId]);
 
 	async function onAction(a: ButtonAction) {
@@ -311,6 +323,7 @@ export default function App() {
 							onAction={onAction}
 							sessionId={sessionId}
 							sessionState={sessionState}
+							group={group}
 							compiledConfig={compiledConfig}
 							isNavigating={transitioning}
 							onSessionStateChange={(updates) =>

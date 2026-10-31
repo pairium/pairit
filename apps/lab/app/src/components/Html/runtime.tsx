@@ -1,5 +1,6 @@
 import { submitEvent, updateState } from "@app/lib/api";
 import { defineRuntimeComponent } from "@app/runtime/define-runtime-component";
+import type { GroupView } from "@app/runtime/expression";
 import type { RuntimeComponentContext } from "@app/runtime/registry";
 import type { ButtonAction, ComponentInstance } from "@app/runtime/types";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -70,7 +71,7 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 
 		useEffect(() => {
 			if (!iframeLoadedRef.current) return;
-			const state = pickKeys(context.sessionState, readKeys);
+			const state = readState(context.sessionState, context.group, readKeys);
 			const serialized = JSON.stringify(state);
 			if (serialized === lastPostedStateRef.current) return;
 			lastPostedStateRef.current = serialized;
@@ -78,7 +79,7 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 				{ type: "pairit:state", state },
 				"*",
 			);
-		}, [context.sessionState, readKeys]);
+		}, [context.sessionState, context.group, readKeys]);
 
 		useEffect(() => {
 			const onMessage = (event: MessageEvent) => {
@@ -159,7 +160,11 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 					height={height}
 					onLoad={() => {
 						emitHtmlEvent("onLoad", component, context);
-						const state = pickKeys(context.sessionState, readKeys);
+						const state = readState(
+							context.sessionState,
+							context.group,
+							readKeys,
+						);
 						const serialized = JSON.stringify(state);
 						lastPostedStateRef.current = serialized;
 						iframeLoadedRef.current = true;
@@ -176,6 +181,15 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 		);
 	},
 });
+
+// `group` in `read` sends the whole group view; other keys are session_state
+function readState(
+	sessionState: Record<string, unknown> | undefined,
+	group: GroupView | undefined,
+	keys: string[],
+): Record<string, unknown> {
+	return pickKeys({ ...sessionState, group }, keys);
+}
 
 function stringList(value: unknown): string[] {
 	if (!Array.isArray(value)) return [];

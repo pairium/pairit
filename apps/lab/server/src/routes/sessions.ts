@@ -15,6 +15,7 @@ import {
 	getSessionStartLocksCollection,
 	getSessionsCollection,
 } from "../lib/db";
+import { sessionStateChanged } from "../lib/group-view";
 import { buildProvenance, type Provenance } from "../lib/provenance";
 import { startLockKey, withStartLock } from "../lib/session-start-lock";
 import { hasOverlappingPaths } from "../lib/session-state";
@@ -431,6 +432,9 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				set.status = 404;
 				return { error: "not_found" };
 			}
+			sessionStateChanged(id, Object.keys(body.updates)).catch((error) => {
+				console.error("[Group] Failed to share state:", error);
+			});
 
 			return { success: true };
 		},

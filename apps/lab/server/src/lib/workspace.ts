@@ -12,6 +12,7 @@ import {
 	getWorkspaceDocumentsCollection,
 	getWorkspaceUpdatesCollection,
 } from "./db";
+import { scheduleGroupPush } from "./group-view";
 import { getGroupMembers } from "./groups";
 import { broadcastToSession } from "./sse";
 import {
@@ -267,6 +268,29 @@ async function saveAndBroadcast(
 	for (const memberId of await getGroupMembers(workspace.groupId)) {
 		broadcastToSession(memberId, "workspace_update", data);
 	}
+	// A matched group's fields are readable on every page as group.ws
+	if (
+		workspace.settings.mode === "structured" &&
+		!workspace.groupId.includes(":")
+	) {
+		scheduleGroupPush(workspace.groupId);
+	}
+}
+
+/** A group workspace's fields, from memory if it is open, else as saved. */
+export async function readGroupWorkspaceFields(
+	groupId: string,
+	pageId: string,
+): Promise<Record<string, unknown>> {
+	const id = workspaceId(groupId, pageId);
+	const open = workspaces.get(id);
+	if (open) return getFields(open.doc).toJSON();
+	const documents = await getWorkspaceDocumentsCollection();
+	const stored = await documents.findOne(
+		{ groupId: id },
+		{ projection: { fields: 1 } },
+	);
+	return stored?.fields ?? {};
 }
 
 /** Apply a change and wait until it is saved and broadcast. */

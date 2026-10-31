@@ -4,6 +4,7 @@
  */
 
 import { getGroupsCollection, getSessionsCollection } from "./db";
+import { scheduleGroupPush } from "./group-view";
 import { broadcastToSession, getConnectionCount } from "./sse";
 import { assignTreatment } from "./treatment-assignment";
 
@@ -267,6 +268,9 @@ async function formGroup(
 	} catch (error) {
 		console.error("[Matchmaking] Failed to persist group:", error);
 	}
+
+	// Values entered before the match are shared now
+	scheduleGroupPush(groupId);
 
 	// Broadcast match_found to all matched sessions
 	for (const entry of matchedEntries) {

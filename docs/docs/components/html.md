@@ -94,6 +94,24 @@ pairit.onState(function (state) {
 });
 ```
 
+### Read the group
+
+Add `group` to `read` to get what the participant may see about their matched group (see [Share answers with the group](matchmaking.md#share-answers-with-the-group)). It updates live, so use `pairit.onState`:
+
+```yaml
+props:
+  src: discussion.html
+  read: [r1_estimate, group]
+```
+
+```js
+pairit.onState(function (state) {
+  var partner = state.group && state.group.others[0];
+  mine.textContent = state.r1_estimate;
+  theirs.textContent = partner ? partner.r1_estimate : "…";
+});
+```
+
 ### Write answers
 
 List outgoing keys in `write`. Save them with `pairit.setState`. Later pages can use `{{session_state.rating}}`.
