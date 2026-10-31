@@ -4,6 +4,7 @@
  */
 
 import { Elysia, sse, t } from "elysia";
+import { sendGroupView } from "../lib/group-view";
 import { handleDisconnect } from "../lib/matchmaking-pool";
 import {
 	AsyncEventQueue,
@@ -62,6 +63,10 @@ export const streamRoutes = new Elysia({ prefix: "/sessions" })
 			try {
 				// Send initial connected event
 				yield sse({ event: "connected", data: { sessionId: id } });
+				// A reconnect also catches up on group changes it missed
+				sendGroupView(id).catch((error) => {
+					console.error(`[Group] Failed to send view to ${id}:`, error);
+				});
 
 				// Start heartbeat in background
 				let heartbeatActive = true;

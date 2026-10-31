@@ -1,4 +1,5 @@
 import { defineRuntimeComponent } from "@app/runtime/define-runtime-component";
+import { getScopePath, SCOPE_PATH, type Scope } from "@app/runtime/expression";
 import type { TextComponent } from "@app/runtime/types";
 import { type ComponentProps, isValidElement, type ReactNode } from "react";
 import Markdown from "react-markdown";
@@ -47,28 +48,18 @@ function MarkdownPre({ children }: { children?: ReactNode }) {
 	);
 }
 
-function getNestedValue(
-	obj: Record<string, unknown> | undefined,
-	path: string,
-): unknown {
-	if (!obj) return undefined;
-	return path.split(".").reduce<unknown>((current, key) => {
-		if (current == null || typeof current !== "object") return undefined;
-		return (current as Record<string, unknown>)[key];
-	}, obj);
-}
-
 /**
- * Interpolate template variables like {{session_state.xxx}} with actual values
+ * Interpolate template variables like {{session_state.xxx}} or
+ * {{group.ws.xxx}} with actual values
  */
-function interpolate(
-	text: string,
-	sessionState: Record<string, unknown> | undefined,
-): string {
-	return text.replace(/\{\{session_state\.([A-Za-z0-9_.]+)\}\}/g, (_, path) => {
-		const value = getNestedValue(sessionState, path);
-		return value !== undefined ? String(value) : `{{session_state.${path}}}`;
-	});
+function interpolate(text: string, scope: Scope): string {
+	return text.replace(
+		new RegExp(`\\{\\{(${SCOPE_PATH})\\}\\}`, "g"),
+		(raw, path) => {
+			const value = getScopePath(scope, path);
+			return value !== undefined ? String(value) : raw;
+		},
+	);
 }
 
 export const TextRuntime = defineRuntimeComponent<
@@ -82,7 +73,10 @@ export const TextRuntime = defineRuntimeComponent<
 			return null;
 		}
 
-		const interpolatedText = interpolate(text, context.sessionState);
+		const interpolatedText = interpolate(text, {
+			session_state: context.sessionState ?? {},
+			group: context.group,
+		});
 
 		return (
 			<div className="prose prose-slate max-w-none">

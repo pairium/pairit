@@ -91,6 +91,41 @@ matchmaking:
     timeoutSeconds: 120
 ```
 
+## Share answers with the group
+
+Each participant's `session_state` is private. To let group members see some of each other's answers, list those keys in the pool's `share`:
+
+```yaml
+matchmaking:
+  - id: pairs
+    num_users: 2
+    share: [r1_estimate]
+```
+
+After the match, every page can read `group`:
+
+| Path | What it is |
+|------|------------|
+| `group.others.0.r1_estimate` | The first other member's `r1_estimate`. Members are numbered in the order they joined, starting at 0, and you are left out. In a pair, `group.others.0` is your partner. |
+| `group.ws.<field>` | A field of a structured `scope: group` [workspace](workspace.md#read-the-workspace-on-other-pages), from any page. |
+
+Only keys in `share` are visible. Answers given before the match are shared once the group forms, and later changes show up live.
+
+```yaml
+pages:
+  - id: discuss
+    components:
+      - type: text
+        props:
+          text: "You said {{session_state.r1_estimate}}. Your partner said {{group.others.0.r1_estimate}}."
+      - type: text
+        when: "group.others.0.r1_estimate > 50"
+        props:
+          text: "Your partner guessed higher than 50."
+```
+
+`group` works in text templates, `when:` conditions, button branches, [HTML embeds](html.md#read-the-group) (`read: [group]`) and [agent prompts](agents.md#template-interpolation). `pairit config lint` checks that each `group.others` key is in a `share` list and each `group.ws` field exists. Nothing is copied: the data export has each member's own `session_state` and the workspace, as before.
+
 Notes
 - Matching policy: FIFO by arrival; groups of `num_users`.
 - On match: write `session_state.chat_group_id` and emit `match`.

@@ -15,6 +15,7 @@ import {
 	getEventsCollection,
 	getSessionsCollection,
 } from "./db";
+import { getGroupView, sessionStateChanged } from "./group-view";
 import { getGroupMembers } from "./groups";
 import type { AgentConfig, ChatMessage, ReplyCondition, Trigger } from "./llm";
 import { streamAgentResponse } from "./llm";
@@ -306,11 +307,16 @@ async function runAgent(
 
 		const credentials = await getLlmCredentialsForConfig(configId);
 
-		// Resolve conditional prompts and interpolate session_state
+		// Resolve conditional prompts and interpolate session_state and group
+		const usesGroup = [
+			agent.system,
+			...(agent.prompts ?? []).flatMap((p) => [p.when ?? "", p.system]),
+		].some((text) => text.includes("group."));
 		const resolvedSystem = resolveSystemPrompt(
 			agent.system,
 			agent.prompts,
 			options.sessionState,
+			usesGroup ? await getGroupView(sessionId) : undefined,
 		);
 
 		// Build system prompt: guardrail prefix + experimenter prompt + workspace
@@ -585,6 +591,12 @@ async function handleToolCall(
 				});
 			}
 			broadcastToSession(memberId, "chat_ended", { groupId });
+			await sessionStateChanged(
+				memberId,
+				Object.keys(stateUpdates).map((key) =>
+					key.slice("session_state.".length),
+				),
+			);
 		}
 	}
 
@@ -643,6 +655,7 @@ async function handleToolCall(
 			);
 
 			broadcastToSession(memberId, "state_updated", { path, value });
+			await sessionStateChanged(memberId, [path]);
 		}
 	}
 }

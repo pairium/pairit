@@ -1,0 +1,96 @@
+schema_version: 0.1.0
+name: Group share demo
+allowRetake: true
+requireAuth: false
+initialPageId: estimate
+
+# Each partner estimates alone, sees the other's estimate, agrees on a
+# team answer, and sees it again on the last page.
+pages:
+  - id: estimate
+    components:
+      - type: text
+        props:
+          text: "How many jelly beans are in the jar?"
+      - type: survey
+        props:
+          items:
+            - id: r1_estimate
+              text: "Your estimate"
+              answer: numeric
+      - type: buttons
+        props:
+          buttons:
+            - id: next
+              text: "Find a partner"
+              action:
+                type: go_to
+                target: matching
+
+  - id: matching
+    components:
+      - type: matchmaking
+        props:
+          poolId: pairs
+          onMatchTarget: decide
+
+  - id: matching_timeout
+    end: true
+    components:
+      - type: text
+        props:
+          text: "We couldn't find a partner. Thank you for trying!"
+
+  - id: decide
+    components:
+      - type: text
+        props:
+          text: "You said **{{session_state.r1_estimate}}**. Your partner said **{{group.others.0.r1_estimate}}**."
+      - type: text
+        when: "group.others.0.r1_estimate > 500"
+        props:
+          text: "Your partner thinks it's more than 500."
+      - type: live-workspace
+        props:
+          mode: structured
+          scope: group
+          fields:
+            - id: r1_team_answer
+              label: "Team answer"
+              type: number
+      - type: buttons
+        props:
+          buttons:
+            - id: done
+              text: "We agree"
+              action:
+                type: go_to
+                target: result
+
+  - id: result
+    components:
+      - type: text
+        props:
+          text: "Your team answered **{{group.ws.r1_team_answer}}**."
+      - type: buttons
+        props:
+          buttons:
+            - id: finish
+              text: "Finish"
+              action:
+                type: go_to
+                target: thanks
+
+  - id: thanks
+    end: true
+    components:
+      - type: text
+        props:
+          text: "Thank you for participating!"
+
+matchmaking:
+  - id: pairs
+    num_users: 2
+    timeoutSeconds: 300
+    timeoutTarget: matching_timeout
+    share: [r1_estimate]

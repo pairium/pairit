@@ -21,6 +21,11 @@ Merged, but not released yet.
 - An agent no longer reads the chat's error notice as something the participant wrote.
 - The manager answers an unknown address with 404 and a request it can't read with 422, instead of 500 for every error. CLI errors now say which it was.
 - Likert scales can label their two ends with `min_label` and `max_label` (e.g. "Not at all" … "Extremely") instead of "Strongly disagree" … "Strongly agree". The survey docs now also show how to relabel every point with `choices`.
+- Group members can see each other's answers. List keys in a matchmaking pool's `share` (e.g. `share: [r1_estimate]`), then read them on any page as `{{group.others.0.r1_estimate}}`, in `when:` conditions, in HTML embeds (`read: [group]`) and in agent prompts. A structured group workspace's fields can be read on any page as `group.ws.<field>`. See [Share answers with the group](components/matchmaking.md#share-answers-with-the-group).
+
+### CLI
+
+- `pairit config lint` checks matchmaking `share` lists and `group.` paths: each `group.others` key must be shared by a pool, and each `group.ws` field must exist in a structured group workspace.
 
 ## CLI 0.3.5
 

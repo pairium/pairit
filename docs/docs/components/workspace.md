@@ -188,6 +188,31 @@ pages:
           initialContent: "# Shared Document\n\nCollaborate here..."
 ```
 
+### Read the workspace on other pages
+
+The fields of a structured `scope: group` workspace can be read on any page as `group.ws.<field id>`, for example to show the team's answer later or to branch on it:
+
+```yaml
+  - id: decide
+    components:
+      - type: live-workspace
+        props:
+          mode: structured
+          scope: group
+          fields:
+            - id: r1_team_answer
+              label: Team answer
+              type: number
+
+  - id: result
+    components:
+      - type: text
+        props:
+          text: "Your team answered {{group.ws.r1_team_answer}}."
+```
+
+Field ids must be unique across a config's group workspaces. Freeform workspaces aren't included. See [Share answers with the group](matchmaking.md#share-answers-with-the-group).
+
 ### Agent-only Workspace
 
 ```yaml

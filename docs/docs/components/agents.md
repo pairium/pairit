@@ -167,6 +167,8 @@ agents:
 
 If a referenced key is missing from `session_state`, the placeholder is left as-is (e.g., `{{session_state.missing_key}}`).
 
+Prompts can also read `{{group.ws.<field>}}` and `{{group.others.0.<key>}}`, from the point of view of the participant whose message the agent is answering. See [Share answers with the group](matchmaking.md#share-answers-with-the-group).
+
 ### Conditional Blocks
 
 Use the `prompts` array to select entirely different system prompts based on `session_state`. Each entry has an optional `when` condition and a `system` prompt. The first matching `when` wins; an entry without `when` serves as the default fallback.
