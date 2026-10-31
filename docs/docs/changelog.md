@@ -15,7 +15,9 @@ Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/re
 
 Merged, but not released yet.
 
-### Platform
+## Platform 2026.10.31
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/platform-v2026.10.31)
 
 - Agents with `trigger: on_join` send their opening message again. Since Platform 2026.10.27 it failed, and participants saw "Sorry, I encountered an error" instead.
 - An agent no longer reads the chat's error notice as something the participant wrote.
