@@ -15,6 +15,10 @@ Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/re
 
 Merged, but not released yet.
 
+### Platform
+
+- When an agent hits an error (for example, the OpenAI key runs out of quota), the chat no longer shows the agent typing forever. Participants see the error notice and can keep chatting.
+
 ## Platform 2026.10.31
 
 [Release notes](https://github.com/pairium/pairit/releases/tag/platform-v2026.10.31)

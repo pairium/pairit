@@ -285,6 +285,20 @@ async function runAgent(
 		abortController.abort();
 	}, AGENT_TIMEOUT_MS);
 
+	const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+	const senderId = `agent:${agent.id}`;
+	let memberIds: string[] = [];
+	// Clears the typing indicator when no agent message replaces it
+	const endStream = () => {
+		for (const memberId of memberIds) {
+			broadcastToSession(memberId, "chat_stream_end", {
+				streamId,
+				groupId,
+				senderId,
+			});
+		}
+	};
+
 	try {
 		const history = await loadChatHistory(groupId);
 
@@ -359,9 +373,7 @@ async function runAgent(
 		}
 
 		// Get members early so we can stream deltas to them
-		const memberIds = await getGroupMembers(groupId);
-		const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-		const senderId = `agent:${agent.id}`;
+		memberIds = await getGroupMembers(groupId);
 
 		// Show typing indicator immediately
 		for (const memberId of memberIds) {
@@ -439,16 +451,9 @@ async function runAgent(
 		}
 
 		// Clear streaming indicator if agent produced no text (tool-only response)
-		if (!fullText.trim()) {
-			for (const memberId of memberIds) {
-				broadcastToSession(memberId, "chat_stream_end", {
-					streamId,
-					groupId,
-					senderId,
-				});
-			}
-		}
+		if (!fullText.trim()) endStream();
 	} catch (error) {
+		endStream();
 		if ((error as Error).name === "AbortError") {
 			console.log(`[Agent] Run aborted for group ${groupId}`);
 		} else {
