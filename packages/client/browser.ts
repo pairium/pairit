@@ -1,5 +1,6 @@
 import {
 	AuthRequiredError,
+	ChatLimitError,
 	LabClient,
 	NotAMemberError,
 	SessionBlockedError,
@@ -23,6 +24,7 @@ export const sseClient = new SSEClient({
 
 export {
 	AuthRequiredError,
+	ChatLimitError,
 	NotAMemberError,
 	SessionBlockedError,
 	WorkspaceRefusedError,

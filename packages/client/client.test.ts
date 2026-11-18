@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import {
 	AuthRequiredError,
+	ChatLimitError,
 	LabClient,
 	NotAMemberError,
 	SessionBlockedError,
@@ -91,6 +92,23 @@ describe("LabClient", () => {
 		await expect(
 			client.sendChatMessage("g1", "s1", "hi"),
 		).rejects.toBeInstanceOf(NotAMemberError);
+	});
+
+	test("sendChatMessage throws ChatLimitError with the reason on 429", async () => {
+		const client = new LabClient({ baseUrl: "http://lab.test" });
+		for (const [error, reason] of [
+			["rate_limited_per_minute", "per_minute"],
+			["rate_limited_per_session", "per_session"],
+		]) {
+			globalThis.fetch = mock(async () =>
+				jsonResponse({ error }, 429),
+			) as unknown as typeof fetch;
+			const thrown = await client
+				.sendChatMessage("g1", "s1", "hi")
+				.catch((e) => e);
+			expect(thrown).toBeInstanceOf(ChatLimitError);
+			expect((thrown as ChatLimitError).reason).toBe(reason);
+		}
 	});
 
 	test("retries a start once when a parallel start races the cookie", async () => {

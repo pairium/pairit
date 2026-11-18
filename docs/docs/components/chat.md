@@ -21,7 +21,9 @@ Each participant can send at most:
 
 These limits are fixed and can't be changed in a config. There is no limit on the total length of a chat. The message limits count only messages participants send. Agent replies, system notices and other participants' messages don't count. The 300 total protects your OpenAI key, since each participant message can start agent replies.
 
-A message over any of these limits is not sent. The chat currently shows no notice when this happens, so if your study needs long chats (for example, an open-ended conversation with an agent for an hour), email [harang@pairium.ai](mailto:harang@pairium.ai) before you launch. A typical 20–30 minute chat study stays well under these limits.
+A message over the per-minute or total limit is not sent. The participant sees a notice above the message box saying why, and their text stays in the box so they can send it later. The message box stops accepting text at 4,000 characters.
+
+A typical 20–30 minute chat study stays well under these limits. If your study needs longer chats (for example, an open-ended conversation with an agent for an hour), email [harang@pairium.ai](mailto:harang@pairium.ai) before you launch.
 
 ## Group Resolution
 
