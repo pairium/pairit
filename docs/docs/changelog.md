@@ -15,6 +15,10 @@ Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/re
 
 Merged, but not released yet.
 
+### Platform
+
+- `pairit media delete` works again for files with a folder in their name, such as `onboarding/hero.png`. Since Platform 2026.11.18.2 it answered "not found".
+
 ## Platform 2026.11.18.2
 
 [Release notes](https://github.com/pairium/pairit/releases/tag/platform-v2026.11.18.2)
