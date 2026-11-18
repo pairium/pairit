@@ -12,6 +12,15 @@ import { mongodbAdapter } from "better-auth/adapters/mongodb";
 const IS_DEV = process.env.NODE_ENV === "development";
 const DEV_AUTH_SECRET = "development-secret-do-not-use-in-production-32chars";
 
+/**
+ * Secrets committed to this repo (env.template and the dev default). They are
+ * long enough to pass the length check, so production must refuse them.
+ */
+export const PUBLIC_AUTH_SECRETS: ReadonlySet<string> = new Set([
+	DEV_AUTH_SECRET,
+	"local-development-secret-must-be-32-chars-long",
+]);
+
 function getAuthSecret(): string {
 	const secret = process.env.AUTH_SECRET;
 	if (!secret) {
@@ -33,6 +42,14 @@ function getAuthSecret(): string {
 			return secret.padEnd(32, "0");
 		}
 		throw new Error("AUTH_SECRET must be at least 32 characters in production");
+	}
+	if (
+		process.env.NODE_ENV === "production" &&
+		PUBLIC_AUTH_SECRETS.has(secret.trim())
+	) {
+		throw new Error(
+			"AUTH_SECRET is the public example value from env.template. Generate one with: openssl rand -hex 32",
+		);
 	}
 	return secret;
 }

@@ -112,7 +112,7 @@ After a CLI publish:
 For a production deploy:
 
 1. In a PR, move the Unreleased Platform bullets into a new `## Platform YYYY.MM.DD` section with a link to the release. Merge it, so the docs that `deploy.yml` publishes with production include it.
-2. Deploy production (`gh workflow run deploy.yml -f target=production`).
+2. Check `pairit admin activity`, then deploy production (`gh workflow run deploy.yml -f target=production -f force=true`).
 3. Tag the deployed commit and create the release:
    ```bash
    gh release create platform-vYYYY.MM.DD --target <deployed sha> --title "Pairit Platform YYYY.MM.DD" --notes-file notes.md
@@ -161,11 +161,12 @@ Two cloud environments. Local dev still uses `.env`. The deploy script never sou
 - CI (`.github/workflows/ci.yml`) runs Biome, type check, tests, and build on every PR.
 - `deploy.yml` deploys staging on every push to `main`, and production only when started by hand. A production deploy also publishes the docs. Then cut a Platform release (see "Release notes"):
   ```bash
-  gh workflow run deploy.yml -f target=production                # latest main (what staging runs)
-  gh workflow run deploy.yml -f target=production -f ref=<sha>   # a specific commit, e.g. rollback
+  gh workflow run deploy.yml -f target=production -f force=true                # latest main (what staging runs)
+  gh workflow run deploy.yml -f target=production -f force=true -f ref=<sha>   # a commit or tag on main, e.g. rollback
   ```
-  Don't deploy production while a multi-participant study is live. Check with `pairit admin activity` (admin only; live group studies come first). `scripts/deploy.sh production` runs this check and stops if one is live (`FORCE_DEPLOY=1` overrides). The workflow can't check yet: it warns unless you pass `-f force=true` after checking yourself.
-- GitHub deploys need one-time setup ("Deploying from GitHub Actions" in `docs/docs/dev/deployment.md`). Until `gh variable list` shows `STAGING_AUTO_DEPLOY=true`, nothing deploys from GitHub; use `scripts/deploy.sh`.
+  Don't deploy production while a multi-participant study is live. Check with `pairit admin activity` (admin only; live group studies come first). `scripts/deploy.sh production` runs this check and stops if one is live (`FORCE_DEPLOY=1` overrides). The workflow can't check yet: a production run stops unless you pass `-f force=true` after checking yourself.
+- GitHub deploys need one-time setup ("Deploying from GitHub Actions" in `docs/docs/dev/deployment.md`, or `bash scripts/setup-wif.sh <staging|production>` for an existing project). Until `gh variable list` shows `STAGING_AUTO_DEPLOY=true`, nothing deploys from GitHub; use `scripts/deploy.sh`.
+- Deploys keep secrets in Secret Manager and run each service as its own account (`pairit-lab`, `pairit-manager`). Whoever runs `scripts/deploy.sh` needs `roles/secretmanager.admin`.
 - The published `pairit` CLI talks to production. Add `--env staging` to use staging (e.g. `pairit --env staging login`). Each environment keeps its own saved login.
 
 ## Conventions

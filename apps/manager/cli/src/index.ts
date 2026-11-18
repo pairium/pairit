@@ -5,7 +5,7 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { Command, InvalidArgumentError } from "commander";
+import { Command, InvalidArgumentError, Option } from "commander";
 import YAML from "yaml";
 import {
 	type ActivityReport,
@@ -316,19 +316,27 @@ mediaCommand
 	)
 	.option("--content-type <contentType>", "Content type to set on the object")
 	.option("--metadata <json>", "Optional metadata JSON string")
-	.option("--private", "Keep the uploaded object private (defaults to public)")
-	.description("Upload a media asset via Pairit Functions")
+	// Removed: the bucket is public-read, so "private" objects were not private.
+	.addOption(new Option("--private").hideHelp())
+	.description(
+		"Upload a media asset. Anyone with its URL can read it; it is stored under your own folder.",
+	)
 	.action(async (filePath: string, options: MediaUploadOptions) => {
 		try {
-			const isPublic = !options.private;
+			if (options.private) {
+				throw new Error(
+					"--private is no longer supported. Anyone with a media object's URL can read it, so do not upload sensitive files.",
+				);
+			}
 			const { object, checksum, response } = await uploadMedia(filePath, {
 				bucket: options.bucket,
 				object: options.object,
 				metadata: options.metadata,
 				contentType: options.contentType,
-				public: isPublic,
 			});
-			console.log(`✓ Uploaded media ${object} (${checksum})`);
+			const stored =
+				(response as { object?: string } | undefined)?.object ?? object;
+			console.log(`✓ Uploaded media ${stored} (${checksum})`);
 			if (typeof response !== "undefined") {
 				console.log(JSON.stringify(response, null, 2));
 			}
@@ -371,7 +379,10 @@ mediaCommand
 
 mediaCommand
 	.command("delete")
-	.argument("<object>", "Object path to delete")
+	.argument(
+		"<object>",
+		"Object to delete: a name in your folder, or the full name from media list",
+	)
 	.option("--force", "Skip confirmation")
 	.description("Delete a media object via Pairit Functions")
 	.action(async (object: string, options: MediaDeleteOptions) => {
@@ -601,7 +612,6 @@ type MediaUploadOptions = {
 	object?: string;
 	metadata?: string;
 	contentType?: string;
-	public?: boolean;
 	private?: boolean;
 };
 
@@ -848,7 +858,6 @@ type MediaUploadPayload = {
 	data: string;
 	contentType?: string | null;
 	metadata?: Record<string, unknown> | null;
-	public?: boolean;
 };
 
 type SignedUploadResponse = {
@@ -871,8 +880,6 @@ async function uploadMedia(
 	const checksum = hashBuffer.toString("hex");
 	const defaultObject = `${toBase64Url(hashBuffer.subarray(0, 12))}${path.extname(resolved)}`;
 	const object = options.object ?? defaultObject;
-	const shouldBePublic =
-		typeof options.public === "boolean" ? options.public : true;
 	const maxInlineBytes = getInlineMediaLimit();
 
 	let metadata: Record<string, unknown> | undefined;
@@ -891,7 +898,6 @@ async function uploadMedia(
 			bucket: options.bucket,
 			object,
 			contentType: options.contentType,
-			public: shouldBePublic,
 		});
 		await uploadViaSignedUrl(fileBuffer, signedResponse);
 		return { object, checksum, response: signedResponse };
@@ -904,7 +910,6 @@ async function uploadMedia(
 		data: fileBuffer.toString("base64"),
 		contentType: options.contentType ?? null,
 		metadata: metadata ?? null,
-		public: shouldBePublic,
 	};
 
 	const response = await callFunctions("/media/upload", {
@@ -920,7 +925,6 @@ async function requestSignedUpload(input: {
 	bucket?: string;
 	object: string;
 	contentType?: string;
-	public?: boolean;
 }): Promise<SignedUploadResponse> {
 	const response = await callFunctions("/media/upload-url", {
 		method: "POST",
@@ -928,7 +932,6 @@ async function requestSignedUpload(input: {
 			bucket: input.bucket,
 			object: input.object,
 			contentType: input.contentType ?? null,
-			public: input.public,
 		}),
 		headers: { "Content-Type": "application/json" },
 	});

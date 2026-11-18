@@ -22,6 +22,14 @@ Merged, but not released yet.
 - Fixed security issues that let participants change their group, treatment, or chat sender, or skip pages. The lab now takes randomization and matchmaking settings only from the uploaded config, and no longer sends agent prompts or the end page's redirect URL to the browser before the participant reaches it. Each participant can send up to 20 chat messages a minute and 300 in total.
 - Fixed a security issue that let a participant act as someone else in their group. Participants no longer see each other's session IDs.
 - A participant who reopens a study in a different browser or device is asked to continue in the browser where they started. Reloading the page works as before, and participants signed in with Google can continue anywhere.
+- Media is now separate per researcher. New uploads go in your own folder, and `pairit media list` and `pairit media delete` show and delete only your files. Media you uploaded before keeps its URL, so configs that use it keep working; ask an admin to delete it. Nobody can list the media bucket from outside anymore, but anyone with a file's URL can still read it.
+- Action needed: `pairit media upload --private` is refused. It never made a file private: the file was readable by URL like any other. Do not upload sensitive files as media.
+- Media uploads accept image, audio, video, font, PDF, JSON, plain text, CSV, and WebVTT files. Other files are stored as downloads. Large uploads are limited to 500 MiB.
+
+### CLI
+
+- `pairit media upload --private` now stops with an error, and `--private` is gone from the help. The media bucket is readable by URL, so the flag never kept a file private.
+- `pairit media upload` prints the stored name, which now starts with your folder.
 
 ## Platform 2026.10.31
 

@@ -7,11 +7,32 @@ set -e
 #
 # staging    loads .env.staging    (database name must contain "staging")
 # production loads .env.production (database name must not contain "staging")
-# Local dev keeps using .env. This script never sources .env.
+# Local dev keeps using .env. This script never reads .env.
+#
+# Secrets go to Secret Manager, and each service runs as its own service
+# account (pairit-lab, pairit-manager). The account that runs this script
+# needs roles/secretmanager.admin; see docs/docs/dev/deployment.md.
 
 # Resolve script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# shellcheck source=common.sh
+source "$SCRIPT_DIR/common.sh"
+
+# Temp files are removed however the script exits.
+TMP_FILES=()
+cleanup() {
+    if [ ${#TMP_FILES[@]} -gt 0 ]; then
+        rm -f "${TMP_FILES[@]}"
+    fi
+}
+trap cleanup EXIT
+make_temp() {
+    local file
+    file=$(mktemp)
+    TMP_FILES+=("$file")
+    printf '%s\n' "$file"
+}
 
 echo "📂 Project Root: $PROJECT_ROOT"
 cd "$PROJECT_ROOT"
@@ -45,11 +66,9 @@ if [ ! -f "$ENV_FILE" ]; then
     exit 1
 fi
 
-echo "📜 Sourcing $ENV_FILE..."
-set -a
-# shellcheck disable=SC1090
-source "$ENV_FILE"
-set +a
+# Parsed as KEY=VALUE lines, never run as a shell script.
+echo "📜 Reading $ENV_FILE..."
+load_env_file "$ENV_FILE"
 
 REGION=${REGION_ARG:-${REGION:-us-central1}}
 REPO_NAME="pairit-repo"
@@ -58,19 +77,39 @@ REPO_NAME="pairit-repo"
 MANAGER_SERVICE="manager"
 LAB_SERVICE="lab"
 
-if [ -z "$PROJECT_ID" ]; then
-    echo "❌ PROJECT_ID is not set in $ENV_FILE"
+# Runtime service accounts. Each service gets only the secrets it reads.
+LAB_SA_NAME="pairit-lab"
+MANAGER_SA_NAME="pairit-manager"
+
+for required in PROJECT_ID MONGODB_URI STORAGE_PATH AUTH_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET; do
+    if [ -z "${!required:-}" ]; then
+        echo "❌ $required is not set in $ENV_FILE"
+        if [ "$required" = "STORAGE_PATH" ]; then
+            echo "Each environment needs its own media bucket name."
+        fi
+        exit 1
+    fi
+done
+
+# Values committed to this repo (env.template, the dev default) are public.
+for secret_key in AUTH_SECRET MANAGER_AUTH_SECRET; do
+    case "${!secret_key:-}" in
+        "local-development-secret-must-be-32-chars-long" | "development-secret-do-not-use-in-production-32chars")
+            echo "❌ $secret_key in $ENV_FILE is the public example value. Generate one: openssl rand -hex 32"
+            exit 1
+            ;;
+    esac
+done
+if [ "${#AUTH_SECRET}" -lt 32 ]; then
+    echo "❌ AUTH_SECRET in $ENV_FILE is shorter than 32 characters."
     exit 1
 fi
-
-if [ -z "$MONGODB_URI" ]; then
-    echo "❌ MONGODB_URI is not set in $ENV_FILE"
+if [ -n "${MANAGER_AUTH_SECRET:-}" ] && [ "${#MANAGER_AUTH_SECRET}" -lt 32 ]; then
+    echo "❌ MANAGER_AUTH_SECRET in $ENV_FILE is shorter than 32 characters."
     exit 1
 fi
-
-if [ -z "$STORAGE_PATH" ]; then
-    echo "❌ STORAGE_PATH is not set in $ENV_FILE"
-    echo "Each environment needs its own media bucket name."
+if [ "$(printf '%s' "${CREDENTIALS_ENCRYPTION_KEY:-}" | tr 'A-F' 'a-f')" = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" ]; then
+    echo "❌ CREDENTIALS_ENCRYPTION_KEY in $ENV_FILE is the public example value. Generate one: openssl rand -hex 32"
     exit 1
 fi
 
@@ -122,6 +161,8 @@ if [ -f "$OTHER_FILE" ]; then
     OTHER_PROJECT=$(env_value "$OTHER_FILE" PROJECT_ID)
     OTHER_URI=$(env_value "$OTHER_FILE" MONGODB_URI)
     OTHER_BUCKET=$(env_value "$OTHER_FILE" STORAGE_PATH)
+    OTHER_AUTH_SECRET=$(env_value "$OTHER_FILE" AUTH_SECRET)
+    OTHER_CREDENTIALS_KEY=$(env_value "$OTHER_FILE" CREDENTIALS_ENCRYPTION_KEY)
     if [ -n "$OTHER_PROJECT" ] && [ "$OTHER_PROJECT" = "$PROJECT_ID" ]; then
         echo "❌ $ENV_FILE and $OTHER_FILE use the same PROJECT_ID ($PROJECT_ID)."
         echo "Staging and production must be different Google projects."
@@ -138,6 +179,14 @@ if [ -f "$OTHER_FILE" ]; then
         echo "❌ $ENV_FILE and $OTHER_FILE use the same media bucket ($STORAGE_PATH)."
         echo "Staging and production must use different buckets."
         exit 1
+    fi
+    if [ -n "$OTHER_AUTH_SECRET" ] && [ "$OTHER_AUTH_SECRET" = "$AUTH_SECRET" ]; then
+        echo "❌ $ENV_FILE and $OTHER_FILE use the same AUTH_SECRET."
+        echo "Give staging its own: openssl rand -hex 32 (staging sign-ins end, and staging chat member IDs change unless MEMBER_ID_SECRET is set)."
+        exit 1
+    fi
+    if [ -n "$OTHER_CREDENTIALS_KEY" ] && [ "$OTHER_CREDENTIALS_KEY" = "${CREDENTIALS_ENCRYPTION_KEY:-}" ]; then
+        echo "⚠️  $ENV_FILE and $OTHER_FILE use the same CREDENTIALS_ENCRYPTION_KEY. Changing it makes stored LLM keys unreadable, so re-upload configs' keys after you do."
     fi
 fi
 
@@ -210,10 +259,11 @@ echo "📍 Lab URL: $LAB_PUBLIC_URL (service: $LAB_SERVICE_URL)"
 
 echo "✅ MONGODB_URI is set (database: $DB_NAME)"
 
-# 0. Setup Artifact Registry
+# 0. APIs and Artifact Registry
+echo "🔧 Enabling APIs..."
+gcloud services enable artifactregistry.googleapis.com secretmanager.googleapis.com \
+    iam.googleapis.com iamcredentials.googleapis.com --project "$PROJECT_ID"
 echo "🔧 Checking Artifact Registry..."
-# Enable API
-gcloud services enable artifactregistry.googleapis.com --project "$PROJECT_ID" || true
 # Create repo if not exists
 if ! gcloud artifacts repositories describe "$REPO_NAME" --project "$PROJECT_ID" --location "$REGION" &>/dev/null; then
     echo "📦 Creating Artifact Registry Repository: $REPO_NAME..."
@@ -226,7 +276,143 @@ else
     echo "✅ Repository $REPO_NAME exists."
 fi
 
-# 0b. Setup media bucket (public-read for participant-facing assets)
+# 0a. Runtime service accounts, one per service, with no project roles.
+# scripts/setup-wif.sh creates them too, so GitHub Actions does not need
+# permission to create service accounts.
+ensure_service_account() {
+    local name=$1
+    local display=$2
+    local email="${name}@${PROJECT_ID}.iam.gserviceaccount.com"
+    if ! gcloud iam service-accounts describe "$email" --project "$PROJECT_ID" &>/dev/null; then
+        echo "👤 Creating service account $email..." >&2
+        gcloud iam service-accounts create "$name" \
+            --project "$PROJECT_ID" \
+            --display-name "$display" >/dev/null
+        # A new account can take a few seconds before IAM bindings accept it.
+        local tries=0
+        until gcloud iam service-accounts describe "$email" --project "$PROJECT_ID" &>/dev/null || [ $tries -ge 10 ]; do
+            tries=$((tries + 1))
+            sleep 3
+        done
+        sleep 5
+    fi
+    printf '%s\n' "$email"
+}
+LAB_SA=$(ensure_service_account "$LAB_SA_NAME" "Pairit lab (Cloud Run)")
+MANAGER_SA=$(ensure_service_account "$MANAGER_SA_NAME" "Pairit manager (Cloud Run)")
+echo "✅ Runtime service accounts: $LAB_SA, $MANAGER_SA"
+# The manager signs media upload URLs through the IAM API as itself.
+# scripts/setup-wif.sh grants this once; GitHub Actions cannot, so a failure
+# here is only a warning.
+if ! gcloud iam service-accounts add-iam-policy-binding "$MANAGER_SA" \
+    --project "$PROJECT_ID" \
+    --role roles/iam.serviceAccountTokenCreator \
+    --member "serviceAccount:$MANAGER_SA" >/dev/null 2>&1; then
+    echo "⚠️  Could not let $MANAGER_SA sign upload URLs. If large media uploads fail, run scripts/setup-wif.sh $TARGET as a project owner."
+fi
+
+# 0b. Secrets. Each env-file secret becomes a Secret Manager secret named
+# pairit-<key>. A new version is added only when the value changed. Prints
+# the version number to deploy, so each revision pins the exact value.
+secret_name() {
+    printf 'pairit-%s\n' "$(printf '%s' "$1" | tr 'A-Z_' 'a-z-')"
+}
+upsert_secret() {
+    local name=$1
+    local value=$2
+    local current version
+    if ! gcloud secrets describe "$name" --project "$PROJECT_ID" &>/dev/null; then
+        echo "🔐 Creating secret $name..." >&2
+        gcloud secrets create "$name" \
+            --project "$PROJECT_ID" \
+            --replication-policy automatic >/dev/null
+        current=""
+    else
+        current=$(gcloud secrets versions access latest --secret "$name" --project "$PROJECT_ID" 2>/dev/null || true)
+    fi
+    if [ -z "$current" ] || [ "$current" != "$value" ]; then
+        echo "🔐 Adding a new version of $name..." >&2
+        version=$(printf '%s' "$value" | gcloud secrets versions add "$name" \
+            --project "$PROJECT_ID" \
+            --data-file=- \
+            --format='value(name)')
+    else
+        version=$(gcloud secrets versions describe latest --secret "$name" \
+            --project "$PROJECT_ID" \
+            --format='value(name)')
+    fi
+    printf '%s\n' "${version##*/}"
+}
+grant_secret_access() {
+    local name=$1
+    local sa=$2
+    gcloud secrets add-iam-policy-binding "$name" \
+        --project "$PROJECT_ID" \
+        --member "serviceAccount:$sa" \
+        --role roles/secretmanager.secretAccessor >/dev/null
+}
+
+# add_secret <secret source key> <env var name> <value> <lab|-> <manager|->
+# Stores the value as secret pairit-<source key>, lets the named services'
+# accounts read it, and adds ENV=secret:version to their --set-secrets list.
+LAB_SECRETS=""
+MANAGER_SECRETS=""
+add_secret() {
+    local source_key=$1
+    local env_key=$2
+    local value=$3
+    local for_lab=$4
+    local for_manager=$5
+    local name version
+    name=$(secret_name "$source_key")
+    version=$(upsert_secret "$name" "$value")
+    if [ -z "$version" ]; then
+        echo "❌ Could not store secret $name in $PROJECT_ID."
+        echo "   The deploying account needs roles/secretmanager.admin. See 'Deploying from GitHub Actions' in docs/docs/dev/deployment.md (scripts/setup-wif.sh $TARGET)."
+        exit 1
+    fi
+    if [ "$for_lab" = "lab" ]; then
+        grant_secret_access "$name" "$LAB_SA"
+        LAB_SECRETS="${LAB_SECRETS:+$LAB_SECRETS,}$env_key=$name:$version"
+    fi
+    if [ "$for_manager" = "manager" ]; then
+        grant_secret_access "$name" "$MANAGER_SA"
+        MANAGER_SECRETS="${MANAGER_SECRETS:+$MANAGER_SECRETS,}$env_key=$name:$version"
+    fi
+    echo "✅ $env_key → $name (version $version)"
+}
+
+echo "🔐 Storing secrets in Secret Manager..."
+add_secret MONGODB_URI MONGODB_URI "$MONGODB_URI" lab manager
+add_secret GOOGLE_CLIENT_SECRET GOOGLE_CLIENT_SECRET "$GOOGLE_CLIENT_SECRET" lab manager
+if [ -n "${CREDENTIALS_ENCRYPTION_KEY:-}" ]; then
+    # The manager encrypts per-config LLM keys and the lab decrypts them.
+    add_secret CREDENTIALS_ENCRYPTION_KEY CREDENTIALS_ENCRYPTION_KEY "$CREDENTIALS_ENCRYPTION_KEY" lab manager
+fi
+for optional in OPENAI_API_KEY ANTHROPIC_API_KEY MEMBER_ID_SECRET SIMULATION_KEY; do
+    if [ -n "${!optional:-}" ]; then
+        add_secret "$optional" "$optional" "${!optional}" lab -
+    fi
+done
+# Each server signs its own sign-in cookies, on its own host, so the lab and
+# manager need not share AUTH_SECRET. Set MANAGER_AUTH_SECRET to give the
+# manager its own (manager and CLI users sign in again once). Without it the
+# manager keeps using AUTH_SECRET.
+if [ -n "${MANAGER_AUTH_SECRET:-}" ] && [ "$MANAGER_AUTH_SECRET" != "$AUTH_SECRET" ]; then
+    add_secret AUTH_SECRET AUTH_SECRET "$AUTH_SECRET" lab -
+    add_secret MANAGER_AUTH_SECRET AUTH_SECRET "$MANAGER_AUTH_SECRET" - manager
+    # An earlier deploy may have let the manager read the lab's secret.
+    gcloud secrets remove-iam-policy-binding "$(secret_name AUTH_SECRET)" \
+        --project "$PROJECT_ID" \
+        --member "serviceAccount:$MANAGER_SA" \
+        --role roles/secretmanager.secretAccessor >/dev/null 2>&1 || true
+else
+    add_secret AUTH_SECRET AUTH_SECRET "$AUTH_SECRET" lab manager
+    echo "ℹ️  The manager shares AUTH_SECRET with the lab. Set MANAGER_AUTH_SECRET in $ENV_FILE to give it its own."
+fi
+
+# 0c. Media bucket. Objects are public to read by URL, but nobody outside can
+# list the bucket.
 MEDIA_BUCKET="$STORAGE_PATH"
 echo "🔧 Checking media bucket gs://$MEDIA_BUCKET..."
 if ! gcloud storage buckets describe "gs://$MEDIA_BUCKET" --project "$PROJECT_ID" &>/dev/null; then
@@ -238,58 +424,54 @@ if ! gcloud storage buckets describe "gs://$MEDIA_BUCKET" --project "$PROJECT_ID
 else
     echo "✅ Bucket gs://$MEDIA_BUCKET exists."
 fi
-# Grant public read so the stable public URL returned by the manager works.
-# Idempotent: re-applying the binding is a no-op.
+# legacyObjectReader grants storage.objects.get only, so the stable public URL
+# the manager returns works while listing the bucket does not. Add it before
+# removing objectViewer so public URLs never stop working.
 gcloud storage buckets add-iam-policy-binding "gs://$MEDIA_BUCKET" \
     --project="$PROJECT_ID" \
     --member=allUsers \
-    --role=roles/storage.objectViewer >/dev/null
-echo "✅ Bucket gs://$MEDIA_BUCKET is publicly readable."
-# Both services run as the default compute service account, and the manager
-# writes media uploads, so it needs write access to the bucket.
-RUNTIME_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+    --role=roles/storage.legacyObjectReader >/dev/null
+# Fails when the binding is already gone; that is the state we want.
+gcloud storage buckets remove-iam-policy-binding "gs://$MEDIA_BUCKET" \
+    --project="$PROJECT_ID" \
+    --member=allUsers \
+    --role=roles/storage.objectViewer >/dev/null 2>&1 || true
+echo "✅ gs://$MEDIA_BUCKET objects are public to read; the bucket is not public to list."
+# Only the manager writes media.
 gcloud storage buckets add-iam-policy-binding "gs://$MEDIA_BUCKET" \
     --project="$PROJECT_ID" \
-    --member="serviceAccount:$RUNTIME_SA" \
+    --member="serviceAccount:$MANAGER_SA" \
     --role=roles/storage.objectAdmin >/dev/null
-echo "✅ $RUNTIME_SA can write to gs://$MEDIA_BUCKET."
+echo "✅ $MANAGER_SA can write to gs://$MEDIA_BUCKET."
 
 # Define Image Paths
 LAB_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/pairit-lab"
 MANAGER_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/pairit-manager"
 
-# Prepare env vars with ++ delimiter to avoid comma conflicts in MONGODB_URI
+# Plain (non-secret) env vars, with ++ as the delimiter so commas in values
+# (AUTH_TRUSTED_ORIGINS) are kept. Secrets go in --set-secrets.
 MANAGER_ENV="NODE_ENV=production"
-MANAGER_ENV="$MANAGER_ENV++MONGODB_URI=$MONGODB_URI"
 MANAGER_ENV="$MANAGER_ENV++STORAGE_BACKEND=gcs"
 MANAGER_ENV="$MANAGER_ENV++STORAGE_PATH=$STORAGE_PATH"
 MANAGER_ENV="$MANAGER_ENV++GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"
-MANAGER_ENV="$MANAGER_ENV++GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET"
-MANAGER_ENV="$MANAGER_ENV++AUTH_SECRET=$AUTH_SECRET"
 MANAGER_ENV="$MANAGER_ENV++AUTH_BASE_URL=${MANAGER_PUBLIC_URL}"
 MANAGER_ENV="$MANAGER_ENV++AUTH_TRUSTED_ORIGINS=${MANAGER_PUBLIC_URL},${MANAGER_SERVICE_URL}"
 MANAGER_ENV="$MANAGER_ENV++PAIRIT_LAB_URL=${LAB_PUBLIC_URL}"
-MANAGER_ENV="$MANAGER_ENV++CREDENTIALS_ENCRYPTION_KEY=$CREDENTIALS_ENCRYPTION_KEY"
 MANAGER_ENV="$MANAGER_ENV++MANAGER_BOOTSTRAP_ADMIN_EMAIL=${MANAGER_BOOTSTRAP_ADMIN_EMAIL:-harang@pairium.ai}"
 MANAGER_ENV="$MANAGER_ENV++MANAGER_ADMIN_CONTACT_EMAIL=${MANAGER_ADMIN_CONTACT_EMAIL:-harang@pairium.ai}"
 MANAGER_ENV="$MANAGER_ENV++GIT_SHA=$GIT_SHA"
 
 LAB_ENV="NODE_ENV=production"
-LAB_ENV="$LAB_ENV++MONGODB_URI=$MONGODB_URI"
 LAB_ENV="$LAB_ENV++STORAGE_BACKEND=gcs"
 LAB_ENV="$LAB_ENV++STORAGE_PATH=$STORAGE_PATH"
 LAB_ENV="$LAB_ENV++GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"
-LAB_ENV="$LAB_ENV++GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET"
-LAB_ENV="$LAB_ENV++AUTH_SECRET=$AUTH_SECRET"
 LAB_ENV="$LAB_ENV++AUTH_BASE_URL=${LAB_PUBLIC_URL}"
 LAB_ENV="$LAB_ENV++AUTH_TRUSTED_ORIGINS=${LAB_PUBLIC_URL},${LAB_SERVICE_URL}"
-LAB_ENV="$LAB_ENV++OPENAI_API_KEY=${OPENAI_API_KEY}"
-LAB_ENV="$LAB_ENV++CREDENTIALS_ENCRYPTION_KEY=$CREDENTIALS_ENCRYPTION_KEY"
 LAB_ENV="$LAB_ENV++GIT_SHA=$GIT_SHA"
 
-# Create temp files for Cloud Build configs
-CLOUDBUILD_MANAGER=$(mktemp)
-CLOUDBUILD_LAB=$(mktemp)
+# Cloud Build configs
+CLOUDBUILD_MANAGER=$(make_temp)
+CLOUDBUILD_LAB=$(make_temp)
 
 cat > "$CLOUDBUILD_MANAGER" <<EOF
 steps:
@@ -312,9 +494,8 @@ echo "🔨 Building images in parallel..."
 echo "   Manager: $MANAGER_IMAGE"
 echo "   Lab: $LAB_IMAGE (with VITE_MANAGER_URL=$MANAGER_PUBLIC_URL)"
 
-# Create log files for build output
-MANAGER_BUILD_LOG=$(mktemp)
-LAB_BUILD_LOG=$(mktemp)
+MANAGER_BUILD_LOG=$(make_temp)
+LAB_BUILD_LOG=$(make_temp)
 
 # Start Manager build in background
 (
@@ -343,48 +524,48 @@ LAB_BUILD_FAILED=0
 wait $MANAGER_BUILD_PID || MANAGER_BUILD_FAILED=1
 wait $LAB_BUILD_PID || LAB_BUILD_FAILED=1
 
-# Check for build failures
 if [ $MANAGER_BUILD_FAILED -eq 1 ]; then
     echo "❌ Manager Build Failed!"
     cat "$MANAGER_BUILD_LOG"
-    rm -f "$CLOUDBUILD_MANAGER" "$CLOUDBUILD_LAB" "$MANAGER_BUILD_LOG" "$LAB_BUILD_LOG"
     exit 1
 fi
 
 if [ $LAB_BUILD_FAILED -eq 1 ]; then
     echo "❌ Lab Build Failed!"
     cat "$LAB_BUILD_LOG"
-    rm -f "$CLOUDBUILD_MANAGER" "$CLOUDBUILD_LAB" "$MANAGER_BUILD_LOG" "$LAB_BUILD_LOG"
     exit 1
 fi
 
 echo "✅ Both images built successfully"
-rm -f "$CLOUDBUILD_MANAGER" "$CLOUDBUILD_LAB" "$MANAGER_BUILD_LOG" "$LAB_BUILD_LOG"
 
 # 2. Deploy both services in parallel
 echo "📦 Deploying services in parallel..."
 
-# Create log files for deployment output
-MANAGER_DEPLOY_LOG=$(mktemp)
-LAB_DEPLOY_LOG=$(mktemp)
+MANAGER_DEPLOY_LOG=$(make_temp)
+LAB_DEPLOY_LOG=$(make_temp)
 
-# Start Manager deployment in background
+# --set-env-vars and --set-secrets each replace the whole set, so a variable
+# that used to be a plain env var becomes a secret in the same revision.
+# Manager runs on one instance: the CLI login codes live in its memory.
 (
     gcloud run deploy "$MANAGER_SERVICE" \
         --image "$MANAGER_IMAGE" \
         --region "$REGION" \
         --project "$PROJECT_ID" \
+        --service-account "$MANAGER_SA" \
+        --max-instances 1 \
         --set-env-vars "^++^$MANAGER_ENV" \
+        --set-secrets "$MANAGER_SECRETS" \
         --allow-unauthenticated > "$MANAGER_DEPLOY_LOG" 2>&1
 ) &
 MANAGER_DEPLOY_PID=$!
 
-# Start Lab deployment in background
 (
     gcloud run deploy "$LAB_SERVICE" \
         --image "$LAB_IMAGE" \
         --region "$REGION" \
         --project "$PROJECT_ID" \
+        --service-account "$LAB_SA" \
         --port 3001 \
         --max-instances 1 \
         --concurrency 1000 \
@@ -392,6 +573,7 @@ MANAGER_DEPLOY_PID=$!
         --cpu 2 \
         --memory 1Gi \
         --set-env-vars "^++^$LAB_ENV" \
+        --set-secrets "$LAB_SECRETS" \
         --allow-unauthenticated > "$LAB_DEPLOY_LOG" 2>&1
 ) &
 LAB_DEPLOY_PID=$!
@@ -403,25 +585,29 @@ LAB_DEPLOY_FAILED=0
 wait $MANAGER_DEPLOY_PID || MANAGER_DEPLOY_FAILED=1
 wait $LAB_DEPLOY_PID || LAB_DEPLOY_FAILED=1
 
-# Check for deployment failures
 if [ $MANAGER_DEPLOY_FAILED -eq 1 ]; then
     echo "❌ Manager Deployment Failed!"
     cat "$MANAGER_DEPLOY_LOG"
-    rm -f "$MANAGER_DEPLOY_LOG" "$LAB_DEPLOY_LOG"
     exit 1
 fi
 
 if [ $LAB_DEPLOY_FAILED -eq 1 ]; then
     echo "❌ Lab Deployment Failed!"
     cat "$LAB_DEPLOY_LOG"
-    rm -f "$MANAGER_DEPLOY_LOG" "$LAB_DEPLOY_LOG"
     exit 1
 fi
 
 echo "✅ Both services deployed successfully"
 cat "$MANAGER_DEPLOY_LOG"
 cat "$LAB_DEPLOY_LOG"
-rm -f "$MANAGER_DEPLOY_LOG" "$LAB_DEPLOY_LOG"
+
+# The services no longer run as the default compute service account, so it
+# no longer needs to write media. Fails when already removed; that is fine.
+COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+gcloud storage buckets remove-iam-policy-binding "gs://$MEDIA_BUCKET" \
+    --project="$PROJECT_ID" \
+    --member="serviceAccount:$COMPUTE_SA" \
+    --role=roles/storage.objectAdmin >/dev/null 2>&1 || true
 
 # Get final Manager URL
 MANAGER_URL=$(gcloud run services list --filter="SERVICE:$MANAGER_SERVICE" --project "$PROJECT_ID" --region "$REGION" --format="value(URL)")

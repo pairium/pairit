@@ -28,10 +28,24 @@ function getMongoUri(): string {
 	return uri;
 }
 
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+
+/** True when every host in a Mongo connection string is this machine. */
+export function isLoopbackMongoUri(uri: string): boolean {
+	const match = /^mongodb(?:\+srv)?:\/\/(?:[^@/]*@)?([^/?]+)/.exec(uri);
+	if (!match?.[1]) return false;
+	return match[1].split(",").every((entry) => {
+		const host = entry.startsWith("[")
+			? entry.slice(1, entry.indexOf("]"))
+			: entry.split(":")[0];
+		return LOOPBACK_HOSTS.has((host ?? "").toLowerCase());
+	});
+}
+
 /**
  * Build MongoDB client options with appropriate TLS settings
  */
-function buildClientOptions(): MongoClientOptions {
+function buildClientOptions(uri: string): MongoClientOptions {
 	const options: MongoClientOptions = {
 		// Timeouts - fail fast instead of hanging
 		connectTimeoutMS: 5000,
@@ -39,13 +53,16 @@ function buildClientOptions(): MongoClientOptions {
 		socketTimeoutMS: 30000,
 	};
 
-	if (IS_DEV) {
-		// Workaround for Bun TLS "subject" destructuring error in development only
-		// This bypasses certificate validation - NEVER use in production
+	if (IS_DEV && isLoopbackMongoUri(uri)) {
+		// Workaround for Bun TLS "subject" destructuring error, for a database
+		// on this machine only. A remote database (Atlas) always keeps
+		// certificate identity checks, even in development.
 		// TODO: Remove when Bun fixes this issue
 		// biome-ignore lint/suspicious/noExplicitAny: Bun TLS workaround requires type bypass
 		(options as any).checkServerIdentity = () => undefined;
-		console.warn("[DB] TLS certificate validation disabled (development mode)");
+		console.warn(
+			"[DB] TLS identity check disabled (local development database)",
+		);
 	}
 
 	return options;
@@ -85,7 +102,7 @@ export async function connectDB(): Promise<Db> {
 	// Start new connection
 	connectionPromise = (async () => {
 		const uri = getMongoUri();
-		const options = buildClientOptions();
+		const options = buildClientOptions(uri);
 
 		if (!client) {
 			client = new MongoClient(uri, options);
@@ -119,7 +136,7 @@ export async function connectDB(): Promise<Db> {
 export function getClient(): MongoClient {
 	if (!client) {
 		const uri = getMongoUri();
-		const options = buildClientOptions();
+		const options = buildClientOptions(uri);
 		client = new MongoClient(uri, options);
 	}
 	return client;
