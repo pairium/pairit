@@ -14,67 +14,117 @@ on:
         options: [staging, production]
         default: staging
       ref:
-        description: Tag or full commit SHA (blank = latest main)
+        description: Tag or full commit SHA on main (blank = latest main)
         type: string
         default: ''
       force:
-        description: Production only. I checked `pairit admin activity` and no group study is live.
+        description: Production only, required there. I checked `pairit admin activity` and no group study is live.
         type: boolean
         default: false
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
+  # Turns the ref into a commit SHA on main, using the script from main. Later
+  # jobs check out only that SHA, so no deploy runs unmerged code.
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.ref.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+      - id: ref
+        env:
+          REF: ${{ inputs.ref || github.sha }}
+        run: |
+          SHA=$(bash scripts/resolve-deploy-ref.sh "$REF")
+          echo "Deploying $SHA"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
   ci:
+    needs: resolve
     uses: ./.github/workflows/ci.yml
     with:
-      ref: ${{ inputs.ref }}
+      ref: ${{ needs.resolve.outputs.sha }}
 
   deploy:
-    needs: ci
+    needs: [resolve, ci]
     if: >-
       (github.event_name == 'push' && vars.STAGING_AUTO_DEPLOY == 'true') ||
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
+    # Only this job can get a GitHub OIDC token. Its subject names the
+    # environment, which is what Google trusts (docs/docs/dev/deployment.md).
+    permissions:
+      contents: read
+      id-token: write
     environment: ${{ inputs.target || 'staging' }}
     concurrency: deploy-${{ inputs.target || 'staging' }}
     env:
       TARGET: ${{ inputs.target || 'staging' }}
+      DEPLOY_SHA: ${{ needs.resolve.outputs.sha }}
     steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ inputs.ref }}
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.8
-      - uses: google-github-actions/auth@v3
-        with:
-          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
-      - uses: google-github-actions/setup-gcloud@v3
-      - run: printf '%s\n' "$ENV_FILE" > ".env.$TARGET"
-        env:
-          ENV_FILE: ${{ secrets.ENV_FILE }}
       # deploy.sh checks for live group studies with an admin CLI login, which
-      # Actions does not have. Until there is a service credential, warn instead.
+      # Actions does not have. Until there is a service credential, a
+      # production run needs force=true, meaning you ran the check yourself.
       - name: Live-study check
         if: env.TARGET == 'production' && !inputs.force
         run: |
-          echo "::warning title=Live-study check not run::Actions has no admin login for the manager API, so it cannot check for live group studies. Run 'pairit admin activity' before a production deploy, and pass force=true once you have. See docs/docs/dev/deployment.md."
+          echo "::error title=Live-study check not run::Actions has no admin login for the manager API, so it cannot check for live group studies. Run 'pairit admin activity', and if no group study is live, run this workflow again with force=true. See docs/docs/dev/deployment.md."
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.8
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+      # Mask each secret value on its own: GitHub masks the whole ENV_FILE
+      # secret, not a single value from it that a tool might print.
+      - name: Write env file
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        run: |
+          while IFS= read -r line; do
+            line="${line%$'\r'}"
+            if [[ "$line" =~ ^[[:space:]]*(export[[:space:]]+)?([A-Z][A-Z0-9_]*)[[:space:]]*=[[:space:]]*(.*)$ ]]; then
+              key="${BASH_REMATCH[2]}"
+              value="${BASH_REMATCH[3]}"
+              value="${value#\"}"; value="${value%\"}"; value="${value#\'}"; value="${value%\'}"
+              if [[ "$key" =~ (SECRET|KEY|TOKEN|PASSWORD|CREDENTIAL|URI) ]] && [ -n "$value" ]; then
+                echo "::add-mask::$value"
+              fi
+            fi
+          done <<< "$ENV_FILE"
+          umask 077
+          printf '%s\n' "$ENV_FILE" > ".env.$TARGET"
       - run: bash scripts/deploy.sh "$TARGET"
         env:
-          # The step above stands in for deploy.sh's check
-          FORCE_DEPLOY: '1'
-      - run: bash scripts/tests/verify-health.sh "${{ vars.LAB_URL }}" "${{ vars.MANAGER_URL }}"
+          # Production reaches this step only with force=true (see above).
+          FORCE_DEPLOY: ${{ inputs.force && '1' || '' }}
+      - run: bash scripts/tests/verify-health.sh "$LAB_URL" "$MANAGER_URL"
+        env:
+          LAB_URL: ${{ vars.LAB_URL }}
+          MANAGER_URL: ${{ vars.MANAGER_URL }}
+      - name: Remove env file
+        if: always()
+        run: rm -f ".env.$TARGET"
 
   docs:
-    needs: deploy
+    needs: [resolve, deploy]
     if: inputs.target == 'production'
     uses: ./.github/workflows/docs.yml
     with:
-      ref: ${{ inputs.ref }}
+      ref: ${{ needs.resolve.outputs.sha }}
     permissions:
       contents: read
       pages: write

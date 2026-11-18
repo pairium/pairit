@@ -109,6 +109,8 @@ pairit media list --prefix onboarding/
 pairit media delete onboarding/hero.png
 ```
 
+Each upload goes in your own folder and returns a public URL. Use that URL in your config. Anyone with the URL can read the file, so do not upload sensitive files. `media list` shows only your files, and `media delete` deletes only your files. Files uploaded before per-researcher folders keep their URLs; ask an admin to delete one.
+
 ## Data Export
 
 Export experiment data for analysis.

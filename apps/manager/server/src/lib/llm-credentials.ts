@@ -15,6 +15,27 @@ export type StoredLlmCredentials = {
 	anthropic?: EncryptedSecret;
 };
 
+/** The example key committed in env.template. Production must refuse it. */
+const PUBLIC_CREDENTIALS_KEYS: ReadonlySet<string> = new Set([
+	"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+]);
+
+/**
+ * Throws in production when CREDENTIALS_ENCRYPTION_KEY is the public example
+ * value. The manager calls this at startup so a bad deploy fails to start.
+ */
+export function rejectPublicCredentialsKey(
+	env: Record<string, string | undefined> = process.env,
+): void {
+	if (env.NODE_ENV !== "production") return;
+	const raw = env.CREDENTIALS_ENCRYPTION_KEY?.trim().toLowerCase();
+	if (raw && PUBLIC_CREDENTIALS_KEYS.has(raw)) {
+		throw new Error(
+			"CREDENTIALS_ENCRYPTION_KEY is the public example value from env.template. Generate one with: openssl rand -hex 32",
+		);
+	}
+}
+
 const INPUT_FIELD: Record<LlmProvider, keyof LlmCredentialInput> = {
 	openai: "openaiApiKey",
 	anthropic: "anthropicApiKey",

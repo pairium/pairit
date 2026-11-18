@@ -14,11 +14,18 @@ export class GCSStorage implements StorageBackend {
 		this.bucketName = bucketName;
 	}
 
-	async put(key: string, data: Buffer | Uint8Array | string): Promise<void> {
+	async put(
+		key: string,
+		data: Buffer | Uint8Array | string,
+		options?: { contentType?: string },
+	): Promise<void> {
 		const file = this.bucket.file(key);
 		const buffer =
 			typeof data === "string" ? Buffer.from(data) : Buffer.from(data);
-		await file.save(buffer);
+		await file.save(
+			buffer,
+			options?.contentType ? { contentType: options.contentType } : undefined,
+		);
 	}
 
 	async get(key: string): Promise<Buffer | null> {
@@ -68,25 +75,36 @@ export class GCSStorage implements StorageBackend {
 	}
 
 	async getPublicUrl(key: string): Promise<string> {
-		return `https://storage.googleapis.com/${this.bucketName}/${encodeURIComponent(key)}`;
+		// Encode each path segment, so `owner/photo.png` keeps its slash.
+		const path = key.split("/").map(encodeURIComponent).join("/");
+		return `https://storage.googleapis.com/${this.bucketName}/${path}`;
 	}
 
 	async getUploadUrl(
 		key: string,
-		options?: { expiresInSeconds?: number; contentType?: string },
+		options: {
+			expiresInSeconds: number;
+			contentType: string;
+			maxBytes: number;
+		},
 	): Promise<SignedUpload> {
-		const expiresInSeconds = options?.expiresInSeconds ?? 900;
+		const { expiresInSeconds, contentType, maxBytes } = options;
 		const file = this.bucket.file(key);
+		// Both headers are signed, so the upload must send them unchanged. GCS
+		// rejects a body outside x-goog-content-length-range.
+		const lengthRange = `0,${maxBytes}`;
 		const [url] = await file.getSignedUrl({
 			action: "write",
 			expires: Date.now() + expiresInSeconds * 1000,
-			contentType: options?.contentType,
+			contentType,
+			extensionHeaders: { "x-goog-content-length-range": lengthRange },
 			version: "v4",
 		});
 
-		const headers = options?.contentType
-			? { "Content-Type": options.contentType }
-			: undefined;
+		const headers = {
+			"Content-Type": contentType,
+			"x-goog-content-length-range": lengthRange,
+		};
 
 		return {
 			url,

@@ -8,9 +8,9 @@ A lightweight command line utility for working with Pairit experiment configurat
 - `config upload` — compile and upload a config through the manager service, optionally with per-experiment LLM provider keys
 - `config list` — list configs stored via the manager service
 - `config delete` — delete a stored config
-- `media upload` — upload a binary asset to Cloud Storage via the manager service (uploads are public unless `--private` is passed; public uploads return a stable asset URL when the backend supports it)
-- `media list` — list media objects in Cloud Storage
-- `media delete` — delete a media object from Cloud Storage
+- `media upload` — upload a binary asset to Cloud Storage via the manager service. It goes in your own folder (`<your user id>/<name>`) and returns a stable public URL. Anyone with the URL can read it
+- `media list` — list your media objects (admins see everyone's)
+- `media delete` — delete one of your media objects (admins can delete any)
 - `data export` — export sessions, events, and chat messages for a config as CSV/JSON/JSONL
 - `admin add-user` / `admin remove-user` / `admin list-users` — manage the manager allowlist (admin role required)
 - `admin activity` — show studies with recent sessions, live group studies first (admin role required)
@@ -59,7 +59,7 @@ pairit data export <configId> --format jsonl       # Export as JSONL
 pairit data export <configId> --out ./exports      # Export to specific directory
 ```
 
-Add `--private` if you need to keep an object private. Use `--bucket <name>` only when you need to override the backend default.
+Media is public: anyone with an object's URL can read it, so do not upload sensitive files. `--private` is no longer supported. Uploads go under your own folder, so `media upload intro.mp4 --object onboarding/intro.mp4` stores `<your user id>/onboarding/intro.mp4`. `media list` and `media delete` work only on your own objects. Media uploaded before per-researcher folders keeps its URL, and only an admin can delete it. Allowed content types are image, audio, video, font, PDF, JSON, plain text, CSV, and WebVTT. Other files are stored as downloads (`application/octet-stream`). Files above 5 MiB use a signed upload, up to 500 MiB.
 
 ### Example
 

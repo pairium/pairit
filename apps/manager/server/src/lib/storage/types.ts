@@ -9,7 +9,11 @@ export interface StorageBackend {
 	/**
 	 * Store data at the given key
 	 */
-	put(key: string, data: Buffer | Uint8Array | string): Promise<void>;
+	put(
+		key: string,
+		data: Buffer | Uint8Array | string,
+		options?: { contentType?: string },
+	): Promise<void>;
 
 	/**
 	 * Retrieve data for the given key
@@ -44,11 +48,16 @@ export interface StorageBackend {
 	getPublicUrl?(key: string): Promise<string>;
 
 	/**
-	 * Get a signed URL for direct uploads when supported by the backend
+	 * Get a signed URL for direct uploads when supported by the backend.
+	 * The upload must use `contentType` and be at most `maxBytes` long.
 	 */
 	getUploadUrl?(
 		key: string,
-		options?: { expiresInSeconds?: number; contentType?: string },
+		options: {
+			expiresInSeconds: number;
+			contentType: string;
+			maxBytes: number;
+		},
 	): Promise<SignedUpload>;
 }
 

@@ -61,5 +61,5 @@ extra_css:
   - stylesheets/extra.css
   - stylesheets/pygments.css
 extra_javascript:
-  - https://unpkg.com/lucide@latest/dist/umd/lucide.min.js
+  - https://unpkg.com/lucide@1.66.0/dist/umd/lucide.min.js
   - javascripts/icons.js

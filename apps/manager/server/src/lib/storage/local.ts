@@ -34,7 +34,11 @@ export class LocalStorage implements StorageBackend {
 		return fullPath;
 	}
 
-	async put(key: string, data: Buffer | Uint8Array | string): Promise<void> {
+	async put(
+		key: string,
+		data: Buffer | Uint8Array | string,
+		_options?: { contentType?: string },
+	): Promise<void> {
 		const fullPath = this.getFullPath(key);
 		await mkdir(dirname(fullPath), { recursive: true });
 		await writeFile(fullPath, data);

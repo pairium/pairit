@@ -63,7 +63,9 @@ Key deployment files are organized as follows:
         *   `NODE_ENV`: `development` or `production`. Controls CORS and debug endpoints.
         *   `PROJECT_ID`: GCP Project ID.
         *   `MONGODB_URI`: Production/Local connection string.
-        *   `AUTH_SECRET`: Random 32-char string.
+        *   `AUTH_SECRET`: Random string of at least 32 characters (`openssl rand -hex 32`). The deploy refuses the `env.template` value, and an `AUTH_SECRET` that `.env.staging` and `.env.production` share.
+        *   `MANAGER_AUTH_SECRET` (optional): the manager's own sign-in secret. Unset, the manager uses `AUTH_SECRET`. The lab and manager set sign-in cookies on different hosts, so they do not need the same secret. Setting it signs manager and CLI users out once.
+        *   `CREDENTIALS_ENCRYPTION_KEY`: `openssl rand -hex 32`. The lab and manager must share it: the manager encrypts per-config LLM keys and the lab decrypts them. Production refuses the `env.template` value.
         *   `GOOGLE_CLIENT_ID` / `SECRET`: OAuth credentials.
         *   `STORAGE_BACKEND`: `gcs` (cloud) or `local`.
         *   `STORAGE_PATH`: GCS Bucket name or local path.
@@ -85,11 +87,32 @@ Optional second argument is the region (default `us-central1`).
 This script will:
 1.  For production, stop if a group study is live (see [Live-study check](#live-study-check)).
 1.  Refuse to run with uncommitted changes, and record the commit (`GIT_SHA`) on both services. Set `ALLOW_DIRTY=1` to deploy anyway; the version then ends in `-dirty`.
-1.  Source `.env.staging` or `.env.production`. It never sources `.env`.
-2.  Refuse to run if staging would use the live database, or production would use the staging database. It also refuses if the two env files share a `PROJECT_ID`, a database name, or a media bucket.
-3.  Enable Artifact Registry.
-4.  Build Docker images using Cloud Build.
-5.  Deploy the `manager` and `lab` services to Cloud Run.
+1.  Read `.env.staging` or `.env.production` as `KEY=VALUE` lines. It never runs the file as a script, and never reads `.env`.
+2.  Refuse to run if staging would use the live database, or production would use the staging database. It also refuses if the two env files share a `PROJECT_ID`, a database name, a media bucket, or an `AUTH_SECRET`, or if `AUTH_SECRET` or `CREDENTIALS_ENCRYPTION_KEY` is the `env.template` example.
+3.  Enable Artifact Registry, Secret Manager, and IAM.
+4.  Create the runtime service accounts `pairit-lab` and `pairit-manager` if they are missing. They have no project roles.
+5.  Store each secret from the env file in Secret Manager as `pairit-<name>` (for example `pairit-mongodb-uri`), adding a version only when the value changed. Each runtime account can read only the secrets its service uses. See [Secrets](#secrets).
+6.  Make the media bucket readable by URL but not listable (`allUsers` gets `roles/storage.legacyObjectReader`, and the older `roles/storage.objectViewer` binding is removed). Only `pairit-manager` can write to it.
+7.  Build Docker images using Cloud Build.
+8.  Deploy the `manager` and `lab` services to Cloud Run, each as its own service account, with secrets from Secret Manager. The manager runs on one instance, since CLI login codes live in its memory.
+9.  Remove the default compute service account's write access to the media bucket.
+
+### Secrets
+
+Cloud Run reads these from Secret Manager, pinned to the version the deploy stored. Plain settings (URLs, bucket name, OAuth client ID) stay ordinary env vars.
+
+| Env var | Secret | Lab | Manager |
+|---|---|---|---|
+| `MONGODB_URI` | `pairit-mongodb-uri` | yes | yes |
+| `GOOGLE_CLIENT_SECRET` | `pairit-google-client-secret` | yes | yes |
+| `AUTH_SECRET` | `pairit-auth-secret` | yes | yes, unless `MANAGER_AUTH_SECRET` is set |
+| `MANAGER_AUTH_SECRET` | `pairit-manager-auth-secret` | | as `AUTH_SECRET` |
+| `CREDENTIALS_ENCRYPTION_KEY` | `pairit-credentials-encryption-key` | yes | yes |
+| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `MEMBER_ID_SECRET`, `SIMULATION_KEY` (when set) | `pairit-openai-api-key`, ... | yes | |
+
+To change a secret, change it in the env file (and the `ENV_FILE` GitHub secret) and deploy. Rolling back to an older Cloud Run revision also rolls back to the secret versions it used.
+
+The account that runs `deploy.sh` needs `roles/secretmanager.admin` in the project, besides the roles in [Deploying from GitHub Actions](#deploying-from-github-actions). Project owners already have it.
 
 ### Live-study check
 
@@ -109,7 +132,7 @@ It lists every study with sessions in the last 24 hours, live group studies firs
 
 Staging deploys skip the check.
 
-**GitHub Actions does not run the check yet.** The endpoint needs an admin login, and the workflow has no credential for the manager API. A CLI login is a Better Auth session that expires, so it cannot be stored as a secret. A production run of `deploy.yml` instead shows a warning, unless you pass `force=true` to say you ran `pairit admin activity` yourself. To make the workflow check blocking, the manager needs a service credential that can call `GET /admin/activity`, for example an admin API key stored as a `production` environment secret. Then replace the warning step in `deploy.yml` with a call that fails when `liveGroupStudies` is not empty.
+**GitHub Actions does not run the check yet.** The endpoint needs an admin login, and the workflow has no credential for the manager API. A CLI login is a Better Auth session that expires, so it cannot be stored as a secret. A production run of `deploy.yml` therefore stops unless you pass `force=true`, which says you ran `pairit admin activity` yourself and no group study is live. To have the workflow check for itself, the manager needs a service credential that can call `GET /admin/activity`, for example an admin API key stored as a `production` environment secret. Then replace the `Live-study check` step in `deploy.yml` with a call that fails when `liveGroupStudies` is not empty.
 
 ### Deploying from GitHub Actions
 
@@ -119,17 +142,20 @@ Staging deploys skip the check.
 
 - Push to `main` deploys staging, once the repo variable `STAGING_AUTO_DEPLOY` is `true`. Docs-only pushes are skipped.
 - Production deploys only by hand: Actions → Deploy → Run workflow → `production`, from `main`.
-- A manual run deploys the `ref` input, a tag or full commit SHA. Left blank, it deploys the latest `main`, which is what staging runs. So check staging, then deploy production with `ref` blank.
+- A manual run deploys the `ref` input, a tag or full 40-character commit SHA. Left blank, it deploys the latest `main`, which is what staging runs. So check staging, then deploy production with `ref` blank.
+- The ref must be on `main`. Before anything gets credentials, the `resolve` job turns it into a commit SHA with `scripts/resolve-deploy-ref.sh` (taken from `main`) and stops if the commit is not on `main`, so unmerged branches and pull requests never deploy. Later jobs check out only that SHA.
 
 ```bash
-gh workflow run deploy.yml -f target=production                # what staging runs
-gh workflow run deploy.yml -f target=production -f ref=<sha>   # an older commit, e.g. to roll back
-gh workflow run deploy.yml -f target=production -f force=true  # you checked: no group study is live
+# Run `pairit admin activity` first; force=true says no group study is live
+gh workflow run deploy.yml -f target=production -f force=true                # what staging runs
+gh workflow run deploy.yml -f target=production -f force=true -f ref=<sha>   # an older commit on main, e.g. to roll back
 ```
 
-Run `pairit admin activity` before a production run. The workflow cannot check for live studies itself (see [Live-study check](#live-study-check)), so it shows a warning unless `force=true`.
+The workflow cannot check for live studies itself (see [Live-study check](#live-study-check)), so a production run without `force=true` stops before deploying.
 
-A production deploy then publishes the docs from the same commit, so the docs describe what production runs. `docs.yml` no longer runs on push; start it by hand only to republish (`gh workflow run docs.yml -f ref=<sha>`).
+A production deploy then publishes the docs from the same commit, so the docs describe what production runs. `docs.yml` no longer runs on push; start it by hand from `main` only to republish (`gh workflow run docs.yml -f ref=<sha>`). It checks the ref the same way, and builds with the versions pinned in `docs/uv.lock`.
+
+Only the job that deploys can get a Google token (`id-token: write`), and Google accepts it only from the GitHub environment named for the target. Actions are pinned to commit SHAs. The `ENV_FILE` values with secret-looking names (`*SECRET*`, `*KEY*`, `*TOKEN*`, `*PASSWORD*`, `*CREDENTIAL*`, `*URI*`) are masked in the logs.
 
 Each production deploy is a Platform release. Before deploying, move the `## Unreleased` → `### Platform` bullets in `docs/docs/changelog.md` into a `## Platform YYYY.MM.DD` section and merge that. After the deploy, tag the deployed commit `platform-vYYYY.MM.DD` and create its GitHub Release. The steps are in `AGENTS.md` under "Release notes".
 
@@ -137,21 +163,22 @@ To roll back in seconds without a rebuild, send traffic to an earlier Cloud Run 
 
 One-time setup, per environment (`staging`, `production`):
 
-1.  In GitHub (Settings → Environments), create the environment. For `production`, add yourself as a required reviewer.
+1.  In GitHub (Settings → Environments), create the environment. Under Deployment branches and tags, allow only `main`. For `production`, add yourself as a required reviewer.
 2.  Add the secret `ENV_FILE` with the whole contents of `.env.staging` or `.env.production`.
 3.  Add the variables `LAB_URL`, `MANAGER_URL` (the public URLs in the table above), `GCP_WORKLOAD_IDENTITY_PROVIDER`, and `GCP_SERVICE_ACCOUNT`.
-4.  In that environment's Google project, create a deploy service account and let GitHub use it through Workload Identity Federation, limited to `pairium/pairit`:
+4.  In that environment's Google project, create a deploy service account and let GitHub use it through Workload Identity Federation, limited to that GitHub environment of `pairium/pairit`:
 
     ```bash
+    TARGET=staging                  # or production
     PROJECT_ID=pairit-lab-staging   # or pairit-lab
     PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
     SA=github-deploy@$PROJECT_ID.iam.gserviceaccount.com
 
-    gcloud services enable iamcredentials.googleapis.com sts.googleapis.com --project $PROJECT_ID
+    gcloud services enable iamcredentials.googleapis.com sts.googleapis.com secretmanager.googleapis.com iam.googleapis.com --project $PROJECT_ID
     gcloud iam service-accounts create github-deploy --project $PROJECT_ID
     for role in run.admin cloudbuild.builds.editor artifactregistry.admin storage.admin \
                 serviceusage.serviceUsageConsumer serviceusage.serviceUsageAdmin \
-                iam.serviceAccountUser viewer; do
+                iam.serviceAccountUser secretmanager.admin viewer; do
       gcloud projects add-iam-policy-binding $PROJECT_ID --member "serviceAccount:$SA" --role "roles/$role" --condition=None >/dev/null
     done
 
@@ -161,15 +188,28 @@ One-time setup, per environment (`staging`, `production`):
       --issuer-uri https://token.actions.githubusercontent.com \
       --attribute-mapping google.subject=assertion.sub,attribute.repository=assertion.repository \
       --attribute-condition "assertion.repository == 'pairium/pairit'"
+    # Only jobs that run in this GitHub environment (the deploy job) can use the account.
     gcloud iam service-accounts add-iam-policy-binding $SA --project $PROJECT_ID \
       --role roles/iam.workloadIdentityUser \
-      --member "principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/attribute.repository/pairium/pairit"
+      --member "principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/subject/repo:pairium/pairit:environment:$TARGET"
+
+    # Runtime accounts for the services. deploy.sh grants their access.
+    gcloud iam service-accounts create pairit-lab --project $PROJECT_ID
+    gcloud iam service-accounts create pairit-manager --project $PROJECT_ID
+    # The manager signs media upload URLs as itself.
+    MANAGER_SA=pairit-manager@$PROJECT_ID.iam.gserviceaccount.com
+    gcloud iam service-accounts add-iam-policy-binding $MANAGER_SA --project $PROJECT_ID \
+      --role roles/iam.serviceAccountTokenCreator --member "serviceAccount:$MANAGER_SA"
 
     echo "GCP_WORKLOAD_IDENTITY_PROVIDER=projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/providers/github"
     echo "GCP_SERVICE_ACCOUNT=$SA"
     ```
 
 When you change a local `.env.staging` or `.env.production`, update the matching `ENV_FILE` secret too.
+
+Projects set up before November 2026 let any workflow in the repository use `github-deploy`, and deploy without Secret Manager. Bring one up to date, staging first, with `bash scripts/setup-wif.sh staging` (then `production`), run as a project owner. It is safe to run again. It adds `roles/secretmanager.admin` to `github-deploy`, creates the runtime accounts, lets `pairit-manager` sign upload URLs, binds `github-deploy` to the environment's subject, and removes the repository-wide binding.
+
+The default compute service account (`<project number>-compute@developer.gserviceaccount.com`) still has the project's default Editor role. The services no longer run as it, but Cloud Build may, so check what uses it before you remove that role.
 
 ### Lab runs on one instance
 
@@ -219,6 +259,8 @@ The `scripts/deploy.sh` script automates several manual steps:
 2.  **Context Switching**: It changes directory to the project root to run builds, ensuring the full monorepo context is available.
 3.  **Artifact Registry**: Checks for and creates the `pairit-repo` repository if it doesn't exist.
 4.  **Dynamic Envs**: It injects the *actual* Cloud Run URLs into `AUTH_BASE_URL` environment variables during deployment. This prevents the "redirect mismatch" errors common with authentication.
+5.  **Secrets**: Secrets go to Cloud Run with `--set-secrets`, never `--set-env-vars`, so they do not appear in the service's configuration. See [Secrets](#secrets).
+6.  **Containers**: Both images use a pinned Bun version (`oven/bun:1.3.8`) and run as the image's unprivileged `bun` user.
 
 ## Troubleshooting
 
@@ -229,5 +271,7 @@ The `scripts/deploy.sh` script automates several manual steps:
     - detailed logs can be viewed in the "Logs" tab of the Cloud Run service.
 - **Authentication Fails (401/Redirect Mismatch)**:
     - Verify `AUTH_BASE_URL` in the Cloud Run "Variables" tab matches the service URL exactly.
-    - Verify `AUTH_SECRET` is consistent.
+    - Verify `AUTH_SECRET` is consistent. It is the `pairit-auth-secret` secret in Secret Manager (`pairit-manager-auth-secret` for the manager, if set).
+- **"Permission denied" on a secret during deploy**: the deploying account needs `roles/secretmanager.admin`. Run `bash scripts/setup-wif.sh <staging|production>` as a project owner.
+- **Container fails to start with "public example value"**: `AUTH_SECRET` or `CREDENTIALS_ENCRYPTION_KEY` is the `env.template` value. Generate one with `openssl rand -hex 32`.
     - Double-check Google Cloud Console "Authorized redirect URIs" list.

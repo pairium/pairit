@@ -13,6 +13,7 @@ import { CliAuthCodeStore } from "./lib/cli-auth-codes";
 import { ensureConfigIndexes } from "./lib/db";
 import { errorResponse } from "./lib/error-response";
 import { escapeHtml, htmlResponse } from "./lib/html";
+import { rejectPublicCredentialsKey } from "./lib/llm-credentials";
 import { loginSuccessPage } from "./lib/login-success";
 import { adminRoutes } from "./routes/admin";
 import { configsRoutes } from "./routes/configs";
@@ -20,6 +21,7 @@ import { dataRoutes } from "./routes/data";
 import { mediaRoutes } from "./routes/media";
 
 const IS_DEV = process.env.NODE_ENV === "development";
+rejectPublicCredentialsKey();
 const RAW_CORS_ORIGINS = process.env.CORS_ORIGINS;
 const ALLOWED_ORIGINS = RAW_CORS_ORIGINS
 	? RAW_CORS_ORIGINS.split(",")

@@ -44,3 +44,18 @@ README.md
 *.spec.ts
 coverage
 .nyc_output
+
+# Local state and credentials: never send these to Cloud Build or an image
+# (Docker patterns match from the context root, so ** reaches nested copies)
+.env*
+**/.env*
+.envrc
+**/.envrc
+.npmrc
+**/.npmrc
+.storage/
+**/.storage
+.claude/
+**/.claude
+.cursor/
+**/.cursor
