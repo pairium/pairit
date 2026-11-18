@@ -9,6 +9,7 @@ import type {
 } from "@app/lib/participant-icons";
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
+import { OTHERS_MARKDOWN } from "./markdown";
 import { ParticipantIcon } from "./ParticipantIcon";
 
 export type ChatMessage = {
@@ -29,10 +30,16 @@ type StreamingMessage = {
 	avatar?: ChatAvatarConfig;
 };
 
+// The server refuses longer messages (routes/chat.ts)
+const MAX_MESSAGE_LENGTH = 4000;
+
 export type ChatViewProps = {
 	messages: ChatMessage[];
-	onSend: (content: string) => void;
+	/** Resolve to false when the message was not sent: the text is put back. */
+	onSend: (content: string) => void | Promise<boolean | undefined>;
 	disabled?: boolean;
+	/** Shown above the input, e.g. why the last message was not sent. */
+	notice?: string | null;
 	placeholder?: string;
 	streamingMessage?: StreamingMessage | null;
 	avatars?: ChatAvatarOverrides;
@@ -45,6 +52,7 @@ export function ChatView({
 	placeholder = "Type a message...",
 	streamingMessage,
 	avatars,
+	notice,
 }: ChatViewProps) {
 	const [input, setInput] = useState("");
 	const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -64,8 +72,13 @@ export function ChatView({
 		const trimmed = input.trim();
 		if (!trimmed || disabled) return;
 
-		onSend(trimmed);
+		const sent = onSend(trimmed);
 		setInput("");
+		// Not sent (e.g. over a chat limit): give the text back, unless the
+		// participant has already started typing something else.
+		void Promise.resolve(sent).then((ok) => {
+			if (ok === false) setInput((current) => current || trimmed);
+		});
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -99,6 +112,11 @@ export function ChatView({
 				<div ref={messagesEndRef} />
 			</div>
 
+			{notice ? (
+				<output className="block border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800">
+					{notice}
+				</output>
+			) : null}
 			<form
 				onSubmit={handleSubmit}
 				className="flex gap-2 border-t border-slate-200 p-4"
@@ -110,6 +128,7 @@ export function ChatView({
 					onKeyDown={handleKeyDown}
 					placeholder={placeholder}
 					disabled={disabled}
+					maxLength={MAX_MESSAGE_LENGTH}
 					rows={1}
 					className="flex-1 resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm transition-colors focus:border-slate-400 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400"
 				/>
@@ -193,7 +212,7 @@ function MessageBubble({
 							{message.content}
 						</Markdown>
 					) : (
-						<Markdown>{message.content}</Markdown>
+						<Markdown components={OTHERS_MARKDOWN}>{message.content}</Markdown>
 					)}
 				</div>
 			</div>
@@ -229,7 +248,7 @@ function StreamingBubble({
 			<div className="max-w-[80%] rounded-2xl bg-slate-100 px-4 py-2 text-sm text-slate-900">
 				<div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-headings:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
 					{message.content ? (
-						<Markdown>{message.content}</Markdown>
+						<Markdown components={OTHERS_MARKDOWN}>{message.content}</Markdown>
 					) : (
 						<span className="inline-flex items-center gap-1">
 							<span className="h-2 w-2 animate-pulse rounded-full bg-slate-400" />

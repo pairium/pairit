@@ -1,8 +1,8 @@
 import { defineRuntimeComponent } from "@app/runtime/define-runtime-component";
-import { getScopePath, SCOPE_PATH, type Scope } from "@app/runtime/expression";
 import type { TextComponent } from "@app/runtime/types";
 import { type ComponentProps, isValidElement, type ReactNode } from "react";
 import Markdown from "react-markdown";
+import { interpolate } from "./interpolate";
 import { MermaidBlock } from "./MermaidBlock";
 
 function isMermaidCode(className?: string) {
@@ -45,20 +45,6 @@ function MarkdownPre({ children }: { children?: ReactNode }) {
 		<pre className="not-prose my-4 overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
 			{children}
 		</pre>
-	);
-}
-
-/**
- * Interpolate template variables like {{session_state.xxx}} or
- * {{group.ws.xxx}} with actual values
- */
-function interpolate(text: string, scope: Scope): string {
-	return text.replace(
-		new RegExp(`\\{\\{(${SCOPE_PATH})\\}\\}`, "g"),
-		(raw, path) => {
-			const value = getScopePath(scope, path);
-			return value !== undefined ? String(value) : raw;
-		},
 	);
 }
 

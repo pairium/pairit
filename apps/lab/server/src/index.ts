@@ -8,6 +8,8 @@ import { cors } from "@elysiajs/cors";
 import { Elysia } from "elysia";
 import { auth } from "./lib/auth";
 import { ensureIndexes } from "./lib/db";
+import { hideInternalErrors } from "./lib/errors";
+import { HTML_SECURITY_HEADERS, staticFile } from "./lib/static-files";
 import { chatRoutes } from "./routes/chat";
 import { eventsRoutes } from "./routes/events";
 import { matchmakingRoutes } from "./routes/matchmaking";
@@ -17,6 +19,9 @@ import { streamRoutes } from "./routes/stream";
 import { workspaceRoutes } from "./routes/workspace";
 
 const IS_DEV = process.env.NODE_ENV === "development";
+const IDLE_TIMEOUT_SECONDS = 30;
+// Request bodies are small JSON (chat, state, base64 Yjs batches).
+const MAX_REQUEST_BODY_BYTES = 2 * 1024 * 1024;
 const RAW_CORS_ORIGINS = process.env.CORS_ORIGINS;
 const ALLOWED_ORIGINS = RAW_CORS_ORIGINS
 	? RAW_CORS_ORIGINS.split(",")
@@ -56,6 +61,8 @@ const app = new Elysia().use(
 		maxAge: 86400,
 	}),
 );
+
+app.use(hideInternalErrors);
 
 // Debug endpoints only available in non-production
 if (IS_DEV) {
@@ -104,46 +111,63 @@ app
 	.use(randomizeRoutes)
 	.use(workspaceRoutes);
 
+function serveIndexHtml(): Response {
+	return new Response(Bun.file(`${distPath}/index.html`), {
+		headers: {
+			"Content-Type": "text/html; charset=utf-8",
+			...HTML_SECURITY_HEADERS,
+		},
+	});
+}
+
 // Static file serving (production only - in dev, Vite handles this)
 if (!IS_DEV) {
+	const assetsDir = resolve(distPath, "assets");
+	const configsDir = resolve(distPath, "configs");
 	app
-		.get("/", () => Bun.file(`${distPath}/index.html`))
+		.get("/", serveIndexHtml)
 		.get("/favicon.ico", () => Bun.file(`${distPath}/favicon.ico`))
 		.get("/manifest.json", () => Bun.file(`${distPath}/manifest.json`))
 		.get("/logo192.png", () => Bun.file(`${distPath}/logo192.png`))
 		.get("/logo512.png", () => Bun.file(`${distPath}/logo512.png`))
-		.get("/assets/*", ({ params: { "*": path }, set }) => {
-			const fullPath = resolve(distPath, "assets", path);
-			if (!fullPath.startsWith(resolve(distPath, "assets"))) {
-				set.status = 403;
-				return "Forbidden";
+		.get("/assets/*", async ({ params: { "*": path }, set }) => {
+			const file = await staticFile(assetsDir, path);
+			if (!file) {
+				set.status = 404;
+				return "Not Found";
 			}
-			return Bun.file(fullPath);
+			return Bun.file(file);
 		})
 		// Serve config files (YAML) for viewing
-		.get("/configs/*", ({ params: { "*": path }, set }) => {
-			const fullPath = resolve(distPath, "configs", path);
-			if (!fullPath.startsWith(resolve(distPath, "configs"))) {
-				set.status = 403;
-				return "Forbidden";
+		.get("/configs/*", async ({ params: { "*": path }, set }) => {
+			const file = await staticFile(configsDir, path);
+			if (!file) {
+				set.status = 404;
+				return "Not Found";
 			}
 			if (path.endsWith(".yaml")) {
 				set.headers["content-type"] = "text/yaml";
 			}
-			return Bun.file(fullPath);
+			return Bun.file(file);
 		})
 		// SPA catch-all for client-side routes (exclude /api/* paths)
 		.get("*", ({ path }) => {
 			if (path.startsWith("/api/")) {
 				return new Response("Not Found", { status: 404 });
 			}
-			return Bun.file(`${distPath}/index.html`);
+			return serveIndexHtml();
 		});
 }
 
-// idleTimeout: 0 — Bun's default idle timeout closes SSE streams after ~60s
-// between 30s heartbeats, which dropped participants from matchmaking pools.
-app.listen({ port: Number(process.env.PORT) || 3001, idleTimeout: 0 });
+// Bun counts only reads as activity, so SSE heartbeats don't keep a stream
+// open; SSE routes turn the idle timeout off for themselves (routes/stream.ts).
+app.listen({
+	port: Number(process.env.PORT) || 3001,
+	// Development turns on dev-only routes; keep them off the network.
+	...(IS_DEV && { hostname: "127.0.0.1" }),
+	idleTimeout: IDLE_TIMEOUT_SECONDS,
+	maxRequestBodySize: MAX_REQUEST_BODY_BYTES,
+});
 
 console.log(
 	`🚀 Lab server running on ${app.server?.hostname}:${app.server?.port}`,

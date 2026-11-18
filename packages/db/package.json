@@ -5,7 +5,8 @@
 	"type": "module",
 	"exports": {
 		".": "./index.ts",
-		"./types": "./types.ts"
+		"./types": "./types.ts",
+		"./llm-credentials": "./llm-credentials.ts"
 	},
 	"dependencies": {
 		"mongodb": "^6.12.0"

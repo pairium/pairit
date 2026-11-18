@@ -4,7 +4,7 @@
  */
 
 import { connectDB } from "@pairit/db";
-import type { Collection } from "mongodb";
+import { type Collection, MongoServerError } from "mongodb";
 import type {
 	ChatMessageDocument,
 	ConfigDocument,
@@ -80,6 +80,40 @@ export async function getWorkspaceUpdatesCollection(): Promise<
 	return database.collection<WorkspaceUpdateDocument>("workspace_updates");
 }
 
+const LEGACY_IDEMPOTENCY_INDEX = "idempotencyKey_1";
+// MongoDB's IndexNotFound
+const INDEX_NOT_FOUND = 27;
+
+/**
+ * Idempotency keys are unique per session, not across all sessions: a global
+ * index let one session's key block (and reveal) another session's message.
+ * The per-session index is built first, so duplicates within a session stay
+ * rejected throughout; then the old global index is dropped. Both steps are
+ * idempotent, and the old index only ever rejected more, so running this
+ * on several instances at once, or beside older instances, is safe.
+ */
+export async function scopeIdempotencyIndex(
+	collection: Collection,
+): Promise<void> {
+	await collection.createIndex(
+		{ sessionId: 1, idempotencyKey: 1 },
+		{
+			unique: true,
+			partialFilterExpression: { idempotencyKey: { $type: "string" } },
+		},
+	);
+	try {
+		await collection.dropIndex(LEGACY_IDEMPOTENCY_INDEX);
+		console.log(
+			`[DB] Dropped global ${LEGACY_IDEMPOTENCY_INDEX} on ${collection.collectionName}`,
+		);
+	} catch (err) {
+		if (!(err instanceof MongoServerError && err.code === INDEX_NOT_FOUND)) {
+			throw err;
+		}
+	}
+}
+
 export async function ensureIndexes(): Promise<void> {
 	const database = await connectDB();
 
@@ -92,9 +126,7 @@ export async function ensureIndexes(): Promise<void> {
 	await database
 		.collection("events")
 		.createIndex({ configId: 1, createdAt: 1, _id: 1 });
-	await database
-		.collection("events")
-		.createIndex({ idempotencyKey: 1 }, { unique: true, sparse: true });
+	await scopeIdempotencyIndex(database.collection("events"));
 	await database
 		.collection("configs")
 		.createIndex({ configId: 1 }, { unique: true });
@@ -111,9 +143,7 @@ export async function ensureIndexes(): Promise<void> {
 	await database
 		.collection("chat_messages")
 		.createIndex({ configId: 1, createdAt: 1, _id: 1 });
-	await database
-		.collection("chat_messages")
-		.createIndex({ idempotencyKey: 1 }, { unique: true, sparse: true });
+	await scopeIdempotencyIndex(database.collection("chat_messages"));
 	// Per-session chat limit (routes/chat.ts)
 	await database
 		.collection("chat_messages")

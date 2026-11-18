@@ -6,6 +6,8 @@
 import type { Binary, ObjectId } from "mongodb";
 
 export type EncryptedSecret = {
+	/** 2: bound to {configId, provider} as AAD. Absent: legacy, no AAD. */
+	v?: 2;
 	iv: string;
 	ciphertext: string;
 	authTag: string;

@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { getAgentsFromConfig } from "./agents";
-import { resolveParticipantAvatar, toAvatarString } from "./chat-avatar";
+import {
+	isAllowedFilledAvatar,
+	resolveParticipantAvatar,
+	toAvatarString,
+} from "./chat-avatar";
 
 describe("toAvatarString", () => {
 	test("keeps strings and drops empty ones", () => {
@@ -49,6 +53,55 @@ describe("resolveParticipantAvatar", () => {
 				{ role: "leader" },
 			),
 		).toBe("/avatars/leader.png");
+	});
+
+	test("drops a filled avatar that points at another server", () => {
+		const config = configWith("{{session_state.avatar}}");
+		for (const avatar of [
+			"https://tracker.example/pixel.png",
+			"//tracker.example/pixel.png",
+			"/\\tracker.example/pixel.png",
+			"data:image/svg+xml,<svg/>",
+		]) {
+			expect(
+				resolveParticipantAvatar(config, "chat", { avatar }),
+			).toBeUndefined();
+		}
+		expect(
+			resolveParticipantAvatar(config, "chat", { avatar: "/media/a.png" }),
+		).toBe("/media/a.png");
+	});
+
+	test("keeps a filled avatar on the origin the template fixes", () => {
+		const config = configWith("https://cdn.example.com/{{session_state.r}}");
+		expect(resolveParticipantAvatar(config, "chat", { r: "a.png" })).toBe(
+			"https://cdn.example.com/a.png",
+		);
+		expect(
+			isAllowedFilledAvatar(
+				"https://cdn.example.com{{x}}",
+				"https://cdn.example.com.evil.test/",
+			),
+		).toBe(false);
+		expect(
+			resolveParticipantAvatar(
+				configWith("{{session_state.r}}/a.png"),
+				"chat",
+				{
+					r: "https://evil.test",
+				},
+			),
+		).toBeUndefined();
+	});
+
+	test("keeps a static image URL from the config", () => {
+		expect(
+			resolveParticipantAvatar(
+				configWith("https://cdn.example.com/a.png"),
+				"chat",
+				{},
+			),
+		).toBe("https://cdn.example.com/a.png");
 	});
 
 	test("returns a static avatar as is", () => {

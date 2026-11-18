@@ -1,14 +1,13 @@
-import { createCipheriv, randomBytes } from "node:crypto";
+import { encryptLlmSecret, type LlmProvider } from "@pairit/db/llm-credentials";
+import type { EncryptedSecret } from "@pairit/db/types";
+
+export type { LlmProvider };
+
+export const LLM_PROVIDERS: readonly LlmProvider[] = ["openai", "anthropic"];
 
 export type LlmCredentialInput = {
 	openaiApiKey?: string;
 	anthropicApiKey?: string;
-};
-
-export type EncryptedSecret = {
-	iv: string;
-	ciphertext: string;
-	authTag: string;
 };
 
 export type StoredLlmCredentials = {
@@ -37,60 +36,75 @@ export function rejectPublicCredentialsKey(
 	}
 }
 
-function getEncryptionKey(): Buffer {
-	const raw = process.env.CREDENTIALS_ENCRYPTION_KEY;
-	if (!raw) {
-		throw new Error(
-			"CREDENTIALS_ENCRYPTION_KEY is required for per-config LLM credentials",
-		);
-	}
-	rejectPublicCredentialsKey();
+const INPUT_FIELD: Record<LlmProvider, keyof LlmCredentialInput> = {
+	openai: "openaiApiKey",
+	anthropic: "anthropicApiKey",
+};
 
-	const trimmed = raw.trim();
-	if (/^[0-9a-fA-F]{64}$/.test(trimmed)) {
-		return Buffer.from(trimmed, "hex");
-	}
+function inputKey(
+	input: LlmCredentialInput | null | undefined,
+	provider: LlmProvider,
+): string | undefined {
+	return input?.[INPUT_FIELD[provider]]?.trim() || undefined;
+}
 
-	const base64 = Buffer.from(trimmed, "base64");
-	if (base64.length === 32) {
-		return base64;
-	}
-
-	throw new Error(
-		"CREDENTIALS_ENCRYPTION_KEY must be 32 bytes, base64-encoded or 64-char hex",
+/** A provider the upload both sets and clears, if any. */
+export function llmCredentialConflict(
+	input: LlmCredentialInput | null | undefined,
+	clear: readonly LlmProvider[] | null | undefined,
+): LlmProvider | null {
+	return (
+		LLM_PROVIDERS.find((p) => inputKey(input, p) && clear?.includes(p)) ?? null
 	);
 }
 
-function encryptSecret(value: string): EncryptedSecret {
-	const iv = randomBytes(12);
-	const cipher = createCipheriv("aes-256-gcm", getEncryptionKey(), iv);
-	const ciphertext = Buffer.concat([
-		cipher.update(value, "utf8"),
-		cipher.final(),
-	]);
-	const authTag = cipher.getAuthTag();
+/**
+ * What an upload does to stored keys, per provider: set the ones it sends,
+ * clear the ones it asks to clear, and leave the rest alone.
+ */
+export type LlmCredentialChanges = {
+	set: Partial<Record<LlmProvider, EncryptedSecret>>;
+	clear: LlmProvider[];
+};
 
-	return {
-		iv: iv.toString("base64"),
-		ciphertext: ciphertext.toString("base64"),
-		authTag: authTag.toString("base64"),
-	};
+export function planLlmCredentialChanges(
+	configId: string,
+	input: LlmCredentialInput | null | undefined,
+	clear: readonly LlmProvider[] | null | undefined,
+): LlmCredentialChanges {
+	const changes: LlmCredentialChanges = { set: {}, clear: [] };
+	for (const provider of LLM_PROVIDERS) {
+		const value = inputKey(input, provider);
+		if (value) {
+			changes.set[provider] = encryptLlmSecret(value, { configId, provider });
+		} else if (clear?.includes(provider)) {
+			changes.clear.push(provider);
+		}
+	}
+	return changes;
 }
 
-export function encryptLlmCredentials(
-	input?: LlmCredentialInput | null,
+/** Mongo `$set` / `$unset` fields that apply the changes to a config doc. */
+export function llmCredentialUpdateFields(changes: LlmCredentialChanges): {
+	$set: Record<string, EncryptedSecret>;
+	$unset: Record<string, "">;
+} {
+	const $set: Record<string, EncryptedSecret> = {};
+	for (const [provider, secret] of Object.entries(changes.set)) {
+		if (secret) $set[`llmCredentials.${provider}`] = secret;
+	}
+	const $unset: Record<string, ""> = {};
+	for (const provider of changes.clear) {
+		$unset[`llmCredentials.${provider}`] = "";
+	}
+	return { $set, $unset };
+}
+
+/** Credentials for a brand-new config doc, or undefined when none are set. */
+export function newConfigLlmCredentials(
+	changes: LlmCredentialChanges,
 ): StoredLlmCredentials | undefined {
-	if (!input) return undefined;
-
-	const output: StoredLlmCredentials = {};
-	if (input.openaiApiKey?.trim()) {
-		output.openai = encryptSecret(input.openaiApiKey.trim());
-	}
-	if (input.anthropicApiKey?.trim()) {
-		output.anthropic = encryptSecret(input.anthropicApiKey.trim());
-	}
-
-	return Object.keys(output).length > 0 ? output : undefined;
+	return Object.keys(changes.set).length > 0 ? { ...changes.set } : undefined;
 }
 
 export function maskConfiguredCredentials(

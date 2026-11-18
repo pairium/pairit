@@ -939,13 +939,13 @@ function buildFormSchema(items: SurveyItemDefinition[]): {
 }
 
 function buildStringSchema(answer: SurveyItemAnswer): z.ZodTypeAny {
-	const base = z.string({ required_error: "Required" });
+	const base = z.string({ error: "Required" });
 	return answer.required ? base.min(1, "This field is required") : base;
 }
 
 function buildNumericSchema(answer: SurveyItemAnswer): z.ZodTypeAny {
-	const base = z.string({ required_error: "Required" });
-	let schema: z.ZodTypeAny = answer.required
+	const base = z.string({ error: "Required" });
+	let schema: z.ZodType<string> = answer.required
 		? base.min(1, "This field is required")
 		: base;
 
@@ -975,8 +975,8 @@ function buildNumericSchema(answer: SurveyItemAnswer): z.ZodTypeAny {
 
 function buildChoiceSchema(answer: SurveyItemAnswer): z.ZodTypeAny {
 	const values = answer.choices?.map((choice) => choice.value) ?? [];
-	const base = z.string({ required_error: "Required" });
-	let schema: z.ZodTypeAny = answer.required
+	const base = z.string({ error: "Required" });
+	let schema: z.ZodType<string> = answer.required
 		? base.min(1, "Select an option")
 		: base;
 
@@ -993,7 +993,7 @@ function buildChoiceSchema(answer: SurveyItemAnswer): z.ZodTypeAny {
 function buildMultiSelectSchema(answer: SurveyItemAnswer): z.ZodTypeAny {
 	const values = answer.choices?.map((choice) => choice.value) ?? [];
 	const base = z.array(z.string());
-	let schema: z.ZodTypeAny = answer.required
+	let schema: z.ZodType<string[]> = answer.required
 		? base.min(1, "Select at least one option")
 		: base;
 

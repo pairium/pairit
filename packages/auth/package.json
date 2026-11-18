@@ -8,7 +8,7 @@
 	},
 	"dependencies": {
 		"@pairit/db": "workspace:*",
-		"better-auth": "^1.4.7",
+		"better-auth": "~1.6.34",
 		"mongodb": "^6.12.0"
 	},
 	"devDependencies": {

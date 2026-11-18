@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import {
 	AuthRequiredError,
+	ChatLimitError,
 	LabClient,
 	NotAMemberError,
 	SessionBlockedError,
@@ -93,6 +94,23 @@ describe("LabClient", () => {
 		).rejects.toBeInstanceOf(NotAMemberError);
 	});
 
+	test("sendChatMessage throws ChatLimitError with the reason on 429", async () => {
+		const client = new LabClient({ baseUrl: "http://lab.test" });
+		for (const [error, reason] of [
+			["rate_limited_per_minute", "per_minute"],
+			["rate_limited_per_session", "per_session"],
+		]) {
+			globalThis.fetch = mock(async () =>
+				jsonResponse({ error }, 429),
+			) as unknown as typeof fetch;
+			const thrown = await client
+				.sendChatMessage("g1", "s1", "hi")
+				.catch((e) => e);
+			expect(thrown).toBeInstanceOf(ChatLimitError);
+			expect((thrown as ChatLimitError).reason).toBe(reason);
+		}
+	});
+
 	test("retries a start once when a parallel start races the cookie", async () => {
 		const responses = [
 			jsonResponse(
@@ -113,6 +131,23 @@ describe("LabClient", () => {
 		const r = await client.startSession("cfg", null);
 		expect(r.sessionId).toBe("s1");
 		expect(fetchMock).toHaveBeenCalledTimes(2);
+	});
+
+	test("encodes ids in request paths", async () => {
+		const urls: string[] = [];
+		const fetchMock = mock(async (input: RequestInfo | URL) => {
+			urls.push(String(input));
+			return jsonResponse({ ok: true, messages: [] });
+		});
+		globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+		const client = new LabClient({ baseUrl: "http://lab.test" });
+		await client.getSession("a/../b?c");
+		await client.getChatHistory("g/../x", "s#1");
+		expect(urls).toEqual([
+			"http://lab.test/sessions/a%2F..%2Fb%3Fc",
+			"http://lab.test/chat/g%2F..%2Fx/history?sessionId=s%231",
+		]);
 	});
 
 	test("reports a session open in another browser", async () => {

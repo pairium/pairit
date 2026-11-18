@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from "react";
+import { type MermaidFrame, toMermaidFrame } from "./mermaid-frame";
 
 let mermaidReady: Promise<typeof import("mermaid").default> | null = null;
 
@@ -8,7 +9,8 @@ function loadMermaid() {
 			const mermaid = mod.default;
 			mermaid.initialize({
 				startOnLoad: false,
-				securityLevel: "strict",
+				// Lays out the diagram in a sandboxed iframe, not in the lab page
+				securityLevel: "sandbox",
 				theme: "default",
 				themeVariables: {
 					darkMode: false,
@@ -23,12 +25,12 @@ function loadMermaid() {
 
 export function MermaidBlock({ source }: { source: string }) {
 	const rawId = useId().replace(/:/g, "");
-	const [svg, setSvg] = useState<string | null>(null);
+	const [frame, setFrame] = useState<MermaidFrame | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
 		let cancelled = false;
-		setSvg(null);
+		setFrame(null);
 		setError(null);
 
 		const renderId = `mermaid-${rawId}-${Math.random().toString(36).slice(2)}`;
@@ -36,7 +38,10 @@ export function MermaidBlock({ source }: { source: string }) {
 		loadMermaid()
 			.then((mermaid) => mermaid.render(renderId, source))
 			.then(({ svg: rendered }) => {
-				if (!cancelled) setSvg(rendered);
+				if (cancelled) return;
+				const next = toMermaidFrame(rendered);
+				if (next) setFrame(next);
+				else setError("Invalid diagram");
 			})
 			.catch((err: unknown) => {
 				if (!cancelled) {
@@ -58,16 +63,21 @@ export function MermaidBlock({ source }: { source: string }) {
 		);
 	}
 
-	if (!svg) {
+	if (!frame) {
 		return null;
 	}
 
+	// No sandbox permissions: the diagram can't run scripts, open links or
+	// load anything (see DIAGRAM_CSP).
 	return (
-		<div
-			className="not-prose my-4 flex justify-center overflow-x-auto"
-			// mermaid.render returns SVG; securityLevel "strict" disables click/script
-			// biome-ignore lint/security/noDangerouslySetInnerHtml: mermaid SVG output
-			dangerouslySetInnerHTML={{ __html: svg }}
-		/>
+		<div className="not-prose my-4 flex justify-center overflow-x-auto">
+			<iframe
+				title="Diagram"
+				sandbox=""
+				srcDoc={frame.srcdoc}
+				className="w-full border-0"
+				style={{ height: frame.height }}
+			/>
+		</div>
 	);
 }

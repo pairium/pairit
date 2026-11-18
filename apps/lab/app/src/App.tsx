@@ -12,36 +12,14 @@ import {
 	startSession,
 } from "./lib/api";
 import { useSession } from "./lib/auth-client";
+import { isProlificUrl, safeRedirectUrl } from "./lib/end-redirect";
 import { sseClient } from "./lib/sse";
+import { mergeNestedUpdates } from "./lib/state-path";
 import "./runtime"; // Register component renderers
 import type { CompiledConfig } from "./runtime/config";
 import { EMPTY_GROUP, type GroupView } from "./runtime/expression";
 import { PageRenderer } from "./runtime/renderer";
 import type { ButtonAction, OnEnterAction, Page } from "./runtime/types";
-
-function mergeNestedUpdates(
-	base: Record<string, unknown>,
-	updates: Record<string, unknown>,
-): Record<string, unknown> {
-	const next = structuredClone(base);
-	for (const [path, value] of Object.entries(updates)) {
-		const keys = path.split(".");
-		if (keys.length === 1) {
-			next[path] = value;
-			continue;
-		}
-		let obj: Record<string, unknown> = next;
-		for (let i = 0; i < keys.length - 1; i++) {
-			const key = keys[i];
-			if (obj[key] == null || typeof obj[key] !== "object") {
-				obj[key] = {};
-			}
-			obj = obj[key] as Record<string, unknown>;
-		}
-		obj[keys[keys.length - 1]] = value;
-	}
-	return next;
-}
 
 function canSwapOptimistically(nextPage: Page): boolean {
 	return !nextPage.onEnter?.length && !nextPage.end;
@@ -161,7 +139,7 @@ export default function App() {
 				setCompiledConfig(r.config);
 				setSessionId(r.sessionId);
 				setPage(r.page);
-				setEndRedirectUrl(r.page?.endRedirectUrl ?? null);
+				setEndRedirectUrl(safeRedirectUrl(r.page?.endRedirectUrl));
 				setEndedAt(r.endedAt ?? null);
 				if (r.session_state) setSessionState(r.session_state);
 
@@ -265,7 +243,7 @@ export default function App() {
 
 			setPage(nextPage);
 			// The server sends a page's redirect only once the participant is on it
-			setEndRedirectUrl(r.page?.endRedirectUrl ?? null);
+			setEndRedirectUrl(safeRedirectUrl(r.page?.endRedirectUrl));
 			setEndedAt(r.endedAt ?? null);
 		} catch (error: unknown) {
 			if (optimistic && previousPage) {
@@ -345,7 +323,7 @@ export default function App() {
 							<>
 								<div className="text-lg font-medium">Thanks, that's it.</div>
 								<div className="text-sm text-slate-500">
-									{endRedirectUrl.toLowerCase().includes("prolific")
+									{isProlificUrl(endRedirectUrl)
 										? "Click below to complete on Prolific."
 										: "Continue to the next step below."}
 								</div>
@@ -361,11 +339,11 @@ export default function App() {
 									</Button>
 									<Button
 										onClick={() => {
-											if (!endRedirectUrl) return;
-											window.location.assign(endRedirectUrl);
+											const url = safeRedirectUrl(endRedirectUrl);
+											if (url) window.location.assign(url);
 										}}
 									>
-										{endRedirectUrl.toLowerCase().includes("prolific")
+										{isProlificUrl(endRedirectUrl)
 											? "Continue to Prolific"
 											: "Continue"}
 									</Button>

@@ -13,6 +13,7 @@ import {
 	parseDuration,
 } from "./activity.js";
 import { getAuthHeaders, login } from "./auth.js";
+import { escapeCsvValue } from "./csv.js";
 import { getApiUrl, getLabUrl, parseEnvName, setEnv } from "./env.js";
 import { lintGroupView } from "./group-lint.js";
 import {
@@ -23,7 +24,14 @@ import {
 	inspectHtmlSources,
 	inspectWorkspaceFiles,
 } from "./html-assets.js";
+import {
+	type LlmKeyOptions,
+	type LlmProvider,
+	readAllStdin,
+	resolveLlmKeys,
+} from "./llm-keys.js";
 import { lintRandomization } from "./randomize-lint.js";
+import { lintEndRedirectUrls } from "./redirect-lint.js";
 
 type ExperimentPage = {
 	id: string;
@@ -47,7 +55,7 @@ const program = new Command();
 program
 	.name("pairit")
 	.description("CLI for Pairit experiment configs")
-	.version("0.3.6")
+	.version("0.3.7")
 	.option(
 		"--env <name>",
 		"Target environment: staging or production",
@@ -132,8 +140,26 @@ configCommand
 		"Update an existing config by id (configs created before names)",
 	)
 	.option("--metadata <json>", "Optional metadata JSON string")
-	.option("--openai-api-key <key>", "OpenAI API key for this experiment")
-	.option("--anthropic-api-key <key>", "Anthropic API key for this experiment")
+	.option(
+		"--openai-api-key <key>",
+		"OpenAI API key for this experiment (visible in ps and shell history; prefer --openai-api-key-env)",
+	)
+	.option(
+		"--openai-api-key-env <var>",
+		"Read the OpenAI API key from this environment variable",
+	)
+	.option("--openai-api-key-stdin", "Read the OpenAI API key from stdin")
+	.option("--clear-openai-api-key", "Remove the stored OpenAI API key")
+	.option(
+		"--anthropic-api-key <key>",
+		"Anthropic API key for this experiment (visible in ps and shell history; prefer --anthropic-api-key-env)",
+	)
+	.option(
+		"--anthropic-api-key-env <var>",
+		"Read the Anthropic API key from this environment variable",
+	)
+	.option("--anthropic-api-key-stdin", "Read the Anthropic API key from stdin")
+	.option("--clear-anthropic-api-key", "Remove the stored Anthropic API key")
 	.description("Compile and upload config via Pairit Functions")
 	.action(async (configPath: string, options: UploadOptions) => {
 		try {
@@ -168,6 +194,15 @@ configCommand
 				);
 			}
 			console.log(`  checksum ${checksum}`);
+			for (const provider of payload.clearLlmCredentials ?? []) {
+				if (result.llmCredentials?.[provider]) {
+					console.warn(
+						`⚠ The server kept the ${provider} key: it doesn't support clearing keys yet.`,
+					);
+				} else {
+					console.log(`✓ Cleared the ${provider} key`);
+				}
+			}
 			if (
 				result.previousRevision != null &&
 				result.previousRevisionSessionCount > 0
@@ -548,12 +583,10 @@ program.parseAsync(process.argv).catch((err) => {
 	process.exit(1);
 });
 
-type UploadOptions = {
+type UploadOptions = LlmKeyOptions & {
 	name?: string;
 	configId?: string;
 	metadata?: string;
-	openaiApiKey?: string;
-	anthropicApiKey?: string;
 };
 
 type ListOptions = Record<string, never>;
@@ -570,6 +603,7 @@ type UploadResponse = {
 	created: boolean;
 	previousRevision: number | null;
 	previousRevisionSessionCount: number;
+	llmCredentials?: Partial<Record<LlmProvider, boolean>>;
 };
 
 type DeleteOptions = {
@@ -673,6 +707,7 @@ async function lintConfig(configPath: string): Promise<HtmlSourceInfo[]> {
 	}
 	errors.push(...lintRandomization(config));
 	errors.push(...lintGroupView(config));
+	errors.push(...lintEndRedirectUrls(config));
 
 	if (errors.length) {
 		throw new Error(errors.join(", "));
@@ -701,6 +736,10 @@ type ComponentWithProps = {
 
 async function compileConfig(configPath: string): Promise<string> {
 	const config = await loadConfig(configPath);
+	const redirectErrors = lintEndRedirectUrls(config);
+	if (redirectErrors.length) {
+		throw new Error(redirectErrors.join(", "));
+	}
 
 	// Build pool config lookup from matchmaking array
 	const poolConfigs = new Map<string, MatchmakingPoolConfig>();
@@ -781,6 +820,7 @@ type UploadPayload = {
 		openaiApiKey?: string;
 		anthropicApiKey?: string;
 	};
+	clearLlmCredentials?: LlmProvider[];
 	allowRetake?: boolean;
 	requireAuth?: boolean;
 };
@@ -828,12 +868,10 @@ async function buildUploadPayload(
 		metadata.originalFilename = path.basename(configPath);
 	}
 
-	const llmCredentials = {
-		...(options.openaiApiKey && { openaiApiKey: options.openaiApiKey }),
-		...(options.anthropicApiKey && {
-			anthropicApiKey: options.anthropicApiKey,
-		}),
-	};
+	const { llmCredentials, clearLlmCredentials } = await resolveLlmKeys(
+		options,
+		{ env: process.env, readStdin: readAllStdin },
+	);
 
 	return {
 		payload: {
@@ -843,6 +881,7 @@ async function buildUploadPayload(
 			metadata: metadata ?? null,
 			config: parsed,
 			...(Object.keys(llmCredentials).length > 0 && { llmCredentials }),
+			...(clearLlmCredentials.length > 0 && { clearLlmCredentials }),
 			allowRetake,
 			...(requireAuth !== undefined && { requireAuth }),
 		},
@@ -1387,16 +1426,6 @@ async function writeExportFile<T>(
 	}
 
 	await writeFile(filePath, rows.join("\n"), "utf8");
-}
-
-function escapeCsvValue(value: unknown): string {
-	if (value === null || value === undefined) return "";
-	const str = String(value);
-	// If value contains comma, quote, or newline, wrap in quotes and escape internal quotes
-	if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-		return `"${str.replace(/"/g, '""')}"`;
-	}
-	return str;
 }
 
 export const __filename = fileURLToPath(import.meta.url);

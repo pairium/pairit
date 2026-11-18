@@ -1,11 +1,17 @@
-import type { Ref } from "react";
+import { type Ref, useLayoutEffect, useRef } from "react";
 
 export type HtmlEmbedProps = {
 	srcdoc: string;
 	height: number;
 	title?: string;
 	iframeRef?: Ref<HTMLIFrameElement>;
+	/** Runs once per srcdoc, when the researcher's document has loaded. */
 	onLoad?: () => void;
+	/**
+	 * Runs when the frame loads anything after that: the document navigated
+	 * itself away, so the lab must stop posting to it.
+	 */
+	onNavigateAway?: () => void;
 };
 
 export function HtmlEmbed({
@@ -14,7 +20,15 @@ export function HtmlEmbed({
 	title = "Custom experiment UI",
 	iframeRef,
 	onLoad,
+	onNavigateAway,
 }: HtmlEmbedProps) {
+	const loadsRef = useRef(0);
+	// A new srcdoc reloads the frame with the researcher's document again
+	// biome-ignore lint/correctness/useExhaustiveDependencies: reset on srcdoc change
+	useLayoutEffect(() => {
+		loadsRef.current = 0;
+	}, [srcdoc]);
+
 	return (
 		<iframe
 			ref={iframeRef}
@@ -23,7 +37,11 @@ export function HtmlEmbed({
 			sandbox="allow-scripts"
 			className="w-full rounded-lg border border-slate-200 bg-white"
 			style={{ height }}
-			onLoad={onLoad}
+			onLoad={() => {
+				loadsRef.current += 1;
+				if (loadsRef.current === 1) onLoad?.();
+				else onNavigateAway?.();
+			}}
 		/>
 	);
 }

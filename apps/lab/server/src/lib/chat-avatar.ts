@@ -44,5 +44,33 @@ export function resolveParticipantAvatar(
 		session_state: sessionState,
 	}).trim();
 	if (!resolved || resolved.includes("{{")) return undefined;
+	if (template.includes("{{") && !isAllowedFilledAvatar(template, resolved)) {
+		return undefined;
+	}
 	return resolved;
+}
+
+const LAB_ORIGIN = "https://lab.invalid";
+
+/**
+ * A participant chooses their own session_state, so an avatar filled from it
+ * must not point other participants' browsers at a server the participant
+ * picked. Allowed: an icon name, a relative path on the lab, or a URL on the
+ * origin the template fixes before its first {{ (e.g.
+ * "https://cdn.example.com/{{session_state.role}}.png").
+ */
+export function isAllowedFilledAvatar(
+	template: string,
+	resolved: string,
+): boolean {
+	if (!resolved.includes("/") && !resolved.includes(":")) return true;
+	if (resolved.includes("\\")) return false;
+	try {
+		if (new URL(resolved, `${LAB_ORIGIN}/`).origin === LAB_ORIGIN) return true;
+		const prefix = template.slice(0, template.indexOf("{{"));
+		if (!/^https?:\/\/[^/{}@\\]+\//i.test(prefix)) return false;
+		return new URL(resolved).origin === new URL(prefix).origin;
+	} catch {
+		return false;
+	}
 }

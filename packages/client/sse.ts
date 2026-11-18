@@ -40,9 +40,8 @@ export class SSEClient {
 	private createConnection(): void {
 		if (!this.sessionId) return;
 
-		const url = `${this.baseUrl}/sessions/${this.sessionId}/stream`;
-
-		console.log(`[SSE] Connecting to ${url}`);
+		// The session id is a credential: keep it out of the console
+		const url = `${this.baseUrl}/sessions/${encodeURIComponent(this.sessionId)}/stream`;
 
 		this.eventSource = new EventSource(url, {
 			withCredentials: this.withCredentials,

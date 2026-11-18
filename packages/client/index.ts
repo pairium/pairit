@@ -1,6 +1,7 @@
 export type { LabClientOptions, ProlificParams } from "./client";
 export {
 	AuthRequiredError,
+	ChatLimitError,
 	LabClient,
 	NotAMemberError,
 	SessionBlockedError,
