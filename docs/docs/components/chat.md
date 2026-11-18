@@ -1,6 +1,6 @@
 # Chat
 
-Open a chat view for real-time messaging. Supports human-human chat (via matchmaking) and human-AI chat (via agents). See the [AI Chat](../examples.md#ai-chat) and [Multi-Chat](../examples.md#multi-chat) examples.
+Open a chat view for real-time messaging. Supports human-human chat (via matchmaking) and human-AI chat (via agents). Each participant can send up to 20 messages a minute and 300 in total; see [Limits](#limits). See the [AI Chat](../examples.md#ai-chat) and [Multi-Chat](../examples.md#multi-chat) examples.
 
 ## Props
 
@@ -10,6 +10,19 @@ Open a chat view for real-time messaging. Supports human-human chat (via matchma
 | `groupId` | string | - | Explicit chat group identifier for shared contexts |
 | `placeholder` | string | `"Type a message..."` | Placeholder text in the message input |
 | `avatars` | object | - | Avatar overrides for `self`, `participant`, `agent`, or specific `agents.{id}`. See [Avatars](#avatars). |
+
+## Limits
+
+Each participant can send at most:
+
+- **20 messages a minute**, and
+- **300 messages in total** per session, across every chat in the study.
+
+These limits are fixed and can't be changed in a config. They count only messages participants send. Agent replies, system notices and other participants' messages don't count. The 300 total protects your OpenAI key, since each participant message can start agent replies.
+
+A message over either limit is not sent. The chat currently shows no notice when this happens, so if your study needs long chats (for example, an open-ended conversation with an agent for an hour), email [harang@pairium.ai](mailto:harang@pairium.ai) before you launch. A typical 20–30 minute chat study stays well under both limits.
+
+Messages are also limited to 4,000 characters.
 
 ## Group Resolution
 
