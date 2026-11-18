@@ -14,7 +14,11 @@ import {
 	User,
 } from "lucide-react";
 
-/** A Lucide icon name, or an image path/URL (contains "/" or ":") */
+/**
+ * A Lucide icon name, or an image path/URL (contains "/" or ":"). A
+ * participant avatar filled from session_state may only be an icon or an
+ * image on the lab's own origin.
+ */
 export type ChatAvatarConfig = string;
 
 export type ChatAvatarOverrides = {
@@ -75,12 +79,51 @@ function getParticipantIcon(senderId: string): LucideIcon {
 	return PARTICIPANT_ICONS[index];
 }
 
-function resolveAvatarConfig(config?: ChatAvatarConfig): ResolvedChatAvatar {
+/** A relative path or a URL on the lab's own origin. */
+export function isSameOriginImage(value: string): boolean {
+	if (value.includes("\\")) return false;
+	const origin = globalThis.location?.origin ?? "https://lab.invalid";
+	try {
+		return new URL(value, `${origin}/`).origin === origin;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Whether a participant's message avatar may be shown. It can be filled from
+ * their own session_state, so an image must be on the lab's origin, or on the
+ * origin the config's template fixes before its first {{ (e.g.
+ * "https://cdn.example.com/{{session_state.role}}.png"), or be the config's
+ * literal avatar.
+ */
+export function isAllowedParticipantImage(
+	value: string,
+	template: string | undefined,
+): boolean {
+	if (isSameOriginImage(value)) return true;
+	const configured = template?.trim();
+	if (!configured) return false;
+	if (!configured.includes("{{")) return value === configured;
+	const prefix = configured.slice(0, configured.indexOf("{{"));
+	if (!/^https?:\/\/[^/{}@\\]+\//i.test(prefix)) return false;
+	try {
+		return new URL(value).origin === new URL(prefix).origin;
+	} catch {
+		return false;
+	}
+}
+
+function resolveAvatarConfig(
+	config?: ChatAvatarConfig,
+	isAllowedImage: (src: string) => boolean = () => true,
+): ResolvedChatAvatar {
 	const value = typeof config === "string" ? config.trim() : undefined;
 	// Unresolved {{session_state.*}} templates are filled in by the server
 	if (!value || value.includes("{{")) return null;
 
 	if (value.includes("/") || value.includes(":")) {
+		if (!isAllowedImage(value)) return null;
 		return { type: "image", src: value };
 	}
 
@@ -106,10 +149,16 @@ export function resolveChatAvatar(params: {
 		return null;
 	}
 
+	// Config and agent avatars are written by the researcher and can be any
+	// URL; a participant's message avatar is checked (see above).
+	const participantAvatar = resolveAvatarConfig(avatar, (src) =>
+		isAllowedParticipantImage(src, avatars?.participant),
+	);
+
 	if (isOwn) {
 		return (
 			resolveAvatarConfig(avatars?.self) ??
-			resolveAvatarConfig(avatar) ??
+			participantAvatar ??
 			({ type: "icon", icon: DEFAULT_SELF_ICON } as const)
 		);
 	}
@@ -127,7 +176,7 @@ export function resolveChatAvatar(params: {
 	}
 
 	return (
-		resolveAvatarConfig(avatar) ??
+		participantAvatar ??
 		resolveAvatarConfig(avatars?.participant) ??
 		({ type: "icon", icon: getParticipantIcon(senderId) } as const)
 	);

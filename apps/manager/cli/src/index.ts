@@ -24,6 +24,7 @@ import {
 	inspectWorkspaceFiles,
 } from "./html-assets.js";
 import { lintRandomization } from "./randomize-lint.js";
+import { lintEndRedirectUrls } from "./redirect-lint.js";
 
 type ExperimentPage = {
 	id: string;
@@ -663,6 +664,7 @@ async function lintConfig(configPath: string): Promise<HtmlSourceInfo[]> {
 	}
 	errors.push(...lintRandomization(config));
 	errors.push(...lintGroupView(config));
+	errors.push(...lintEndRedirectUrls(config));
 
 	if (errors.length) {
 		throw new Error(errors.join(", "));
@@ -691,6 +693,10 @@ type ComponentWithProps = {
 
 async function compileConfig(configPath: string): Promise<string> {
 	const config = await loadConfig(configPath);
+	const redirectErrors = lintEndRedirectUrls(config);
+	if (redirectErrors.length) {
+		throw new Error(redirectErrors.join(", "));
+	}
 
 	// Build pool config lookup from matchmaking array
 	const poolConfigs = new Map<string, MatchmakingPoolConfig>();

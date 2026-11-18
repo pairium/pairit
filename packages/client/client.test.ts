@@ -115,6 +115,23 @@ describe("LabClient", () => {
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 	});
 
+	test("encodes ids in request paths", async () => {
+		const urls: string[] = [];
+		const fetchMock = mock(async (input: RequestInfo | URL) => {
+			urls.push(String(input));
+			return jsonResponse({ ok: true, messages: [] });
+		});
+		globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+		const client = new LabClient({ baseUrl: "http://lab.test" });
+		await client.getSession("a/../b?c");
+		await client.getChatHistory("g/../x", "s#1");
+		expect(urls).toEqual([
+			"http://lab.test/sessions/a%2F..%2Fb%3Fc",
+			"http://lab.test/chat/g%2F..%2Fx/history?sessionId=s%231",
+		]);
+	});
+
 	test("reports a session open in another browser", async () => {
 		const fetchMock = mock(async () =>
 			jsonResponse(

@@ -11,6 +11,7 @@ import {
 } from "../lib/config-lookup";
 import { getGroupsCollection, getSessionsCollection } from "../lib/db";
 import { denySessionAccess } from "../lib/session-access";
+import { isSafeStatePath } from "../lib/session-state";
 import {
 	assignTreatment,
 	distributeConditions,
@@ -34,11 +35,7 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 		const stateKey = body.stateKey || DEFAULT_STATE_KEY;
 
 		// Validate stateKey to prevent MongoDB operator injection
-		if (
-			stateKey.includes("$") ||
-			stateKey.startsWith(".") ||
-			stateKey.endsWith(".")
-		) {
+		if (!isSafeStatePath(stateKey)) {
 			set.status = 400;
 			return { error: "invalid_state_key" };
 		}

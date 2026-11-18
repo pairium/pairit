@@ -22,6 +22,13 @@ Merged, but not released yet.
 - Fixed security issues that let participants change their group, treatment, or chat sender, or skip pages. The lab now takes randomization and matchmaking settings only from the uploaded config, and no longer sends agent prompts or the end page's redirect URL to the browser before the participant reaches it. Each participant can send up to 20 chat messages a minute and 300 in total.
 - Fixed a security issue that let a participant act as someone else in their group. Participants no longer see each other's session IDs.
 - A participant who reopens a study in a different browser or device is asked to continue in the browser where they started. Reloading the page works as before, and participants signed in with Google can continue anywhere.
+- Fixed security issues that let a participant or agent put links, images or diagrams on other participants' pages. Values filled into text with `{{session_state.*}}` or `{{group.*}}` now show as plain text, so Markdown inside a value is no longer formatted. In chat, images from others show as text and links open in a new tab. An avatar filled from `session_state` must be an icon name or an image on the lab, or on the site the avatar template names (e.g. `https://cdn.example.com/{{session_state.role}}.png`).
+- The end page's Continue button opens only `http://` and `https://` links, and says "Continue to Prolific" only for prolific.com and prolific.co links. Uploading a config with any other `endRedirectUrl` fails.
+- Mermaid diagrams and HTML embeds are kept further apart from the lab page. Embeds work as before.
+
+### CLI
+
+- `pairit config lint`, `compile` and `upload` reject an `endRedirectUrl` that isn't an `http://` or `https://` URL.
 
 ## Platform 2026.10.31
 

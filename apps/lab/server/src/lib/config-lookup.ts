@@ -4,6 +4,8 @@
  * a client sends.
  */
 
+import { getOwnPath } from "./session-state";
+
 export type AssignmentType = "random" | "balanced_random" | "block";
 
 export type RandomizationSettings = {
@@ -213,10 +215,5 @@ export function sessionGroupSuffixes(config: unknown): Set<string> {
 
 /** Reads a dotted path such as "a.b" from an object. */
 export function getPath(obj: unknown, path: string): unknown {
-	let current: unknown = obj;
-	for (const key of path.split(".")) {
-		if (!isObj(current)) return undefined;
-		current = current[key];
-	}
-	return current;
+	return getOwnPath(obj, path);
 }

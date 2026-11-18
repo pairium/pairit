@@ -1,3 +1,29 @@
+const FORBIDDEN_SEGMENTS = new Set(["__proto__", "constructor", "prototype"]);
+
+/**
+ * A dotted session_state path ("a.b") that is safe to $set and to send to
+ * browsers: no Mongo operators, no empty segments, and no segment that
+ * reaches an object's prototype when a client applies it.
+ */
+export function isSafeStatePath(path: string): boolean {
+	if (!path || path.includes("$")) return false;
+	return path
+		.split(".")
+		.every((segment) => segment.length > 0 && !FORBIDDEN_SEGMENTS.has(segment));
+}
+
+/** Reads a dotted path through own properties only. */
+export function getOwnPath(root: unknown, path: string): unknown {
+	let current = root;
+	for (const key of path.split(".")) {
+		if (FORBIDDEN_SEGMENTS.has(key)) return undefined;
+		if (current == null || typeof current !== "object") return undefined;
+		if (!Object.hasOwn(current, key)) return undefined;
+		current = (current as Record<string, unknown>)[key];
+	}
+	return current;
+}
+
 // MongoDB rejects one $set that touches both "a" and "a.b".
 export function hasOverlappingPaths(paths: string[]): boolean {
 	const sorted = [...paths].sort();

@@ -377,4 +377,45 @@ describe("App", () => {
 
 		expect(await screen.findByText("All done.")).toBeDefined();
 	});
+
+	function startOnEnd(endRedirectUrl: string) {
+		startSessionMock.mockResolvedValue({
+			sessionId: "sess-1234567890",
+			configId: "test-experiment",
+			config: compiledConfig,
+			currentPageId: "end",
+			page: { ...endPage, endRedirectUrl },
+			endedAt: "2026-09-25T00:00:00.000Z",
+		});
+	}
+
+	test("does not follow a javascript: end redirect", async () => {
+		startOnEnd("javascript:alert(document.cookie)");
+		renderApp();
+		expect(await screen.findByText("You can close this window.")).toBeDefined();
+		expect(screen.queryByRole("button", { name: /Continue/ })).toBeNull();
+	});
+
+	test("labels only real Prolific hosts as Prolific", async () => {
+		startOnEnd("https://evil.test/?next=prolific.com");
+		const { unmount } = renderApp();
+		expect(
+			await screen.findByRole("button", { name: "Continue" }),
+		).toBeDefined();
+		expect(screen.queryByText("Continue to Prolific")).toBeNull();
+		unmount();
+
+		startOnEnd("https://app.prolific.com/submissions/complete?cc=AB12");
+		renderApp();
+		expect(
+			await screen.findByRole("button", { name: "Continue to Prolific" }),
+		).toBeDefined();
+	});
+
+	test("does not put the full session id in the header", async () => {
+		startOnEnd("https://x.test");
+		const { container } = renderApp();
+		expect(await screen.findByText("Session: sess-123…")).toBeDefined();
+		expect(container.innerHTML).not.toContain("sess-1234567890");
+	});
 });
