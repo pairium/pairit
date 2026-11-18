@@ -173,6 +173,10 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 							"*",
 						);
 					}}
+					onNavigateAway={() => {
+						// The page left its srcdoc: send it nothing more
+						iframeLoadedRef.current = false;
+					}}
 				/>
 				{required && !done && blockedMessage ? (
 					<p className="text-sm text-amber-700">{blockedMessage}</p>

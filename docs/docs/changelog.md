@@ -21,6 +21,13 @@ Merged, but not released yet.
 - Participant-written values in agent prompts (`{{session_state.*}}`, `{{group.*}}`, workspace text) are now marked as participant data, which makes prompt injection harder. Values Pairit assigns, such as a randomized condition, are passed through unchanged.
 - Agents see the most recent 100 chat messages, not the whole chat.
 - Workspace edits are checked on the server: participants can only change the fields the workspace declares, with the declared types, and a workspace can hold up to 200,000 characters.
+- Fixed security issues that let a participant or agent put links, images or diagrams on other participants' pages. Values filled into text with `{{session_state.*}}` or `{{group.*}}` now show as plain text, so Markdown inside a value is no longer formatted. In chat, images from others show as text and links open in a new tab. An avatar filled from `session_state` must be an icon name or an image on the lab, or on the site the avatar template names (e.g. `https://cdn.example.com/{{session_state.role}}.png`).
+- The end page's Continue button opens only `http://` and `https://` links, and says "Continue to Prolific" only for prolific.com and prolific.co links. Uploading a config with any other `endRedirectUrl` fails.
+- Mermaid diagrams and HTML embeds are kept further apart from the lab page. Embeds work as before.
+
+### CLI
+
+- `pairit config lint`, `compile` and `upload` reject an `endRedirectUrl` that isn't an `http://` or `https://` URL.
 
 ## Platform 2026.11.18
 

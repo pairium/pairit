@@ -1,3 +1,5 @@
+import { isSafePathSegment } from "@app/lib/state-path";
+
 export const HTML_CSP =
 	"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:";
 
@@ -48,7 +50,7 @@ export const PAIRIT_HELPER_SCRIPT = `(function(){
     }
   };
   window.addEventListener("message", function(event) {
-    if (!event.data) return;
+    if (event.source !== window.parent || !event.data) return;
     if (event.data.type === "pairit:init") {
       applyState(event.data.state, true);
       return;
@@ -86,7 +88,7 @@ export function pickKeys(
 	if (!source || !keys?.length) return {};
 	const out: Record<string, unknown> = {};
 	for (const key of keys) {
-		if (key in source) {
+		if (isSafePathSegment(key) && Object.hasOwn(source, key)) {
 			out[key] = source[key];
 		}
 	}
@@ -103,11 +105,30 @@ export function isPairitFromEmbed(data: unknown): data is PairitFromEmbed {
 	);
 }
 
+export type EmbedMessageEvent = {
+	source: unknown;
+	origin: string;
+	data: unknown;
+};
+
+/**
+ * From the embed's own window while it still shows its srcdoc: a srcdoc
+ * sandboxed without allow-same-origin has the opaque origin "null". After the
+ * frame navigates itself elsewhere, its origin changes and it is ignored.
+ */
+function isFromEmbed(event: EmbedMessageEvent, expectedSource: unknown) {
+	return (
+		!!expectedSource &&
+		event.source === expectedSource &&
+		event.origin === "null"
+	);
+}
+
 export function parseEmbedMessage(
-	event: { source: unknown; data: unknown },
+	event: EmbedMessageEvent,
 	expectedSource: unknown,
 ): PairitFromEmbed | null {
-	if (!expectedSource || event.source !== expectedSource) return null;
+	if (!isFromEmbed(event, expectedSource)) return null;
 	if (!isPairitFromEmbed(event.data)) return null;
 	return event.data;
 }
@@ -152,6 +173,7 @@ export const WORKSPACE_HELPER_SCRIPT = `(function(){
     }
   };
   window.addEventListener("message", function(event) {
+    if (event.source !== window.parent) return;
     var data = event.data;
     if (!data) return;
     if (data.type === "pairit:workspace") { text = data.text; emit(); return; }
@@ -171,10 +193,10 @@ export type WorkspaceReplaceMessage = {
 };
 
 export function parseWorkspaceMessage(
-	event: { source: unknown; data: unknown },
+	event: EmbedMessageEvent,
 	expectedSource: unknown,
 ): WorkspaceReplaceMessage | null {
-	if (!expectedSource || event.source !== expectedSource) return null;
+	if (!isFromEmbed(event, expectedSource)) return null;
 	const data = event.data as Partial<WorkspaceReplaceMessage> | null;
 	if (
 		data?.type !== "pairit:workspace:replace" ||
@@ -187,16 +209,13 @@ export function parseWorkspaceMessage(
 	return data as WorkspaceReplaceMessage;
 }
 
+/**
+ * The embed's document. The CSP and the helper come first, before anything
+ * the researcher wrote, so no markup in their HTML can move or hide them.
+ */
 export function wrapHtmlSrcdoc(
 	userHtml: string,
 	helperScript: string = PAIRIT_HELPER_SCRIPT,
 ): string {
-	const inject = `<meta http-equiv="Content-Security-Policy" content="${HTML_CSP}"><script>${helperScript}</script>`;
-	if (/<head[\s>]/i.test(userHtml)) {
-		return userHtml.replace(/<head([^>]*)>/i, `<head$1>${inject}`);
-	}
-	if (/<html[\s>]/i.test(userHtml)) {
-		return userHtml.replace(/<html([^>]*)>/i, `<html$1><head>${inject}</head>`);
-	}
-	return `<!DOCTYPE html><html><head>${inject}</head><body>${userHtml}</body></html>`;
+	return `<!DOCTYPE html><meta http-equiv="Content-Security-Policy" content="${HTML_CSP}"><script>${helperScript}</script>${userHtml}`;
 }

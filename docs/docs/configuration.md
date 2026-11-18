@@ -57,7 +57,7 @@ Common page fields:
 
 - `id`: string, unique within the config
 - `end?`: boolean; when true, entering the page ends the session
-- `endRedirectUrl?`: string; optional URL exposed as a "Continue" button on end pages. Participants can follow it to finish in an external system instead of restarting.
+- `endRedirectUrl?`: string; optional `http://` or `https://` URL exposed as a "Continue" button on end pages. Participants can follow it to finish in an external system instead of restarting.
 - `onEnter?`: array of actions to run invisibly when entering the page (e.g., randomization). See [Randomization](components/randomization.md).
 - `components?`: array of component instances shown on the page (canonical)
 - `layout?`: set to `split` for a two-column page (see [Split layout](#split-layout))

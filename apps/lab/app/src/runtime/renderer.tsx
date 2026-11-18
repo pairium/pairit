@@ -1,3 +1,4 @@
+import { mergeNestedUpdates } from "@app/lib/state-path";
 import { Card, CardContent } from "@components/ui/Card";
 
 import { useCallback, useMemo, useRef } from "react";
@@ -8,30 +9,6 @@ import {
 	type RuntimeComponentContext,
 } from "./registry";
 import type { ButtonAction, ComponentInstance, Page } from "./types";
-
-function mergeNestedUpdates(
-	base: Record<string, unknown>,
-	updates: Record<string, unknown>,
-): Record<string, unknown> {
-	const next = structuredClone(base);
-	for (const [path, value] of Object.entries(updates)) {
-		const keys = path.split(".");
-		if (keys.length === 1) {
-			next[path] = value;
-			continue;
-		}
-		let obj: Record<string, unknown> = next;
-		for (let i = 0; i < keys.length - 1; i++) {
-			const key = keys[i];
-			if (obj[key] == null || typeof obj[key] !== "object") {
-				obj[key] = {};
-			}
-			obj = obj[key] as Record<string, unknown>;
-		}
-		obj[keys[keys.length - 1]] = value;
-	}
-	return next;
-}
 
 // A chat in a split column fills the column: it drops its fixed height
 // and its own border, and cancels the column padding to sit flush with

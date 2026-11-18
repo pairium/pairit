@@ -27,6 +27,7 @@ import {
 	DATA_TAG,
 	resolveSystemPrompt,
 } from "./prompt-resolver";
+import { isSafeStatePath } from "./session-state";
 import { broadcastToSession, getConnectionCount } from "./sse";
 import {
 	editWorkspace,
@@ -688,7 +689,7 @@ async function handleToolCall(
 			return;
 		}
 
-		if (path.includes("$") || path.startsWith(".") || path.endsWith(".")) {
+		if (typeof path !== "string" || !isSafeStatePath(path)) {
 			console.error(`[Agent] assign_state invalid path: ${path}`);
 			return;
 		}

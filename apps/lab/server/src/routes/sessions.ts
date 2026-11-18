@@ -33,6 +33,7 @@ import { startLockKey, withStartLock } from "../lib/session-start-lock";
 import {
 	filterProtectedUpdates,
 	hasOverlappingPaths,
+	isSafeStatePath,
 	PROTECTED_STATE_KEYS,
 } from "../lib/session-state";
 import { resolveSimulationFields } from "../lib/simulation";
@@ -261,7 +262,7 @@ async function advanceSession(
 }
 
 function assertValidStatePath(path: string): void {
-	if (path.includes("$") || path.startsWith(".") || path.endsWith(".")) {
+	if (!isSafeStatePath(path)) {
 		throw new Error(`Invalid session_state path: ${path}`);
 	}
 }

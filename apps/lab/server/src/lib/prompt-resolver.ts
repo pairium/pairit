@@ -2,6 +2,8 @@
  * Resolves agent system prompts with template interpolation and conditional blocks
  */
 
+import { getOwnPath } from "./session-state";
+
 type ComparisonOp = "==" | "!=" | "<=" | ">=" | "<" | ">";
 
 function parseValue(raw: string): unknown {
@@ -57,10 +59,7 @@ type Scope = {
 const PATH = String.raw`(?:session_state|group)\.[A-Za-z0-9_.]+`;
 
 function getPath(scope: Scope, path: string): unknown {
-	return path.split(".").reduce<unknown>((current, key) => {
-		if (current == null || typeof current !== "object") return undefined;
-		return (current as Record<string, unknown>)[key];
-	}, scope);
+	return getOwnPath(scope, path);
 }
 
 export function evaluateExpression(expr: string, scope: Scope): boolean {

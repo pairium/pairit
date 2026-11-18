@@ -9,6 +9,7 @@ import type {
 } from "@app/lib/participant-icons";
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
+import { OTHERS_MARKDOWN } from "./markdown";
 import { ParticipantIcon } from "./ParticipantIcon";
 
 export type ChatMessage = {
@@ -193,7 +194,7 @@ function MessageBubble({
 							{message.content}
 						</Markdown>
 					) : (
-						<Markdown>{message.content}</Markdown>
+						<Markdown components={OTHERS_MARKDOWN}>{message.content}</Markdown>
 					)}
 				</div>
 			</div>
@@ -229,7 +230,7 @@ function StreamingBubble({
 			<div className="max-w-[80%] rounded-2xl bg-slate-100 px-4 py-2 text-sm text-slate-900">
 				<div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-headings:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
 					{message.content ? (
-						<Markdown>{message.content}</Markdown>
+						<Markdown components={OTHERS_MARKDOWN}>{message.content}</Markdown>
 					) : (
 						<span className="inline-flex items-center gap-1">
 							<span className="h-2 w-2 animate-pulse rounded-full bg-slate-400" />
