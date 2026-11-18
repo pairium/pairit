@@ -5,6 +5,7 @@
 
 import {
 	type ChatMessage as ApiChatMessage,
+	ChatLimitError,
 	getChatHistory,
 	getSession,
 	NotAMemberError,
@@ -20,6 +21,14 @@ import { sseClient } from "@app/lib/sse";
 import { defineRuntimeComponent } from "@app/runtime/define-runtime-component";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type ChatMessage, ChatView } from "./ChatView";
+
+// Limits are set on the server (lib/chat-rate-limit.ts)
+const CHAT_LIMIT_NOTICES: Record<ChatLimitError["reason"], string> = {
+	per_minute:
+		"You're sending messages too quickly. Your message wasn't sent. Wait a minute, then try again.",
+	per_session:
+		"You've reached the message limit for this study, so your message wasn't sent.",
+};
 
 type ChatProps = {
 	placeholder?: string;
@@ -98,6 +107,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 		const [messages, setMessages] = useState<ChatMessage[]>([]);
 		const [loading, setLoading] = useState(true);
 		const [chatDisabled, setChatDisabled] = useState(false);
+		const [sendNotice, setSendNotice] = useState<string | null>(null);
 		const [streamingMessage, setStreamingMessage] =
 			useState<StreamingMessage | null>(null);
 		const seenMessageIds = useRef<Set<string>>(new Set());
@@ -396,6 +406,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 
 				try {
 					const result = await sendChatMessage(groupId, sessionId, content);
+					setSendNotice(null);
 					if (result.senderId) selfSenderId.current = result.senderId;
 
 					if (typeof result.messagesSent === "number") {
@@ -433,6 +444,10 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 						);
 					}
 				} catch (error) {
+					if (error instanceof ChatLimitError) {
+						setSendNotice(CHAT_LIMIT_NOTICES[error.reason]);
+						return false;
+					}
 					console.error("[Chat] Failed to send message:", error);
 				}
 			},
@@ -467,6 +482,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 				onSend={handleSend}
 				placeholder={component.props.placeholder}
 				disabled={chatDisabled}
+				notice={sendNotice}
 				streamingMessage={streamingMessage}
 				avatars={mergedAvatars}
 			/>

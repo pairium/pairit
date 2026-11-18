@@ -27,6 +27,7 @@ Merged, but not released yet.
 - Uploading a config with only an OpenAI key no longer removes its stored Anthropic key, and the reverse. Stored keys can now be removed (see CLI below). Keys are now tied to their config, so a stored key can't be reused on another config.
 - Hardened CLI sign-in: the manager checks that the one-time code goes back to the `pairit login` that asked for it. One-time codes now last 2 minutes.
 - The manager refuses changes sent from other websites, and its error messages no longer include server details.
+- A participant who hits a chat limit (20 messages a minute, 300 in total) now sees a notice saying their message wasn't sent, and keeps their text. Before, the message silently disappeared. The message box stops at 4,000 characters.
 
 ### CLI
 

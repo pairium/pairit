@@ -37,6 +37,18 @@ export class NotAMemberError extends Error {
 	}
 }
 
+export type ChatLimitReason = "per_minute" | "per_session";
+
+/** The session is over a chat limit; the message was not sent. */
+export class ChatLimitError extends Error {
+	reason: ChatLimitReason;
+	constructor(reason: ChatLimitReason) {
+		super("Chat limit reached");
+		this.name = "ChatLimitError";
+		this.reason = reason;
+	}
+}
+
 /** The server refused a workspace request; sending it again won't help. */
 export class WorkspaceRefusedError extends Error {
 	constructor(readonly code: string) {
@@ -266,6 +278,16 @@ export class LabClient {
 			},
 		);
 		if (r.status === 403) throw new NotAMemberError();
+		if (r.status === 429) {
+			const body = (await r.json().catch(() => null)) as {
+				error?: string;
+			} | null;
+			throw new ChatLimitError(
+				body?.error === "rate_limited_per_session"
+					? "per_session"
+					: "per_minute",
+			);
+		}
 		if (!r.ok) throw new Error("Failed to send message");
 		return r.json();
 	}
