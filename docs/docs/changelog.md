@@ -15,14 +15,18 @@ Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/re
 
 Merged, but not released yet.
 
-### Platform
+## Platform 2026.11.18.3
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/platform-v2026.11.18.3)
 
 - Media is now separate per researcher. New uploads go in your own folder, and `pairit media list` and `pairit media delete` show and delete only your files. Media you uploaded before keeps its URL, so configs that use it keep working; ask an admin to delete it. Nobody can list the media bucket from outside anymore, but anyone with a file's URL can still read it.
 - Action needed: `pairit media upload --private` is refused. It never made a file private: the file was readable by URL like any other. Do not upload sensitive files as media.
 - Media uploads accept image, audio, video, font, PDF, JSON, plain text, CSV, and WebVTT files. Other files are stored as downloads. Large uploads are limited to 500 MiB.
 - `pairit media delete` works again for files with a folder in their name, such as `onboarding/hero.png`. Since Platform 2026.11.18.2 it answered "not found".
 
-### CLI
+## CLI 0.3.8
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/cli-v0.3.8)
 
 - `pairit media upload --private` now stops with an error, and `--private` is gone from the help. The media bucket is readable by URL, so the flag never kept a file private.
 - `pairit media upload` prints the stored name, which now starts with your folder.
