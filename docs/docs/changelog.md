@@ -24,10 +24,18 @@ Merged, but not released yet.
 - Fixed security issues that let a participant or agent put links, images or diagrams on other participants' pages. Values filled into text with `{{session_state.*}}` or `{{group.*}}` now show as plain text, so Markdown inside a value is no longer formatted. In chat, images from others show as text and links open in a new tab. An avatar filled from `session_state` must be an icon name or an image on the lab, or on the site the avatar template names (e.g. `https://cdn.example.com/{{session_state.role}}.png`).
 - The end page's Continue button opens only `http://` and `https://` links, and says "Continue to Prolific" only for prolific.com and prolific.co links. Uploading a config with any other `endRedirectUrl` fails.
 - Mermaid diagrams and HTML embeds are kept further apart from the lab page. Embeds work as before.
+- Uploading a config with only an OpenAI key no longer removes its stored Anthropic key, and the reverse. Stored keys can now be removed (see CLI below). Keys are now tied to their config, so a stored key can't be reused on another config.
+- Hardened CLI sign-in: the manager checks that the one-time code goes back to the `pairit login` that asked for it. One-time codes now last 2 minutes.
+- The manager refuses changes sent from other websites, and its error messages no longer include server details.
 
 ### CLI
 
 - `pairit config lint`, `compile` and `upload` reject an `endRedirectUrl` that isn't an `http://` or `https://` URL.
+- `pairit login` checks that the sign-in it receives is the one it started (state and PKCE), against servers that support it.
+- New `config upload` flags: `--openai-api-key-env VAR` and `--anthropic-api-key-env VAR` read a key from an environment variable, and `--openai-api-key-stdin` / `--anthropic-api-key-stdin` read it from stdin, so keys stay out of `ps` and shell history. `--clear-openai-api-key` and `--clear-anthropic-api-key` remove a stored key.
+- CSV exports put a `'` before text that starts with `=`, `+`, `-`, `@`, a tab, or a carriage return, so spreadsheets don't run participant answers as formulas. Text that is only a number, like `-5`, is left as it is. Values with a carriage return are now quoted.
+- `config upload` and `config lint` refuse HTML and schema files that are symlinks pointing outside the config's folder.
+- The saved login in `~/.pairit` is readable only by you.
 
 ## Platform 2026.11.18
 

@@ -1,7 +1,13 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { getApiUrl, getCredentialKey } from "./env.js";
+import {
+	createLoginSecrets,
+	type LoginSecrets,
+	loginParams,
+	readLoopbackCallback,
+} from "./pkce.js";
 
 const CONFIG_DIR = join(homedir(), ".pairit");
 
@@ -20,13 +26,41 @@ const KEYCHAIN_SERVICE = "pairit-cli";
 const KEYTAR_MODULE_SPECIFIER = "keytar";
 
 /**
+ * Whether the manager checks state and PKCE. Servers from before the check
+ * don't have this endpoint; the CLI then logs in the old way.
+ */
+async function serverSupportsPkce(): Promise<boolean> {
+	try {
+		const response = await fetch(`${getApiUrl()}/api/cli/login-info`, {
+			signal: AbortSignal.timeout(10_000),
+		});
+		if (!response.ok) return false;
+		const info = (await response.json()) as {
+			codeChallengeMethods?: unknown;
+		};
+		return (
+			Array.isArray(info.codeChallengeMethods) &&
+			info.codeChallengeMethods.includes("S256")
+		);
+	} catch {
+		return false;
+	}
+}
+
+/**
  * Exchange an authorization code for a session token
  */
-async function exchangeCodeForToken(code: string): Promise<string> {
+async function exchangeCodeForToken(
+	code: string,
+	secrets: LoginSecrets | null,
+): Promise<string> {
 	const response = await fetch(`${getApiUrl()}/api/cli/exchange`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ code }),
+		body: JSON.stringify({
+			code,
+			...(secrets && { code_verifier: secrets.codeVerifier }),
+		}),
 	});
 
 	if (!response.ok) {
@@ -49,7 +83,15 @@ export async function login() {
 	console.log(`Initiating login to ${getApiUrl()}...`);
 
 	const loginUrl = `${getApiUrl()}/login`;
-	const manualLoginUrl = `${loginUrl}?manual=1`;
+	const secrets = (await serverSupportsPkce()) ? createLoginSecrets() : null;
+	if (!secrets) {
+		console.warn(
+			"This server predates state/PKCE checks; using the older login handoff.",
+		);
+	}
+	const manualParams = loginParams(secrets);
+	manualParams.set("manual", "1");
+	const manualLoginUrl = `${loginUrl}?${manualParams}`;
 
 	// Try automated loopback flow when a local browser is likely available
 	if (canAttemptBrowserLogin()) {
@@ -70,7 +112,9 @@ export async function login() {
 			});
 
 			const redirectUri = `http://127.0.0.1:${port}`;
-			const targetUrl = `${loginUrl}?cli_redirect_uri=${encodeURIComponent(redirectUri)}`;
+			const targetParams = loginParams(secrets);
+			targetParams.set("cli_redirect_uri", redirectUri);
+			const targetUrl = `${loginUrl}?${targetParams}`;
 
 			console.log(`Opening ${loginUrl} in your browser...`);
 			await open(targetUrl);
@@ -87,10 +131,11 @@ export async function login() {
 
 				server.on("request", (req, res) => {
 					try {
-						const url = new URL(req.url || "/", `http://${req.headers.host}`);
-						const code = url.searchParams.get("code");
+						const url = new URL(req.url || "/", "http://127.0.0.1");
+						const result = readLoopbackCallback(url, secrets);
 
-						if (code) {
+						if ("code" in result) {
+							const { code } = result;
 							res.writeHead(200, { "Content-Type": "text/html" });
 							res.end(
 								`<!DOCTYPE html><html><head><title>Login Successful</title></head><body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><h1>Authenticated!</h1><p>You can close this window and return to your CLI.</p></div><script>setTimeout(()=>window.close(),3000)</script></body></html>`,
@@ -99,8 +144,9 @@ export async function login() {
 							server.close();
 							resolve(code);
 						} else {
+							// Keep waiting: a stray or forged request doesn't end the login
 							res.writeHead(400);
-							res.end("Missing authorization code");
+							res.end(result.error);
 						}
 					} catch (_e) {
 						res.writeHead(500);
@@ -111,7 +157,7 @@ export async function login() {
 
 			// Exchange the authorization code for a session token
 			console.log("Exchanging authorization code for token...");
-			const token = await exchangeCodeForToken(authCode);
+			const token = await exchangeCodeForToken(authCode, secrets);
 
 			await saveCredentials({ token });
 			console.log("Successfully logged in!");
@@ -139,7 +185,7 @@ Paste that code here to complete CLI login.
 		process.exit(1);
 	}
 
-	const token = await exchangeCodeForToken(code);
+	const token = await exchangeCodeForToken(code, secrets);
 	await saveCredentials({ token });
 	console.log("Successfully logged in!");
 }
@@ -175,10 +221,27 @@ async function saveCredentials(creds: { token?: string; cookie?: string }) {
 		}
 	}
 
-	await mkdir(CONFIG_DIR, { recursive: true });
-	await writeFile(getCredentialsFile(), JSON.stringify(creds, null, 2), {
-		mode: 0o600,
-	});
+	await writeCredentialsFile(
+		CONFIG_DIR,
+		getCredentialsFile(),
+		JSON.stringify(creds, null, 2),
+	);
+}
+
+/**
+ * Write a credentials file readable only by the user: the directory is 0700
+ * and the file 0600, including ones made by older versions with looser modes.
+ */
+export async function writeCredentialsFile(
+	dir: string,
+	file: string,
+	contents: string,
+): Promise<void> {
+	await mkdir(dir, { recursive: true, mode: 0o700 });
+	await chmod(dir, 0o700);
+	await writeFile(file, contents, { mode: 0o600 });
+	// `mode` only applies when the file is created
+	await chmod(file, 0o600);
 }
 
 async function getCredentials(): Promise<{
@@ -203,7 +266,10 @@ async function getCredentials(): Promise<{
 	}
 
 	try {
-		const data = await readFile(getCredentialsFile(), "utf8");
+		const file = getCredentialsFile();
+		const data = await readFile(file, "utf8");
+		// Tighten files saved by older versions
+		await chmod(file, 0o600).catch(() => {});
 		return JSON.parse(data);
 	} catch {
 		return null;

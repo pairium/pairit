@@ -26,7 +26,13 @@ export function errorResponse({ code, error, set }: ErrorContext) {
 		console.error(`[Elysia Error] ${code}:`, error);
 	}
 	set.status = status;
-	const message = error instanceof Error ? error.message : "Unknown error";
+	// A 500's message can carry paths or driver details: log it, don't send it.
+	const message =
+		status >= 500
+			? "Internal server error"
+			: error instanceof Error
+				? error.message
+				: "Unknown error";
 	return {
 		status: "error",
 		code,

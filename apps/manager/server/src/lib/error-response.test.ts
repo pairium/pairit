@@ -44,9 +44,11 @@ describe("errorResponse", () => {
 		expect(await res.json()).toMatchObject({ code: "VALIDATION" });
 	});
 
-	test("returns 500 for a thrown error", async () => {
+	test("returns a generic 500 for a thrown error", async () => {
 		const res = await request("/boom");
 		expect(res.status).toBe(500);
-		expect(await res.json()).toMatchObject({ message: "boom" });
+		const body = await res.json();
+		expect(body).toMatchObject({ message: "Internal server error" });
+		expect(JSON.stringify(body)).not.toContain("boom");
 	});
 });

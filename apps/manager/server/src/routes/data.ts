@@ -8,6 +8,7 @@
  */
 import { Elysia, t } from "elysia";
 import { authMiddleware } from "../lib/auth-middleware";
+import { mapWithConcurrency } from "../lib/concurrency";
 import {
 	type Cursor,
 	CursorError,
@@ -27,6 +28,9 @@ import {
 } from "../lib/db";
 import { toSessionExport } from "../lib/session-export";
 import { rebuildWorkspace } from "../lib/workspace-authorship";
+
+// Parallel update-log reads + Y.Doc rebuilds per workspace-documents page
+const WORKSPACE_REBUILD_CONCURRENCY = 8;
 
 const paginationQuerySchema = t.Object({
 	since: t.Optional(t.String()),
@@ -403,8 +407,11 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 			// The update log is the record; rebuild each doc from it. Docs saved
 			// before the log existed keep their plain copy and no authorship.
 			const updatesCollection = await getWorkspaceUpdatesCollection();
-			const exportData = await Promise.all(
-				documents.map(async (doc) => {
+			// A page can hold thousands of docs: rebuild a few at a time.
+			const exportData = await mapWithConcurrency(
+				documents,
+				WORKSPACE_REBUILD_CONCURRENCY,
+				async (doc) => {
 					const updates = await updatesCollection
 						.find({ groupId: doc.groupId })
 						.sort({ createdAt: 1, _id: 1 })
@@ -433,7 +440,7 @@ export const dataRoutes = new Elysia({ prefix: "/data" })
 						createdAt: doc.createdAt?.toISOString() ?? null,
 						updatedAt: doc.updatedAt?.toISOString() ?? null,
 					};
-				}),
+				},
 			);
 
 			const last = documents.at(-1);

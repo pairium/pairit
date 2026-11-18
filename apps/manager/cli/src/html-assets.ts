@@ -1,4 +1,4 @@
-import { readFile, stat } from "node:fs/promises";
+import { readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
@@ -48,6 +48,36 @@ export function listHtmlComponents(config: { pages?: unknown }): Array<{
 	return result;
 }
 
+function isInside(dir: string, target: string): boolean {
+	const rel = path.relative(dir, target);
+	return (
+		rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel)
+	);
+}
+
+/**
+ * Resolve `relative` inside `configDir`, following symlinks: a link that
+ * points outside the config directory is refused, so a cloned experiment
+ * can't bundle files like SSH keys into an upload. Returns the real path.
+ */
+export async function resolveInsideConfigDir(
+	configDir: string,
+	relative: string,
+): Promise<{ path: string } | { error: "outside" | "missing" }> {
+	const lexical = path.resolve(configDir, relative);
+	if (!isInside(configDir, lexical)) return { error: "outside" };
+	let real: string;
+	let realDir: string;
+	try {
+		real = await realpath(lexical);
+		realDir = await realpath(configDir);
+	} catch {
+		return { error: "missing" };
+	}
+	if (!isInside(realDir, real)) return { error: "outside" };
+	return { path: real };
+}
+
 export async function resolveHtmlSource(
 	src: unknown,
 	componentId: string,
@@ -64,13 +94,15 @@ export async function resolveHtmlSource(
 		throw new Error(`html ${componentId}: src must be a .html file`);
 	}
 
-	const absolutePath = path.resolve(configDir, trimmed);
-	const rel = path.relative(configDir, absolutePath);
-	if (rel.startsWith("..") || path.isAbsolute(rel)) {
+	const resolved = await resolveInsideConfigDir(configDir, trimmed);
+	if ("error" in resolved) {
 		throw new Error(
-			`html ${componentId}: src must stay inside the config directory`,
+			resolved.error === "outside"
+				? `html ${componentId}: src must stay inside the config directory`
+				: `html ${componentId}: file not found: ${trimmed}`,
 		);
 	}
+	const absolutePath = resolved.path;
 
 	let info: Awaited<ReturnType<typeof stat>>;
 	try {
@@ -171,13 +203,15 @@ async function resolveWorkspaceSchema(
 			`live-workspace ${componentId}: schema must be a .json file`,
 		);
 	}
-	const absolutePath = path.resolve(configDir, schema.trim());
-	const rel = path.relative(configDir, absolutePath);
-	if (rel.startsWith("..") || path.isAbsolute(rel)) {
+	const resolved = await resolveInsideConfigDir(configDir, schema.trim());
+	if ("error" in resolved) {
 		throw new Error(
-			`live-workspace ${componentId}: schema must stay inside the config directory`,
+			resolved.error === "outside"
+				? `live-workspace ${componentId}: schema must stay inside the config directory`
+				: `live-workspace ${componentId}: can't read schema ${schema}: file not found`,
 		);
 	}
+	const absolutePath = resolved.path;
 	try {
 		JSON.parse(await readFile(absolutePath, "utf8"));
 	} catch (error) {

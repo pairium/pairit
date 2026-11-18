@@ -3,38 +3,25 @@
  *
  * Validates Better Auth session and enforces the allowlist on every request:
  * defense-in-depth in case an existing session outlived an allowlist removal.
+ * Cookie-authenticated state-changing requests must also come from a trusted
+ * origin (see csrf.ts).
  */
 
-import type { Session, User } from "@pairit/auth";
-import type { Elysia } from "elysia";
+import { getTrustedOrigins } from "@pairit/auth";
 import { findAllowed } from "./allowlist";
 import { auth } from "./auth";
+import { createAuthMiddleware } from "./auth-guard";
+import { normalizeOrigins } from "./csrf";
 
-export type AuthDerived = {
-	user: User | null;
-	session: Session | null;
-	isAdmin: boolean;
-};
+export type { AuthDerived } from "./auth-guard";
 
-export const authMiddleware = (app: Elysia) =>
-	app.derive(async ({ request }): Promise<AuthDerived> => {
-		const sessionData = await auth.api.getSession({
-			headers: request.headers,
-		});
+let trustedOrigins: Set<string> | undefined;
 
-		const user = sessionData?.user ?? null;
-		if (!user) {
-			return { user: null, session: null, isAdmin: false };
-		}
-
-		const entry = await findAllowed(user.email);
-		if (!entry) {
-			return { user: null, session: null, isAdmin: false };
-		}
-
-		return {
-			user,
-			session: sessionData?.session ?? null,
-			isAdmin: entry.isAdmin,
-		};
-	});
+export const authMiddleware = createAuthMiddleware({
+	getSession: (headers) => auth.api.getSession({ headers }),
+	findAllowed,
+	trustedOrigins: () => {
+		trustedOrigins ??= normalizeOrigins(getTrustedOrigins());
+		return trustedOrigins;
+	},
+});

@@ -50,6 +50,28 @@ function getBaseURL(): string {
 	);
 }
 
+/**
+ * Origins trusted to make state-changing requests: this app's base URL,
+ * AUTH_TRUSTED_ORIGINS, and the local dev ports in development.
+ */
+export function getTrustedOrigins(): string[] {
+	return [
+		...(process.env.AUTH_TRUSTED_ORIGINS
+			? process.env.AUTH_TRUSTED_ORIGINS.split(",")
+					.map((origin) => origin.trim())
+					.filter(Boolean)
+			: []),
+		getBaseURL(),
+		...(IS_DEV
+			? [
+					"http://localhost:3000",
+					"http://localhost:3001",
+					"http://localhost:3002",
+				]
+			: []),
+	];
+}
+
 export interface CreateAuthOptions {
 	databaseHooks?: BetterAuthOptions["databaseHooks"];
 	onAPIError?: BetterAuthOptions["onAPIError"];
@@ -67,19 +89,7 @@ export function createAuth(options: CreateAuthOptions = {}) {
 		baseURL,
 		basePath: "/api/auth",
 		secret: finalSecret,
-		trustedOrigins: [
-			...(process.env.AUTH_TRUSTED_ORIGINS
-				? process.env.AUTH_TRUSTED_ORIGINS.split(",")
-				: []),
-			baseURL,
-			...(IS_DEV
-				? [
-						"http://localhost:3000",
-						"http://localhost:3001",
-						"http://localhost:3002",
-					]
-				: []),
-		],
+		trustedOrigins: getTrustedOrigins(),
 		socialProviders: {
 			google: {
 				clientId: process.env.GOOGLE_CLIENT_ID || "",
