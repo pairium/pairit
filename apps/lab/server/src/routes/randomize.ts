@@ -96,7 +96,9 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 					};
 				}
 
-				let distribution = group.distributions?.[stateKey];
+				let distribution = getPath(group.distributions, stateKey) as
+					| Record<string, string>
+					| undefined;
 				const existing = Boolean(distribution);
 				if (!distribution) {
 					let candidate: Record<string, string>;
@@ -124,7 +126,10 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 						{ groupId },
 						{ projection: { distributions: 1 } },
 					);
-					distribution = claimed?.distributions?.[stateKey] ?? candidate;
+					distribution =
+						(getPath(claimed?.distributions, stateKey) as
+							| Record<string, string>
+							| undefined) ?? candidate;
 
 					await sessionsCollection.bulkWrite(
 						Object.entries(distribution).map(([sid, value]) => ({
@@ -204,7 +209,9 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 				{ projection: { assignments: 1 } },
 			);
 			// Groups always exist after matchmaking; fall back if one is missing
-			const treatment = group?.assignments?.[stateKey] ?? candidate;
+			const treatment =
+				(getPath(group?.assignments, stateKey) as string | undefined) ??
+				candidate;
 
 			await sessionsCollection.updateMany(
 				{ "session_state.group_id": groupId },
@@ -232,17 +239,25 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 			session.simulated === true,
 		);
 
-		// Persist treatment to session
+		// Persist treatment to session. Only the first of concurrent requests
+		// writes; the others return what it wrote.
 		const sessionsCollection = await getSessionsCollection();
-		await sessionsCollection.updateOne(
-			{ id },
+		const statePath = `session_state.${stateKey}`;
+		const written = await sessionsCollection.updateOne(
+			// The same "unset" as the idempotency check above (falsy)
+			{ id, [statePath]: { $in: [null, "", false, 0] } },
 			{
 				$set: {
-					[`session_state.${stateKey}`]: treatment,
+					[statePath]: treatment,
 					updatedAt: new Date(),
 				},
 			},
 		);
+		if (written.matchedCount === 0) {
+			const current = await loadSession(id);
+			const stored = getPath(current?.session_state, stateKey);
+			if (stored) return { condition: stored as string, existing: true };
+		}
 
 		console.log(
 			`[Randomize] Session ${id} assigned ${stateKey}: ${treatment} (strategy: ${assignmentType})`,

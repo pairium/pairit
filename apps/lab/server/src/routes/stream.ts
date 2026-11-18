@@ -31,10 +31,14 @@ function sleep(ms: number): Promise<void> {
 export const streamRoutes = new Elysia({ prefix: "/sessions" })
 	.get(
 		"/:id/stream",
-		async function* ({ params: { id }, set, request }) {
+		async function* ({ params: { id }, set, request, server }) {
 			// Only the participant may open their stream: it also evicts older
 			// connections and drives matchmaking disconnects.
 			if (await denySessionAccess(request, id, set)) return;
+
+			// Bun's idle timeout counts only reads, so it would cut the stream
+			// despite heartbeats. MAX_STREAM_DURATION bounds it instead.
+			server?.timeout(request, 0);
 
 			// Verify session exists
 			const session = await loadSession(id);
