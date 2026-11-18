@@ -113,12 +113,9 @@ export function ChatView({
 			</div>
 
 			{notice ? (
-				<p
-					role="status"
-					className="border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800"
-				>
+				<output className="block border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800">
 					{notice}
-				</p>
+				</output>
 			) : null}
 			<form
 				onSubmit={handleSubmit}
