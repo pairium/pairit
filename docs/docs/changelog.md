@@ -15,7 +15,9 @@ Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/re
 
 Merged, but not released yet.
 
-### Platform
+## Platform 2026.11.18
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/platform-v2026.11.18)
 
 - When an agent hits an error (for example, the OpenAI key runs out of quota), the chat no longer shows the agent typing forever. Participants see the error notice and can keep chatting.
 - Fixed a security issue in CLI sign-in. A crafted link could have taken over a signed-in researcher's account. `pairit login` works as before.
