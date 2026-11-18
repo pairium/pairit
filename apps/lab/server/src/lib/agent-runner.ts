@@ -5,6 +5,7 @@
 
 import { jsonSchema, type ToolSet, tool } from "ai";
 import type { ChatMessageDocument } from "../types";
+import { assignStateRefusal } from "./agent-state";
 import {
 	getAgentsFromConfig,
 	getPageAgentIdsFromConfig,
@@ -20,7 +21,12 @@ import { getGroupMembers } from "./groups";
 import type { AgentConfig, ChatMessage, ReplyCondition, Trigger } from "./llm";
 import { streamAgentResponse } from "./llm";
 import { getLlmCredentialsForConfig } from "./llm-credentials";
-import { resolveSystemPrompt } from "./prompt-resolver";
+import {
+	asData,
+	DATA_NOTE,
+	DATA_TAG,
+	resolveSystemPrompt,
+} from "./prompt-resolver";
 import { broadcastToSession, getConnectionCount } from "./sse";
 import {
 	editWorkspace,
@@ -40,22 +46,43 @@ import {
 // Long enough for several rounds of tool calls
 const AGENT_TIMEOUT_MS = 120_000;
 
-const activeGroupRuns = new Set<string>();
+// The most recent messages sent to the model. Older ones are left out so a
+// long chat can't grow every call without bound.
+export const MAX_HISTORY_MESSAGES = 100;
 
-async function withGroupRunLock(
+// Runs one session can have going at once, across all its groups. Two, so an
+// agent on the next page can greet while the last page's agent finishes.
+export const MAX_RUNS_PER_SESSION = 2;
+
+const activeGroupRuns = new Set<string>();
+const activeSessionRuns = new Map<string, number>();
+
+/**
+ * One run per group, and at most MAX_RUNS_PER_SESSION per triggering session,
+ * so a session can't multiply runs by writing to several of its groups.
+ * Returns false (and skips the callback) when either is taken.
+ */
+export async function withGroupRunLock(
 	groupId: string,
+	sessionId: string,
 	callback: () => Promise<void>,
-): Promise<void> {
-	if (activeGroupRuns.has(groupId)) {
-		return;
+): Promise<boolean> {
+	const sessionRuns = activeSessionRuns.get(sessionId) ?? 0;
+	if (activeGroupRuns.has(groupId) || sessionRuns >= MAX_RUNS_PER_SESSION) {
+		return false;
 	}
 
 	activeGroupRuns.add(groupId);
+	activeSessionRuns.set(sessionId, sessionRuns + 1);
 	try {
 		await callback();
 	} finally {
 		activeGroupRuns.delete(groupId);
+		const left = (activeSessionRuns.get(sessionId) ?? 1) - 1;
+		if (left > 0) activeSessionRuns.set(sessionId, left);
+		else activeSessionRuns.delete(sessionId);
 	}
+	return true;
 }
 
 function resolveTriggers(agent: AgentConfig): Trigger[] {
@@ -138,7 +165,7 @@ export async function triggerAgents(
 	groupId: string,
 	sessionId: string,
 ): Promise<void> {
-	await withGroupRunLock(groupId, async () => {
+	await withGroupRunLock(groupId, sessionId, async () => {
 		const sessionConfig = await getSessionConfig(sessionId);
 		if (!sessionConfig) {
 			return;
@@ -201,7 +228,7 @@ export async function triggerJoinAgents(
 	groupId: string,
 	sessionId: string,
 ): Promise<void> {
-	await withGroupRunLock(groupId, async () => {
+	await withGroupRunLock(groupId, sessionId, async () => {
 		const chatCollection = await getChatMessagesCollection();
 		const existingCount = await chatCollection.countDocuments(
 			{ groupId },
@@ -343,6 +370,7 @@ async function runAgent(
 			agent.prompts,
 			options.sessionState,
 			usesGroup ? await getGroupView(sessionId) : undefined,
+			{ delimitData: true },
 		);
 
 		// Build system prompt: guardrail prefix + experimenter prompt + workspace
@@ -380,8 +408,11 @@ async function runAgent(
 		} else if (workspace && workspaceRead) {
 			const label =
 				workspace.settings.mode === "freeform" ? "Content" : "Fields";
-			const text = workspaceRead.text || "(empty)";
+			const text = workspaceRead.text ? asData(workspaceRead.text) : "(empty)";
 			agentWithContext.system += `\n\n--- Current Workspace ${label} ---\n${text}\n--- End Workspace ${label} ---`;
+		}
+		if (agentWithContext.system.includes(`<${DATA_TAG}>`)) {
+			agentWithContext.system += `\n\n${DATA_NOTE}`;
 		}
 
 		// Get members early so we can stream deltas to them
@@ -411,7 +442,7 @@ async function runAgent(
 					declared.parameters ?? { type: "object", properties: {} },
 				),
 				execute: async (args) => {
-					await handleToolCall(
+					const refused = await handleToolCall(
 						declared.name,
 						args,
 						groupId,
@@ -421,8 +452,10 @@ async function runAgent(
 						agent.id,
 						workspace,
 						workspaceRead?.base,
+						options.config,
+						declared,
 					);
-					return "Done.";
+					return refused ?? "Done.";
 				},
 			});
 		}
@@ -486,12 +519,13 @@ async function runAgent(
 
 async function loadChatHistory(groupId: string): Promise<ChatMessage[]> {
 	const collection = await getChatMessagesCollection();
-	const messages = await collection
-		.find({ groupId })
-		.sort({ createdAt: 1 })
+	const newest = await collection
+		.find({ groupId, senderType: { $ne: "system" } })
+		.sort({ createdAt: -1, _id: -1 })
+		.limit(MAX_HISTORY_MESSAGES)
 		.toArray();
 
-	return toChatHistory(messages);
+	return toChatHistory(newest.reverse());
 }
 
 /** System messages, like the error notice, are for participants, not the model. */
@@ -558,7 +592,9 @@ async function handleToolCall(
 	workspace: Workspace | null,
 	// The workspace as the agent read it; its write is merged against this
 	workspaceBase: Uint8Array | undefined,
-): Promise<void> {
+	config: unknown,
+	toolDef: NonNullable<AgentConfig["tools"]>[number],
+): Promise<string | undefined> {
 	await logToolCallEvent(name, args, sessionId, configId);
 
 	if (name === "end_chat") {
@@ -655,6 +691,13 @@ async function handleToolCall(
 		if (path.includes("$") || path.startsWith(".") || path.endsWith(".")) {
 			console.error(`[Agent] assign_state invalid path: ${path}`);
 			return;
+		}
+
+		// Only keys the researcher declared, never server-owned ones
+		const refusal = assignStateRefusal(path, config, toolDef);
+		if (refusal) {
+			console.error(`[Agent] assign_state refused: ${refusal}`);
+			return `Refused: ${refusal}`;
 		}
 
 		console.log(

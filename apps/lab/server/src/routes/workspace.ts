@@ -6,7 +6,6 @@
  */
 
 import { Elysia, t } from "elysia";
-import * as Y from "yjs";
 import { verifyMembership } from "../lib/groups";
 import { denySessionAccess } from "../lib/session-access";
 import {
@@ -16,6 +15,7 @@ import {
 	openWorkspaceForSession,
 } from "../lib/workspace";
 import { EditError } from "../lib/workspace-edit";
+import { checkClientUpdate } from "../lib/workspace-update-check";
 
 const toBase64 = (bytes: Uint8Array) => Buffer.from(bytes).toString("base64");
 const fromBase64 = (text: string) =>
@@ -90,9 +90,13 @@ export const workspaceRoutes = new Elysia({ prefix: "/workspace" })
 			}
 
 			const bytes = fromBase64(update);
-			try {
-				Y.decodeUpdate(bytes);
-			} catch {
+			// Same limits as checked edits: the mode's root, declared fields,
+			// value types and size (lib/workspace-update-check.ts)
+			const refusal = checkClientUpdate(workspace, bytes);
+			if (refusal) {
+				console.warn(
+					`[Workspace] Refused update from ${sessionId} to ${workspace.id}: ${refusal}`,
+				);
 				set.status = 400;
 				return { error: "bad_update" };
 			}

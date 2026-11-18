@@ -13,6 +13,10 @@ export type SSEController = {
 	close: () => void;
 };
 
+// Events waiting for a slow or stalled reader. Past this the connection is
+// closed rather than dropping events: the client reconnects and catches up.
+export const MAX_QUEUED_EVENTS = 1000;
+
 /**
  * Simple async queue for SSE events
  * Allows pushing events that can be consumed by an async iterator
@@ -22,12 +26,18 @@ export class AsyncEventQueue {
 	private resolvers: ((value: SSEEvent) => void)[] = [];
 	private closed = false;
 
+	constructor(private readonly maxQueued = MAX_QUEUED_EVENTS) {}
+
 	push(event: SSEEvent): void {
 		if (this.closed) return;
 
 		const resolver = this.resolvers.shift();
 		if (resolver) {
 			resolver(event);
+		} else if (this.queue.length >= this.maxQueued) {
+			console.warn("[SSE] Queue full; closing the connection");
+			this.queue = [];
+			this.close();
 		} else {
 			this.queue.push(event);
 		}

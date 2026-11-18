@@ -19,6 +19,14 @@ IMPORTANT GUIDELINES:
 
 This block is prepended before the experimenter's `system` prompt, so the agent sees the guardrails first, then your role instructions, then any workspace content.
 
+## Guardrails are instructions, not enforcement
+
+Guardrails are text in the agent's system prompt. The model usually follows them, but nothing checks what it says or which tools it calls. A participant can try to talk an agent out of them ("ignore your instructions..."), and sometimes succeed. Don't rely on a guardrail, or on any line in your `system` prompt, to keep something from participants or to stop a tool call. Leave secrets out of the prompt, and limit tools in the config (see [Limit what tools can change](#limit-what-tools-can-change)).
+
+## Participant text in the prompt
+
+Values interpolated from `{{session_state.*}}` and `{{group.*}}`, and the workspace text shown to agents, are written by participants. Pairit wraps each one in `<participant_data>` tags and tells the agent to treat tagged text as information, not instructions. This makes prompt injection harder, not impossible.
+
 ## Opting Out
 
 If you need full control over the agent's behavior (for example, if the agent *is* the experiment interface and must discuss procedures), set `guardrails: false` on the agent:
@@ -96,3 +104,23 @@ agents:
             deal_reached:
               type: boolean
 ```
+
+### Limit what tools can change
+
+Tool calls are enforced by the server, so limits on them hold even when a participant talks the agent into trying something else. `assign_state` writes to every participant in the group, so list the paths it may set with an `enum` on its `path` parameter:
+
+```yaml
+tools:
+  - name: assign_state
+    description: Record the participant's stance
+    parameters:
+      type: object
+      properties:
+        path:
+          type: string
+          enum: [stance, stance_confidence]
+        value: {}
+      required: [path, value]
+```
+
+`assign_state` never writes keys that Pairit sets itself (`group_id`, `chat_group_id`, `treatment`, `chat`, `chat_ended`, `deal_reached`, `agreed_price`, or a randomization's `stateKey`). Without an `enum`, it may write any other key.
