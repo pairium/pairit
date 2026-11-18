@@ -1,7 +1,59 @@
+import { randomBytes } from "node:crypto";
+
 export interface PageOptions {
 	title: string;
+	/** Trusted HTML. Escape any interpolated value with escapeHtml(). */
 	content: string;
+	/** Raw JavaScript (no <script> tag). Runs under the page's CSP nonce. */
 	scripts?: string;
+}
+
+const HTML_ESCAPES: Record<string, string> = {
+	"&": "&amp;",
+	"<": "&lt;",
+	">": "&gt;",
+	'"': "&quot;",
+	"'": "&#39;",
+};
+
+export function escapeHtml(value: string): string {
+	return value.replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch]);
+}
+
+/** JSON for an inline <script>: `<` is escaped so a value can't close the tag. */
+export function scriptJson(value: unknown): string {
+	return JSON.stringify(value).replace(/</g, "\\u003c");
+}
+
+function contentSecurityPolicy(nonce: string): string {
+	return [
+		"default-src 'none'",
+		`script-src 'nonce-${nonce}'`,
+		"style-src 'unsafe-inline'",
+		"img-src 'self' data:",
+		"connect-src 'self'",
+		"form-action 'self'",
+		"base-uri 'none'",
+		"frame-ancestors 'none'",
+	].join("; ");
+}
+
+/** Render a page with a per-request CSP nonce and security headers. */
+export function htmlResponse(
+	options: PageOptions,
+	init: { status?: number } = {},
+): Response {
+	const nonce = randomBytes(16).toString("base64");
+	return new Response(renderPage(options, nonce), {
+		status: init.status ?? 200,
+		headers: {
+			"Content-Type": "text/html; charset=utf-8",
+			"Content-Security-Policy": contentSecurityPolicy(nonce),
+			"Referrer-Policy": "no-referrer",
+			"X-Content-Type-Options": "nosniff",
+			"Cache-Control": "no-store",
+		},
+	});
 }
 
 const GLOBAL_CSS = `
@@ -222,13 +274,19 @@ function brandMarkSvg(): string {
 	return `<svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 7h.01"/><path d="M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20"/><path d="m20 7 2 .5-2 .5"/><path d="M10 18v3"/><path d="M14 17.75V21"/><path d="M7 18a6 6 0 0 0 3.84-10.61"/></svg>`;
 }
 
-export function renderPage({ title, content, scripts = "" }: PageOptions) {
+function renderPage(
+	{ title, content, scripts = "" }: PageOptions,
+	nonce: string,
+) {
+	const scriptTag = scripts
+		? `<script nonce="${nonce}">${scripts}</script>`
+		: "";
 	return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${title} — Pairit Manager</title>
+    <title>${escapeHtml(title)} — Pairit Manager</title>
     <style>${GLOBAL_CSS}</style>
 </head>
 <body>
@@ -252,7 +310,7 @@ export function renderPage({ title, content, scripts = "" }: PageOptions) {
             <span>&copy; Pairium AI</span>
         </footer>
     </div>
-    ${scripts}
+    ${scriptTag}
 </body>
 </html>`;
 }
