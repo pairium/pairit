@@ -25,7 +25,7 @@ async function revokeSessionsForEmail(email: string): Promise<void> {
 	const ctx = await auth.$context;
 	const result = await ctx.internalAdapter.findUserByEmail(email);
 	if (!result?.user?.id) return;
-	await ctx.internalAdapter.deleteSessions(result.user.id);
+	await ctx.internalAdapter.deleteUserSessions(result.user.id);
 }
 
 export const adminRoutes = new Elysia({ prefix: "/admin" })
