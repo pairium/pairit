@@ -18,6 +18,7 @@ Merged, but not released yet.
 ### Platform
 
 - When an agent hits an error (for example, the OpenAI key runs out of quota), the chat no longer shows the agent typing forever. Participants see the error notice and can keep chatting.
+- Fixed a security issue in CLI sign-in. A crafted link could have taken over a signed-in researcher's account. `pairit login` works as before.
 
 ## Platform 2026.10.31
 

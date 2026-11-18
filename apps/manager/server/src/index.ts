@@ -11,7 +11,8 @@ import { getContactEmail } from "./lib/allowlist-hooks";
 import { auth } from "./lib/auth";
 import { ensureConfigIndexes } from "./lib/db";
 import { errorResponse } from "./lib/error-response";
-import { renderPage } from "./lib/html";
+import { escapeHtml, htmlResponse } from "./lib/html";
+import { loginSuccessPage } from "./lib/login-success";
 import { adminRoutes } from "./routes/admin";
 import { configsRoutes } from "./routes/configs";
 import { dataRoutes } from "./routes/data";
@@ -198,85 +199,15 @@ app
 			| string
 			| undefined;
 
-		const authCode = sessionToken ? generateAuthCode(sessionToken) : undefined;
-
-		// Handle CLI Loopback Flow
-		// If a CLI redirect URI is present (and safe), generate an auth code and redirect
-		const cliRedirect = query.cli_redirect_uri;
-		const manual = query.manual === "1";
-		let redirectUrl: string | undefined;
-
-		if (authCode && cliRedirect && typeof cliRedirect === "string") {
-			try {
-				const url = new URL(cliRedirect);
-				// Security: Only allow redirect to localhost/127.0.0.1 for CLI handoff
-				if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
-					url.searchParams.set("code", authCode);
-					redirectUrl = url.toString();
-				}
-			} catch (_e) {
-				// Ignore invalid URLs
-			}
-		}
-
-		const content = redirectUrl
-			? `
-            <h1>Signed in</h1>
-            <p class="subtitle">Returning you to the CLI…</p>
-            <p class="footnote">Nothing happening? <a href="${redirectUrl}">Retry the handoff.</a></p>`
-			: manual && authCode
-				? `
-            <h1>One-time code</h1>
-            <p class="subtitle">Paste this into your terminal. It expires in 60 seconds.</p>
-            <p class="token-meta">Authorization code</p>
-            <div class="token" id="auth-code">${authCode}</div>
-            <div class="btn-row">
-                <button onclick="copyCode()" class="btn btn--primary">Copy code</button>
-                <button onclick="window.close()" class="btn btn--ghost">Close window</button>
-            </div>`
-				: `
-            <h1>Signed in</h1>
-            <p class="subtitle">You're authenticated. You can close this window and return to your CLI.</p>
-            <div class="btn-row">
-                <button onclick="window.close()" class="btn btn--ghost">Close window</button>
-            </div>`;
-
-		const scriptContent = `
-        <script>
-            const redirectUrl = ${JSON.stringify(redirectUrl || "")};
-
-            async function copyCode() {
-                const code = document.getElementById('auth-code')?.textContent || '';
-                if (!code) return;
-                try {
-                    await navigator.clipboard.writeText(code);
-                } catch (_error) {
-                    // ignore clipboard failures
-                }
-            }
-
-            if (redirectUrl) {
-                setTimeout(() => {
-                    window.location.href = redirectUrl;
-                }, 1000);
-            }
-        </script>`;
-
-		return new Response(
-			renderPage({
-				title: "Signed in",
-				content,
-				scripts: scriptContent,
-			}),
-			{
-				headers: {
-					"Content-Type": "text/html",
-				},
-			},
-		);
+		return loginSuccessPage({
+			sessionToken,
+			cliRedirectUri: query.cli_redirect_uri,
+			manual: query.manual === "1",
+			mintCode: generateAuthCode,
+		});
 	})
 	.get("/access-denied", () => {
-		const contact = getContactEmail();
+		const contact = escapeHtml(getContactEmail());
 		const content = `
             <h1>Access denied</h1>
             <p class="subtitle">Pairit Manager is invite-only. Your Google account isn't on the allowlist for this instance.</p>
@@ -285,16 +216,7 @@ app
                 <a href="/" class="btn btn--ghost">Back to home</a>
             </div>
             <p class="footnote">Contact <a href="mailto:${contact}">${contact}</a></p>`;
-		return new Response(
-			renderPage({
-				title: "Access denied",
-				content,
-			}),
-			{
-				headers: { "content-type": "text/html" },
-				status: 403,
-			},
-		);
+		return htmlResponse({ title: "Access denied", content }, { status: 403 });
 	})
 	.get("/login", ({ query }) => {
 		const manual = query.manual === "1";
@@ -302,14 +224,13 @@ app
             <h1>Sign in</h1>
             <p class="subtitle">${manual ? "Authenticate with your allowlisted Google account. We'll hand off a one-time code your CLI can exchange for a session." : "Authenticate with your allowlisted Google account. Your CLI will resume automatically when the handoff completes."}</p>
             <div class="btn-row">
-                <button onclick="login()" class="btn btn--primary">
+                <button id="google-login" class="btn btn--primary">
                     Continue with Google
                 </button>
             </div>
             <p class="footnote">Not on the allowlist? Ask your operator for an invite.</p>`;
 
 		const scriptContent = `
-        <script>
             async function login() {
                 try {
                     // Check if there is a CLI redirect URI in the current URL
@@ -349,18 +270,13 @@ app
                     alert('Error: ' + err.message);
                 }
             }
-        </script>`;
+            document.getElementById('google-login')?.addEventListener('click', login);`;
 
-		return new Response(
-			renderPage({
-				title: "Sign in",
-				content,
-				scripts: scriptContent,
-			}),
-			{
-				headers: { "content-type": "text/html" },
-			},
-		);
+		return htmlResponse({
+			title: "Sign in",
+			content,
+			scripts: scriptContent,
+		});
 	})
 	.get("/", () => {
 		const content = `
@@ -375,21 +291,13 @@ app
                     <span class="label">Documentation</span>
                     <span class="arrow" aria-hidden="true">→</span>
                 </a>
-                <a href="${LAB_URL}" class="action">
+                <a href="${escapeHtml(LAB_URL)}" class="action">
                     <span class="label">Open the lab</span>
                     <span class="arrow" aria-hidden="true">→</span>
                 </a>
             </nav>`;
 
-		return new Response(
-			renderPage({
-				title: "Pairit Manager",
-				content,
-			}),
-			{
-				headers: { "content-type": "text/html" },
-			},
-		);
+		return htmlResponse({ title: "Pairit Manager", content });
 	})
 	.use(configsRoutes)
 	.use(dataRoutes)
