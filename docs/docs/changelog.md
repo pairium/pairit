@@ -18,6 +18,7 @@ Merged, but not released yet.
 ### Platform
 
 - When an agent hits an error (for example, the OpenAI key runs out of quota), the chat no longer shows the agent typing forever. Participants see the error notice and can keep chatting.
+- Fixed security issues that let participants change their group, treatment, or chat sender, or skip pages. The lab now takes randomization and matchmaking settings only from the uploaded config, and no longer sends agent prompts or the end page's redirect URL to the browser before the participant reaches it. Each participant can send up to 20 chat messages a minute and 300 in total.
 
 ## Platform 2026.10.31
 

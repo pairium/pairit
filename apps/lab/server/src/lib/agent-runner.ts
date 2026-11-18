@@ -70,10 +70,13 @@ function resolveConditions(agent: AgentConfig): ReplyCondition[] {
 		: [agent.replyCondition];
 }
 
+const CONDITION_MAX_OUTPUT_TOKENS = 1024;
+
 async function evaluateConditions(
 	agent: AgentConfig,
 	history: ChatMessage[],
 	configId: string,
+	signal?: AbortSignal,
 ): Promise<boolean> {
 	const conditions = resolveConditions(agent);
 
@@ -91,8 +94,12 @@ async function evaluateConditions(
 		};
 
 		let response = "";
+		// The answer is one word. The cap leaves room for a reasoning model's
+		// hidden reasoning, which counts against it.
 		for await (const delta of streamAgentResponse(conditionAgent, history, {
 			credentials,
+			signal,
+			maxOutputTokens: CONDITION_MAX_OUTPUT_TOKENS,
 		})) {
 			if (delta.type === "text_delta") response += delta.text;
 		}
@@ -308,7 +315,12 @@ async function runAgent(
 		}
 
 		// Evaluate reply conditions before proceeding
-		const shouldReply = await evaluateConditions(agent, history, configId);
+		const shouldReply = await evaluateConditions(
+			agent,
+			history,
+			configId,
+			abortController.signal,
+		);
 		if (!shouldReply) {
 			return;
 		}
