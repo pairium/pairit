@@ -1,21 +1,27 @@
 import { describe, expect, test } from "bun:test";
-import { loginSuccessPage } from "./login-success";
+import { type LoginSuccessInput, loginSuccessPage } from "./login-success";
+
+const CHALLENGE = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM";
+const STATE = "abcdefghijklmnop0123";
+
+type Minted = { token: string; userId: string; codeChallenge: string | null };
 
 function page(
 	cliRedirectUri: unknown,
-	{
-		sessionToken = "tok" as string | undefined,
-		manual = false,
-	}: { sessionToken?: string | undefined; manual?: boolean } = {},
+	overrides: Partial<Omit<LoginSuccessInput, "mintCode" | "cliRedirectUri">> & {
+		mintResult?: string | null;
+	} = {},
 ) {
-	const minted: string[] = [];
+	const minted: Minted[] = [];
+	const { mintResult = "CODE123", ...rest } = overrides;
 	const response = loginSuccessPage({
-		sessionToken,
+		session: { token: "tok", userId: "u1" },
+		manual: false,
+		...rest,
 		cliRedirectUri,
-		manual,
-		mintCode: (token) => {
-			minted.push(token);
-			return "CODE123";
+		mintCode: (input) => {
+			minted.push(input);
+			return mintResult;
 		},
 	});
 	return { response, minted };
@@ -25,8 +31,42 @@ describe("loginSuccessPage", () => {
 	test("redirects a loopback CLI with a fresh code", async () => {
 		const { response, minted } = page("http://127.0.0.1:53111");
 		const html = await response.text();
-		expect(minted).toEqual(["tok"]);
+		expect(minted).toEqual([
+			{ token: "tok", userId: "u1", codeChallenge: null },
+		]);
 		expect(html).toContain("http://127.0.0.1:53111/?code=CODE123");
+	});
+
+	test("echoes state and binds the code to the PKCE challenge", async () => {
+		const { response, minted } = page("http://127.0.0.1:53111", {
+			state: STATE,
+			codeChallenge: CHALLENGE,
+			codeChallengeMethod: "S256",
+		});
+		expect(minted[0]?.codeChallenge).toBe(CHALLENGE);
+		expect(await response.text()).toContain(
+			`http://127.0.0.1:53111/?code=CODE123&amp;state=${STATE}`,
+		);
+	});
+
+	test.each([
+		[{ codeChallenge: CHALLENGE, codeChallengeMethod: "plain" }],
+		[{ codeChallenge: CHALLENGE }],
+		[{ codeChallenge: "short", codeChallengeMethod: "S256" }],
+		[{ state: "bad state!" }],
+	])("refuses a malformed login request %p", async (input) => {
+		const { response, minted } = page("http://127.0.0.1:53111", input);
+		expect(response.status).toBe(400);
+		expect(minted).toEqual([]);
+		expect(await response.text()).not.toContain("CODE123");
+	});
+
+	test("shows an error when no code can be minted", async () => {
+		const { response } = page("http://127.0.0.1:53111", {
+			mintResult: null,
+		});
+		expect(response.status).toBe(400);
+		expect(await response.text()).toContain("busy");
 	});
 
 	test.each([
@@ -59,16 +99,10 @@ describe("loginSuccessPage", () => {
 		expect(plain.minted).toEqual([]);
 	});
 
-	test("mints nothing without a session", async () => {
-		const minted: string[] = [];
-		loginSuccessPage({
-			sessionToken: undefined,
-			cliRedirectUri: "http://127.0.0.1:53111",
+	test("mints nothing without a validated session", async () => {
+		const { minted } = page("http://127.0.0.1:53111", {
+			session: null,
 			manual: true,
-			mintCode: (token) => {
-				minted.push(token);
-				return "CODE123";
-			},
 		});
 		expect(minted).toEqual([]);
 	});

@@ -22,6 +22,17 @@ Merged, but not released yet.
 - Fixed security issues that let participants change their group, treatment, or chat sender, or skip pages. The lab now takes randomization and matchmaking settings only from the uploaded config, and no longer sends agent prompts or the end page's redirect URL to the browser before the participant reaches it. Each participant can send up to 20 chat messages a minute and 300 in total.
 - Fixed a security issue that let a participant act as someone else in their group. Participants no longer see each other's session IDs.
 - A participant who reopens a study in a different browser or device is asked to continue in the browser where they started. Reloading the page works as before, and participants signed in with Google can continue anywhere.
+- Uploading a config with only an OpenAI key no longer removes its stored Anthropic key, and the reverse. Stored keys can now be removed (see CLI below). Keys are now tied to their config, so a stored key can't be reused on another config.
+- Hardened CLI sign-in: the manager checks that the one-time code goes back to the `pairit login` that asked for it. One-time codes now last 2 minutes.
+- The manager refuses changes sent from other websites, and its error messages no longer include server details.
+
+### CLI
+
+- `pairit login` checks that the sign-in it receives is the one it started (state and PKCE), against servers that support it.
+- New `config upload` flags: `--openai-api-key-env VAR` and `--anthropic-api-key-env VAR` read a key from an environment variable, and `--openai-api-key-stdin` / `--anthropic-api-key-stdin` read it from stdin, so keys stay out of `ps` and shell history. `--clear-openai-api-key` and `--clear-anthropic-api-key` remove a stored key.
+- CSV exports put a `'` before text that starts with `=`, `+`, `-`, `@`, a tab, or a carriage return, so spreadsheets don't run participant answers as formulas. Values with a carriage return are now quoted.
+- `config upload` and `config lint` refuse HTML and schema files that are symlinks pointing outside the config's folder.
+- The saved login in `~/.pairit` is readable only by you.
 
 ## Platform 2026.10.31
 

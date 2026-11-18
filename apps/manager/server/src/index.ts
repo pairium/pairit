@@ -3,12 +3,13 @@
  * Elysia app with config and media management
  */
 
-import { randomBytes } from "node:crypto";
 import { cors } from "@elysiajs/cors";
 import { Elysia, t } from "elysia";
+import { findAllowed } from "./lib/allowlist";
 import { initAllowlist } from "./lib/allowlist-boot";
 import { getContactEmail } from "./lib/allowlist-hooks";
 import { auth } from "./lib/auth";
+import { CliAuthCodeStore } from "./lib/cli-auth-codes";
 import { ensureConfigIndexes } from "./lib/db";
 import { errorResponse } from "./lib/error-response";
 import { escapeHtml, htmlResponse } from "./lib/html";
@@ -32,61 +33,22 @@ if (!IS_DEV && ALLOWED_ORIGINS.length === 0) {
 	);
 }
 
-// Authorization code store for CLI login flow
-// Codes expire after 60 seconds and can only be used once
-const AUTH_CODE_EXPIRY_MS = 60 * 1000;
-const AUTH_CODE_MAX_SIZE = 1000; // Maximum number of pending auth codes
-const authCodeStore = new Map<string, { token: string; expiresAt: number }>();
+// One-time codes for the CLI login handoff (see lib/cli-auth-codes.ts)
+const cliAuthCodes = new CliAuthCodeStore();
 
-/**
- * Evict expired codes and enforce size limit
- * Called before adding new codes to prevent unbounded growth
- */
-function evictExpiredCodes(): void {
-	const now = Date.now();
-	for (const [code, entry] of authCodeStore) {
-		if (now > entry.expiresAt) {
-			authCodeStore.delete(code);
-		}
-	}
-
-	// If still over limit, remove oldest entries (FIFO - Map maintains insertion order)
-	if (authCodeStore.size >= AUTH_CODE_MAX_SIZE) {
-		const toDelete = authCodeStore.size - AUTH_CODE_MAX_SIZE + 1;
-		let deleted = 0;
-		for (const code of authCodeStore.keys()) {
-			if (deleted >= toDelete) break;
-			authCodeStore.delete(code);
-			deleted++;
-		}
-	}
-}
-
-function generateAuthCode(token: string): string {
-	// Evict expired codes and enforce size limit before adding new one
-	evictExpiredCodes();
-
-	const code = randomBytes(32).toString("hex");
-	authCodeStore.set(code, {
-		token,
-		expiresAt: Date.now() + AUTH_CODE_EXPIRY_MS,
+/** The caller's session, if it validates in the DB and is allowlisted. */
+async function validatedSession(
+	headers: Headers,
+	sessionToken: string | undefined,
+): Promise<{ token: string; userId: string } | null> {
+	if (!sessionToken) return null;
+	const data = await auth.api.getSession({
+		headers,
+		query: { disableCookieCache: true },
 	});
-	// Clean up this specific code after expiry
-	setTimeout(() => authCodeStore.delete(code), AUTH_CODE_EXPIRY_MS);
-	return code;
-}
-
-function exchangeAuthCode(code: string): string | null {
-	const entry = authCodeStore.get(code);
-	if (!entry) return null;
-
-	// Delete immediately - codes are single-use
-	authCodeStore.delete(code);
-
-	// Check expiry
-	if (Date.now() > entry.expiresAt) return null;
-
-	return entry.token;
+	if (!data?.user) return null;
+	if (!(await findAllowed(data.user.email))) return null;
+	return { token: sessionToken, userId: data.user.id };
 }
 
 const app = new Elysia()
@@ -124,7 +86,7 @@ const app = new Elysia()
 			set.status = 500;
 			return {
 				error: "Internal Server Error",
-				message: error instanceof Error ? error.message : String(error),
+				message: "Internal server error",
 			};
 		}
 	});
@@ -176,23 +138,33 @@ app
 	.post(
 		"/api/cli/exchange",
 		async ({ body, set }) => {
-			const token = exchangeAuthCode(body.code);
-			if (!token) {
+			const result = cliAuthCodes.exchange(body.code, body.code_verifier);
+			if (!result.ok) {
 				set.status = 400;
 				return {
-					error: "invalid_code",
-					message: "Invalid or expired authorization code",
+					error: result.error,
+					message:
+						result.error === "invalid_verifier"
+							? "Authorization code does not match this login"
+							: "Invalid or expired authorization code",
 				};
 			}
-			return { token };
+			return { token: result.token };
 		},
 		{
 			body: t.Object({
-				code: t.String({ minLength: 1 }),
+				code: t.String({ minLength: 1, maxLength: 256 }),
+				code_verifier: t.Optional(t.String({ maxLength: 256 })),
 			}),
 		},
 	)
-	.get("/login-success", ({ query, cookie }) => {
+	// Lets a CLI tell whether this server checks state and PKCE, so a newer
+	// CLI still logs in to an older server.
+	.get("/api/cli/login-info", () => ({
+		state: true,
+		codeChallengeMethods: ["S256"],
+	}))
+	.get("/login-success", async ({ query, cookie, request }) => {
 		// Check for both standard and secure cookie names
 		const sessionToken = (cookie["better-auth.session_token"]?.value ||
 			cookie["__Secure-better-auth.session_token"]?.value) as
@@ -200,10 +172,13 @@ app
 			| undefined;
 
 		return loginSuccessPage({
-			sessionToken,
+			session: await validatedSession(request.headers, sessionToken),
 			cliRedirectUri: query.cli_redirect_uri,
 			manual: query.manual === "1",
-			mintCode: generateAuthCode,
+			state: query.state,
+			codeChallenge: query.code_challenge,
+			codeChallengeMethod: query.code_challenge_method,
+			mintCode: (input) => cliAuthCodes.mint(input),
 		});
 	})
 	.get("/access-denied", () => {
@@ -243,6 +218,11 @@ app
                     const callbackParams = new URLSearchParams();
                     if (cliRedirect) {
                         callbackParams.set('cli_redirect_uri', cliRedirect);
+                    }
+                    // Pass the CLI's state and PKCE challenge through to /login-success
+                    for (const key of ['state', 'code_challenge', 'code_challenge_method']) {
+                        const value = params.get(key);
+                        if (value) callbackParams.set(key, value);
                     }
                     if (${JSON.stringify(true)} && new URLSearchParams(window.location.search).get('manual') === '1') {
                         callbackParams.set('manual', '1');
@@ -303,7 +283,11 @@ app
 	.use(dataRoutes)
 	.use(mediaRoutes)
 	.use(adminRoutes)
-	.listen(Number(process.env.PORT) || 3002);
+	.listen({
+		port: Number(process.env.PORT) || 3002,
+		// Dev turns on wildcard CORS and debug routes; keep it off the LAN.
+		hostname: IS_DEV ? "127.0.0.1" : "0.0.0.0",
+	});
 
 console.log(
 	`🚀 Manager server running on ${app.server?.hostname}:${app.server?.port}`,

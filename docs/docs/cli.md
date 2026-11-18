@@ -13,8 +13,8 @@ Publish / manage configs (stored in MongoDB via the Manager Server API)
 
 ```zsh
 pairit config upload your_experiment.yaml
-pairit config upload your_experiment.yaml --name my-exp --openai-api-key sk-...
-pairit config upload your_experiment.yaml --name my-exp --anthropic-api-key sk-ant-...
+pairit config upload your_experiment.yaml --name my-exp --openai-api-key-env OPENAI_API_KEY
+pairit config upload your_experiment.yaml --name my-exp --anthropic-api-key-env ANTHROPIC_API_KEY
 pairit config list
 pairit config history <configId>
 pairit config history <configId> --revision 1 --out rev1.json
@@ -40,10 +40,26 @@ Each config has a **name** you choose and a **config ID** that Pairit assigns. T
 
 If a config includes AI agents, upload the required provider key with that config.
 
-- `--openai-api-key` is used for OpenAI models like `gpt-6-luna`
-- `--anthropic-api-key` is used for Anthropic models like `claude-sonnet-*`
+- The OpenAI key is used for OpenAI models like `gpt-6-luna`, the Anthropic key for Anthropic models like `claude-sonnet-*`
+- Pass each key one of three ways:
+
+    | OpenAI | Anthropic | Reads the key from |
+    |---|---|---|
+    | `--openai-api-key-env VAR` | `--anthropic-api-key-env VAR` | the environment variable `VAR` |
+    | `--openai-api-key-stdin` | `--anthropic-api-key-stdin` | stdin (one key per upload) |
+    | `--openai-api-key sk-...` | `--anthropic-api-key sk-ant-...` | the command line |
+
+    Prefer the first two: a key on the command line shows up in `ps` and your shell history. For example:
+
+    ```zsh
+    export OPENAI_API_KEY=sk-...   # or keep it in a .env your shell loads
+    pairit config upload exp.yaml --openai-api-key-env OPENAI_API_KEY
+    pbpaste | pairit config upload exp.yaml --openai-api-key-stdin
+    ```
+
+- `--clear-openai-api-key` and `--clear-anthropic-api-key` remove a stored key
 - Keys are encrypted at rest and stored per `configId`
-- Re-uploading the same config without a new key keeps the existing key for that config
+- Re-uploading the same config without a new key keeps the existing key for that config. Setting one provider's key keeps the other's.
 - Agent runs do not fall back to a shared platform API key
 - If the required provider key is missing, the agent run fails
 
@@ -116,6 +132,8 @@ Creates six files per export:
 | `{configId}-workspace-documents.csv` | Workspace documents: groupId, content, fields, updatedAt |
 
 **Formats**: CSV flattens nested objects with dot notation (`session_state.treatment`). JSON/JSONL preserve full nesting.
+
+In CSV, a text value that starts with `=`, `+`, `-`, `@`, a tab, or a carriage return gets a leading `'`, so Excel and Google Sheets show participant answers as text instead of running them as formulas. Numbers are unchanged. JSON and JSONL keep the original text.
 
 **Provenance** columns in the sessions file show what each participant ran:
 

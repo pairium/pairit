@@ -20,8 +20,11 @@ import {
 	getSessionsCollection,
 } from "../lib/db";
 import {
-	encryptLlmCredentials,
+	llmCredentialConflict,
+	llmCredentialUpdateFields,
 	maskConfiguredCredentials,
+	newConfigLlmCredentials,
+	planLlmCredentialChanges,
 } from "../lib/llm-credentials";
 import type { ConfigDocument, ConfigRevisionDocument } from "../types";
 
@@ -62,6 +65,18 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 			if (!user) {
 				set.status = 401;
 				return { error: "unauthorized", message: "Not authenticated" };
+			}
+
+			const conflict = llmCredentialConflict(
+				body.llmCredentials,
+				body.clearLlmCredentials,
+			);
+			if (conflict) {
+				set.status = 400;
+				return {
+					error: "bad_request",
+					message: `Cannot both set and clear the ${conflict} API key.`,
+				};
 			}
 
 			const name = body.name?.trim() || undefined;
@@ -116,7 +131,6 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 					createdAt: now,
 				});
 
-				const encryptedCredentials = encryptLlmCredentials(body.llmCredentials);
 				const payload: Partial<ConfigDocument> = {
 					owner: user.id, // Auto-populate from authenticated user
 					...(name && { name }),
@@ -124,7 +138,6 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 					checksum: body.checksum,
 					metadata: body.metadata ?? null,
 					config: body.config,
-					...(encryptedCredentials && { llmCredentials: encryptedCredentials }),
 					requireAuth: body.requireAuth ?? true, // Default to true
 					allowRetake: body.allowRetake ?? false, // Default to false
 					updatedAt: now,
@@ -133,6 +146,14 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 				let configId: string;
 				if (existing) {
 					configId = existing.configId;
+					// Only the keys this upload sends or clears change; the rest stay.
+					const { $set, $unset } = llmCredentialUpdateFields(
+						planLlmCredentialChanges(
+							configId,
+							body.llmCredentials,
+							body.clearLlmCredentials,
+						),
+					);
 					// Snapshots go first: the unique {configId, revision} index stops
 					// two concurrent uploads from claiming the same revision.
 					if (plan.archiveLegacy) {
@@ -151,14 +172,25 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 					if (plan.bumped) {
 						await saveRevision({ configId, ...snapshot(plan.revision) });
 					}
-					await collection.updateOne({ configId }, { $set: payload });
+					await collection.updateOne(
+						{ configId },
+						{
+							$set: { ...payload, ...$set },
+							...(Object.keys($unset).length > 0 && { $unset }),
+						},
+					);
 				} else {
 					configId = body.configId ?? "";
 					for (let attempt = 0; ; attempt++) {
 						if (!body.configId) configId = generateConfigId(name ?? "config");
+						// Keys are bound to the configId, so encrypt per attempt
+						const llmCredentials = newConfigLlmCredentials(
+							planLlmCredentialChanges(configId, body.llmCredentials, []),
+						);
 						try {
 							await collection.insertOne({
 								...payload,
+								...(llmCredentials && { llmCredentials }),
 								configId,
 								createdAt: now,
 							} as ConfigDocument);
@@ -217,7 +249,7 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 				set.status = 500;
 				return {
 					error: "internal",
-					message: err instanceof Error ? err.message : "unknown error",
+					message: "Internal server error",
 				};
 			}
 		},
@@ -234,6 +266,12 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 					t.Object({
 						openaiApiKey: t.Optional(t.String({ minLength: 1 })),
 						anthropicApiKey: t.Optional(t.String({ minLength: 1 })),
+					}),
+				),
+				// Providers whose stored key this upload removes
+				clearLlmCredentials: t.Optional(
+					t.Array(t.Union([t.Literal("openai"), t.Literal("anthropic")]), {
+						maxItems: 2,
 					}),
 				),
 				requireAuth: t.Optional(t.Boolean()),
@@ -278,7 +316,7 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 				set.status = 500;
 				return {
 					error: "internal",
-					message: err instanceof Error ? err.message : "unknown error",
+					message: "Internal server error",
 				};
 			}
 		},
@@ -415,7 +453,7 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 				set.status = 500;
 				return {
 					error: "internal",
-					message: err instanceof Error ? err.message : "unknown error",
+					message: "Internal server error",
 				};
 			}
 		},
