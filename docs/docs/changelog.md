@@ -20,6 +20,8 @@ Merged, but not released yet.
 - When an agent hits an error (for example, the OpenAI key runs out of quota), the chat no longer shows the agent typing forever. Participants see the error notice and can keep chatting.
 - Fixed a security issue in CLI sign-in. A crafted link could have taken over a signed-in researcher's account. `pairit login` works as before.
 - Fixed security issues that let participants change their group, treatment, or chat sender, or skip pages. The lab now takes randomization and matchmaking settings only from the uploaded config, and no longer sends agent prompts or the end page's redirect URL to the browser before the participant reaches it. Each participant can send up to 20 chat messages a minute and 300 in total.
+- Fixed a security issue that let a participant act as someone else in their group. Participants no longer see each other's session IDs.
+- A participant who reopens a study in a different browser or device is asked to continue in the browser where they started. Reloading the page works as before, and participants signed in with Google can continue anywhere.
 
 ## Platform 2026.10.31
 

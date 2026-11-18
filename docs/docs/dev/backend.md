@@ -33,7 +33,9 @@ const ConfigSchema = Type.Object({
 Authentication is handled by [Better Auth](https://www.better-auth.com/).
 
 -   **Manager Routes**: All routes are protected by `authMiddleware`, which verifies the session cookie or bearer token.
--   **Lab Routes**: Routes derive an auth context (`requireAuth`, `user`) from the config’s `requireAuth` flag. When auth is required, the server will attempt to read a Better Auth session (cookies) and can attach `userId` to sessions when available.
+-   **Lab session start**: `POST /sessions/start` checks the config's `requireAuth` flag. When auth is required, it reads the Better Auth session (cookies) and attaches `userId` to the session. A Prolific PID in the body skips that check.
+-   **Lab session access**: `/sessions/start` gives each new session a random secret in an HttpOnly cookie, `pairit_s_<sessionId>`, and stores only its sha256 (`secretHash`). Every route that acts on a session (`lib/session-access.ts`, `denySessionAccess`) requires that cookie, or a Better Auth sign-in as the session's `userId`. Knowing a sessionId is not enough. Sessions created before this existed have no `secretHash` and stay open.
+-   **Peers never see sessionIds**: chat sends each sender as a per-group member ID (`p_…`, `lib/member-id.ts`). The database still stores real sessionIds, so exports are unchanged.
 
 ## Endpoints
 

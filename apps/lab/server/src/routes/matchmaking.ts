@@ -12,12 +12,15 @@ import {
 	getPoolStatus,
 	removeSession,
 } from "../lib/matchmaking-pool";
+import { denySessionAccess } from "../lib/session-access";
 import { loadSession } from "./sessions";
 
 export const matchmakingRoutes = new Elysia({ prefix: "/sessions" })
 	.post(
 		"/:id/matchmake",
-		async ({ params: { id }, body, set }) => {
+		async ({ params: { id }, body, set, request }) => {
+			const denied = await denySessionAccess(request, id, set);
+			if (denied) return denied;
 			// Verify session exists
 			const session = await loadSession(id);
 			if (!session) {
@@ -89,7 +92,9 @@ export const matchmakingRoutes = new Elysia({ prefix: "/sessions" })
 	)
 	.post(
 		"/:id/matchmake/cancel",
-		async ({ params: { id }, body, set }) => {
+		async ({ params: { id }, body, set, request }) => {
+			const denied = await denySessionAccess(request, id, set);
+			if (denied) return denied;
 			// Verify session exists
 			const session = await loadSession(id);
 			if (!session) {

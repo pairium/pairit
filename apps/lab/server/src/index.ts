@@ -46,7 +46,12 @@ const app = new Elysia().use(
 			: ALLOWED_ORIGINS,
 		credentials: true, // Allow cookies for Better Auth sessions
 		methods: ["GET", "POST", "OPTIONS"],
-		allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+		allowedHeaders: [
+			"Content-Type",
+			"Authorization",
+			"X-Requested-With",
+			"X-Pairit-Simulation-Key",
+		],
 		exposeHeaders: ["Content-Type"],
 		maxAge: 86400,
 	}),

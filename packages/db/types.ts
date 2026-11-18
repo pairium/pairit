@@ -61,6 +61,8 @@ export type SessionDocument = {
 	prolific?: ProlificParams | null;
 	endedAt: string | null;
 	userId?: string | null;
+	/** sha256 of the participant's session cookie secret. Never exported. */
+	secretHash?: string | null;
 	simulated?: boolean;
 	simulationRunId?: string;
 	personaId?: string;

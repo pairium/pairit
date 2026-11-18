@@ -10,6 +10,7 @@ import {
 	getPath,
 } from "../lib/config-lookup";
 import { getGroupsCollection, getSessionsCollection } from "../lib/db";
+import { denySessionAccess } from "../lib/session-access";
 import {
 	assignTreatment,
 	distributeConditions,
@@ -18,7 +19,9 @@ import { loadSession } from "./sessions";
 
 export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 	"/:id/randomize",
-	async ({ params: { id }, body, set }) => {
+	async ({ params: { id }, body, set, request }) => {
+		const denied = await denySessionAccess(request, id, set);
+		if (denied) return denied;
 		// Verify session exists
 		const session = await loadSession(id);
 		if (!session) {

@@ -117,7 +117,8 @@ export default function App() {
 	const transitioningRef = useRef(false);
 	const [error, setError] = useState<string | null>(null);
 	const [authRequired, setAuthRequired] = useState(false);
-	const [sessionBlocked, setSessionBlocked] = useState(false);
+	const [sessionBlocked, setSessionBlocked] =
+		useState<SessionBlockedError | null>(null);
 
 	useEffect(() => {
 		let canceled = false;
@@ -150,7 +151,7 @@ export default function App() {
 			setSessionState({});
 			setGroup(EMPTY_GROUP);
 			setAuthRequired(false);
-			setSessionBlocked(false);
+			setSessionBlocked(null);
 			setBootstrapping(true);
 			setError(null);
 
@@ -181,7 +182,7 @@ export default function App() {
 				}
 
 				if (e instanceof SessionBlockedError) {
-					setSessionBlocked(true);
+					setSessionBlocked(e);
 					setBootstrapping(false);
 					return;
 				}
@@ -306,10 +307,14 @@ export default function App() {
 				{!bootstrapping && sessionBlocked && (
 					<div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-8 text-center">
 						<div className="text-lg font-medium">
-							Experiment Already Completed
+							{sessionBlocked.reason === "session_in_other_browser"
+								? "Continue in your original browser"
+								: "Experiment Already Completed"}
 						</div>
 						<div className="text-sm text-slate-500">
-							You have already completed this experiment and cannot retake it.
+							{sessionBlocked.reason === "session_in_other_browser"
+								? sessionBlocked.message
+								: "You have already completed this experiment and cannot retake it."}
 						</div>
 					</div>
 				)}

@@ -123,6 +123,14 @@ pages:
     endRedirectUrl: "https://app.prolific.com/submissions/complete?cc=ABCD1234"
 ```
 
+Participants see the `endRedirectUrl` only once they reach that page.
+
+### Participants and sign-in
+
+- Participants who arrive from Prolific (the link carries `PROLIFIC_PID`) skip Google sign-in. Prolific doesn't sign these parameters, so the lab can't verify a PID, and the sign-in requirement doesn't stop someone from posing as a Prolific participant.
+- A participant who reloads the page continues where they left off. A Prolific participant must continue in the same browser where they started. Opening the link in another browser or device shows "Continue in the browser where you started this study."
+- A participant who signed in with Google can continue on any device.
+
 ## Routing & Actions
 
 Routing advances the participant between pages using button actions. Use conditional branches to route based on state or the triggering event.

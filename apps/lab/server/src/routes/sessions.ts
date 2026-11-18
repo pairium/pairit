@@ -20,6 +20,16 @@ import {
 } from "../lib/db";
 import { sessionStateChanged } from "../lib/group-view";
 import { buildProvenance, type Provenance } from "../lib/provenance";
+import {
+	decideResume,
+	denySessionAccess,
+	hasSimulationKey,
+	MAX_SESSION_COOKIES,
+	mintSessionSecret,
+	sessionCookieName,
+	sessionCookieOptions,
+	sessionIdsFromCookies,
+} from "../lib/session-access";
 import { startLockKey, withStartLock } from "../lib/session-start-lock";
 import {
 	filterProtectedUpdates,
@@ -126,6 +136,51 @@ function uid(): string {
 	return randomUUID();
 }
 
+type CookieJar = Record<
+	string,
+	{
+		set(
+			options: { value: string } & ReturnType<typeof sessionCookieOptions>,
+		): unknown;
+		remove(): unknown;
+	}
+>;
+
+function setSessionCookie(
+	cookie: CookieJar,
+	sessionId: string,
+	secret: string,
+) {
+	cookie[sessionCookieName(sessionId)].set({
+		value: secret,
+		...sessionCookieOptions(),
+	});
+}
+
+/**
+ * Expire session cookies this browser no longer needs (sessions that ended or
+ * are gone), and the oldest beyond MAX_SESSION_COOKIES, so researchers who
+ * test many sessions don't grow their request headers without bound.
+ */
+async function pruneSessionCookies(request: Request, cookie: CookieJar) {
+	const ids = sessionIdsFromCookies(request);
+	if (ids.length === 0) return;
+	const sessions = await getSessionsCollection();
+	const found = await sessions
+		.find(
+			{ id: { $in: ids } },
+			{ projection: { _id: 0, id: 1, endedAt: 1, createdAt: 1 } },
+		)
+		.toArray();
+	const live = found
+		.filter((s) => !s.endedAt)
+		.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+	const keep = new Set(live.slice(0, MAX_SESSION_COOKIES - 1).map((s) => s.id));
+	for (const id of ids) {
+		if (!keep.has(id)) cookie[sessionCookieName(id)].remove();
+	}
+}
+
 export async function loadSession(sessionId: string): Promise<Session | null> {
 	const collection = await getSessionsCollection();
 	const data = await collection.findOne({ id: sessionId });
@@ -151,7 +206,7 @@ export async function loadSession(sessionId: string): Promise<Session | null> {
 }
 
 async function createSession(
-	session: Session & { userId?: string | null },
+	session: Session & { userId?: string | null; secretHash: string },
 ): Promise<void> {
 	const collection = await getSessionsCollection();
 	const now = new Date();
@@ -164,6 +219,7 @@ async function createSession(
 		prolific: session.prolific ?? null,
 		endedAt: session.endedAt ?? null,
 		userId: session.userId ?? null,
+		secretHash: session.secretHash,
 		...resolveSimulationFields({
 			simulated: session.simulated,
 			simulationRunId: session.simulationRunId,
@@ -266,9 +322,13 @@ async function checkIdempotency(key: string): Promise<{ duplicate: boolean }> {
 export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 	.post(
 		"/start",
-		async ({ body, set, request }) => {
+		async ({ body, set, request, cookie }) => {
+			const jar = cookie as unknown as CookieJar;
 			// Enforce auth requirement (FORCE_AUTH=true bypasses config check for testing)
-			// Prolific participants are identified by their params — skip OAuth for them
+			// Prolific participants are identified by their params — skip OAuth for them.
+			// A PID can't be verified (Prolific doesn't sign its URL params), so
+			// requireAuth doesn't stop someone posing as a Prolific participant.
+			// Resuming by PID also needs the session's cookie (decideResume).
 			const hasProlific = body.prolific?.prolificPid;
 			const loaded = await loadConfig(body.configId);
 			if (!loaded) {
@@ -310,7 +370,27 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 						: config;
 
 					if (!isCompleted) {
-						// Session in progress → resume
+						// Session in progress → resume, if this browser may
+						const decision = decideResume(request, existingSession, userId);
+						if (decision === "other_browser") {
+							set.status = 409;
+							return {
+								status: "blocked" as const,
+								configId: body.configId,
+								error: "session_in_other_browser",
+								message:
+									"Continue in the browser where you started this study.",
+							};
+						}
+						if (decision === "resume_and_mint") {
+							const { secret, hash } = mintSessionSecret();
+							const sessions = await getSessionsCollection();
+							await sessions.updateOne(
+								{ id: existingSession.id, secretHash: { $in: [null] } },
+								{ $set: { secretHash: hash } },
+							);
+							setSessionCookie(jar, existingSession.id, secret);
+						}
 						const page = sessionConfig.pages[existingSession.currentPageId];
 						return {
 							status: "resumed" as const,
@@ -341,15 +421,21 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 
 				// Create new session
 				const prolific: ProlificParams | null = body.prolific ?? null;
+				// Only a trusted runner (with SIMULATION_KEY) may flag simulated runs.
+				const trusted = hasSimulationKey(request);
 				const simulation = resolveSimulationFields({
-					simulated: body.simulated,
-					simulationRunId: body.simulationRunId,
-					personaId: body.personaId,
+					simulated: trusted ? body.simulated : undefined,
+					simulationRunId: trusted ? body.simulationRunId : undefined,
+					personaId: trusted ? body.personaId : undefined,
 					prolificPid,
 				});
 
 				const id = uid();
-				const session: Session & { userId?: string | null } = {
+				const { secret, hash } = mintSessionSecret();
+				const session: Session & {
+					userId?: string | null;
+					secretHash: string;
+				} = {
 					id,
 					configId: body.configId,
 					config,
@@ -357,10 +443,13 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 					session_state: {},
 					prolific,
 					userId,
+					secretHash: hash,
 					...simulation,
 					...provenance,
 				};
 				await createSession(session);
+				await pruneSessionCookies(request, jar);
+				setSessionCookie(jar, id, secret);
 				const page = config.pages[session.currentPageId];
 
 				return {
@@ -401,7 +490,9 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 	)
 	.get(
 		"/:id",
-		async ({ params: { id }, set }) => {
+		async ({ params: { id }, set, request }) => {
+			const denied = await denySessionAccess(request, id, set);
+			if (denied) return denied;
 			const session = await loadSession(id);
 			if (!session) {
 				set.status = 404;
@@ -429,7 +520,9 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 	)
 	.post(
 		"/:id/state",
-		async ({ params: { id }, body, set }) => {
+		async ({ params: { id }, body, set, request }) => {
+			const denied = await denySessionAccess(request, id, set);
+			if (denied) return denied;
 			const session = await loadSession(id);
 			if (!session) {
 				set.status = 404;
@@ -479,7 +572,9 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 	)
 	.post(
 		"/:id/advance",
-		async ({ params: { id }, body, set }) => {
+		async ({ params: { id }, body, set, request }) => {
+			const denied = await denySessionAccess(request, id, set);
+			if (denied) return denied;
 			// Check idempotency first
 			const { duplicate } = await checkIdempotency(body.idempotencyKey);
 			if (duplicate) {
