@@ -15,7 +15,9 @@ Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/re
 
 Merged, but not released yet.
 
-### Platform
+## Platform 2026.11.18.2
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/platform-v2026.11.18.2)
 
 - An agent's `assign_state` tool can no longer overwrite keys Pairit sets itself, such as `group_id`, `treatment` or `chat_ended`. To limit it further, list the allowed paths as an `enum` on its `path` parameter. See [Agent Guardrails](guides/agent-guardrails.md#limit-what-tools-can-change), which now also explains that guardrails are prompt instructions, not enforcement.
 - Participant-written values in agent prompts (`{{session_state.*}}`, `{{group.*}}`, workspace text) are now marked as participant data, which makes prompt injection harder. Values Pairit assigns, such as a randomized condition, are passed through unchanged.
@@ -29,7 +31,9 @@ Merged, but not released yet.
 - The manager refuses changes sent from other websites, and its error messages no longer include server details.
 - A participant who hits a chat limit (20 messages a minute, 300 in total) now sees a notice saying their message wasn't sent, and keeps their text. Before, the message silently disappeared. The message box stops at 4,000 characters.
 
-### CLI
+## CLI 0.3.7
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/cli-v0.3.7)
 
 - `pairit config lint`, `compile` and `upload` reject an `endRedirectUrl` that isn't an `http://` or `https://` URL.
 - `pairit login` checks that the sign-in it receives is the one it started (state and PKCE), against servers that support it.
