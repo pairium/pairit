@@ -114,6 +114,10 @@ export async function ensureIndexes(): Promise<void> {
 	await database
 		.collection("chat_messages")
 		.createIndex({ idempotencyKey: 1 }, { unique: true, sparse: true });
+	// Per-session chat limit (routes/chat.ts)
+	await database
+		.collection("chat_messages")
+		.createIndex({ senderId: 1, senderType: 1 });
 
 	await database
 		.collection("groups")

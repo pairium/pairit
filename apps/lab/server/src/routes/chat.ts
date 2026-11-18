@@ -8,6 +8,7 @@ import { Elysia, t } from "elysia";
 import { MongoServerError, type ObjectId } from "mongodb";
 import { triggerAgents, triggerJoinAgents } from "../lib/agent-runner";
 import { resolveParticipantAvatar } from "../lib/chat-avatar";
+import { takeChatSlot } from "../lib/chat-rate-limit";
 import {
 	getChatMessagesCollection,
 	getIdempotencyCollection,
@@ -35,11 +36,26 @@ async function checkIdempotency(key: string): Promise<{ duplicate: boolean }> {
 	}
 }
 
+const MAX_CONTENT_LENGTH = 4000;
+
+/** Returns an error body if the session is over its chat limit. */
+async function checkRateLimit(
+	sessionId: string,
+): Promise<{ error: string } | null> {
+	const collection = await getChatMessagesCollection();
+	const sent = await collection.countDocuments({
+		senderId: sessionId,
+		senderType: "participant",
+	});
+	const slot = takeChatSlot(sessionId, sent);
+	return slot.ok ? null : { error: `rate_limited_${slot.reason}` };
+}
+
 export const chatRoutes = new Elysia({ prefix: "/chat" })
 	.post(
 		"/:groupId/send",
 		async ({ params: { groupId }, body, set }) => {
-			const { sessionId, content, idempotencyKey, senderType } = body;
+			const { sessionId, content, idempotencyKey } = body;
 
 			// Verify membership
 			const isMember = await verifyMembership(sessionId, groupId);
@@ -80,7 +96,14 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 				}
 			}
 
-			const effectiveSenderType = senderType ?? "participant";
+			const limited = await checkRateLimit(sessionId);
+			if (limited) {
+				set.status = 429;
+				return limited;
+			}
+
+			// Only the server writes agent and system messages
+			const effectiveSenderType = "participant" as const;
 			const avatar =
 				effectiveSenderType === "participant"
 					? resolveParticipantAvatar(
@@ -126,7 +149,7 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 			const messageId = insertedId.toString();
 
 			let messagesSent: number | undefined;
-			if (effectiveSenderType === "participant") {
+			{
 				const updatedSession = await sessionsCollection.findOneAndUpdate(
 					{ id: sessionId },
 					{
@@ -174,12 +197,10 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 				broadcastToSession(memberId, "chat_message", eventData);
 			}
 
-			// Trigger AI agents if message is from a participant
-			if (effectiveSenderType !== "agent" && effectiveSenderType !== "system") {
-				triggerAgents(groupId, sessionId).catch((err) => {
-					console.error("[Chat] Failed to trigger agents:", err);
-				});
-			}
+			// Trigger AI agents
+			triggerAgents(groupId, sessionId).catch((err) => {
+				console.error("[Chat] Failed to trigger agents:", err);
+			});
 
 			return {
 				messageId,
@@ -192,15 +213,8 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 			params: t.Object({ groupId: t.String() }),
 			body: t.Object({
 				sessionId: t.String({ minLength: 1 }),
-				content: t.String({ minLength: 1 }),
+				content: t.String({ minLength: 1, maxLength: MAX_CONTENT_LENGTH }),
 				idempotencyKey: t.Optional(t.String()),
-				senderType: t.Optional(
-					t.Union([
-						t.Literal("participant"),
-						t.Literal("agent"),
-						t.Literal("system"),
-					]),
-				),
 			}),
 		},
 	)
@@ -260,6 +274,12 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 				if (duplicate) {
 					return { ok: true, deduplicated: true };
 				}
+			}
+
+			const limited = await checkRateLimit(sessionId);
+			if (limited) {
+				set.status = 429;
+				return limited;
 			}
 
 			// Trigger join agents (on_join trigger + legacy sendFirstMessage)

@@ -5,6 +5,7 @@
  */
 
 import { Elysia, t } from "elysia";
+import { DEFAULT_POOL_ID, findMatchmaking } from "../lib/config-lookup";
 import { getGroupsCollection } from "../lib/db";
 import {
 	enqueueSession,
@@ -24,14 +25,13 @@ export const matchmakingRoutes = new Elysia({ prefix: "/sessions" })
 				return { error: "session_not_found" };
 			}
 
-			const {
-				poolId,
-				num_users,
-				timeoutSeconds,
-				timeoutTarget,
-				assignmentType,
-				conditions,
-			} = body;
+			// Pool settings come from the config, never from the client
+			const poolId = body.poolId || DEFAULT_POOL_ID;
+			const settings = findMatchmaking(session.config, poolId);
+			if (!settings) {
+				set.status = 400;
+				return { error: "unknown_pool" };
+			}
 
 			// Already grouped in this pool (e.g. a rejoin after a dropped stream
 			// missed match_found) — report the match instead of re-queueing
@@ -54,11 +54,11 @@ export const matchmakingRoutes = new Elysia({ prefix: "/sessions" })
 				session.configId,
 				poolId,
 				{
-					numUsers: num_users,
-					timeoutSeconds,
-					timeoutTarget,
-					assignmentType,
-					conditions,
+					numUsers: settings.numUsers,
+					timeoutSeconds: settings.timeoutSeconds,
+					timeoutTarget: settings.timeoutTarget,
+					assignmentType: settings.assignmentType,
+					conditions: settings.conditions,
 				},
 				session.simulated === true,
 			);
@@ -76,19 +76,14 @@ export const matchmakingRoutes = new Elysia({ prefix: "/sessions" })
 		},
 		{
 			params: t.Object({ id: t.String() }),
+			// Old clients also send the pool settings; they are ignored
 			body: t.Object({
 				poolId: t.String(),
-				num_users: t.Number({ minimum: 2 }),
-				timeoutSeconds: t.Number({ minimum: 1 }),
-				timeoutTarget: t.Optional(t.String()),
-				assignmentType: t.Optional(
-					t.Union([
-						t.Literal("random"),
-						t.Literal("balanced_random"),
-						t.Literal("block"),
-					]),
-				),
-				conditions: t.Optional(t.Array(t.String())),
+				num_users: t.Optional(t.Unknown()),
+				timeoutSeconds: t.Optional(t.Unknown()),
+				timeoutTarget: t.Optional(t.Unknown()),
+				assignmentType: t.Optional(t.Unknown()),
+				conditions: t.Optional(t.Unknown()),
 			}),
 		},
 	)

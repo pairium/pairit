@@ -4,6 +4,11 @@
  */
 
 import { Elysia, t } from "elysia";
+import {
+	DEFAULT_STATE_KEY,
+	findRandomization,
+	getPath,
+} from "../lib/config-lookup";
 import { getGroupsCollection, getSessionsCollection } from "../lib/db";
 import {
 	assignTreatment,
@@ -21,13 +26,9 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 			return { error: "session_not_found" };
 		}
 
-		const {
-			assignmentType = "random",
-			conditions = [],
-			stateKey = "treatment",
-			scope = "session",
-			distribute = false,
-		} = body;
+		// Only the state key comes from the client. The rest is read from the
+		// config so a participant can't pick their own condition.
+		const stateKey = body.stateKey || DEFAULT_STATE_KEY;
 
 		// Validate stateKey to prevent MongoDB operator injection
 		if (
@@ -39,6 +40,13 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 			return { error: "invalid_state_key" };
 		}
 
+		const settings = findRandomization(session.config, stateKey);
+		if (!settings) {
+			set.status = 400;
+			return { error: "unknown_randomization" };
+		}
+		const { assignmentType, conditions, scope, distribute } = settings;
+
 		if (distribute && scope !== "group") {
 			set.status = 400;
 			return {
@@ -48,7 +56,7 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 		}
 
 		// Idempotent: return existing assignment if present
-		const existingValue = session.session_state?.[stateKey];
+		const existingValue = getPath(session.session_state, stateKey);
 		if (existingValue) {
 			return {
 				condition: existingValue as string,
@@ -152,9 +160,10 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 			});
 
 			if (existingMember) {
-				const existingCondition = existingMember.session_state?.[
-					stateKey
-				] as string;
+				const existingCondition = getPath(
+					existingMember.session_state,
+					stateKey,
+				) as string;
 
 				// Ensure this session also has the assignment
 				await sessionsCollection.updateOne(
@@ -243,18 +252,13 @@ export const randomizeRoutes = new Elysia({ prefix: "/sessions" }).post(
 	},
 	{
 		params: t.Object({ id: t.String() }),
+		// Old clients also send the settings; they are ignored
 		body: t.Object({
-			assignmentType: t.Optional(
-				t.Union([
-					t.Literal("random"),
-					t.Literal("balanced_random"),
-					t.Literal("block"),
-				]),
-			),
-			conditions: t.Optional(t.Array(t.String())),
 			stateKey: t.Optional(t.String()),
-			scope: t.Optional(t.Union([t.Literal("session"), t.Literal("group")])),
-			distribute: t.Optional(t.Boolean()),
+			assignmentType: t.Optional(t.Unknown()),
+			conditions: t.Optional(t.Unknown()),
+			scope: t.Optional(t.Unknown()),
+			distribute: t.Optional(t.Unknown()),
 		}),
 	},
 );

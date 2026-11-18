@@ -247,7 +247,7 @@ export default function App() {
 
 		if (optimistic && previousPage) {
 			setPage(nextPage);
-			setEndRedirectUrl(nextPage.endRedirectUrl ?? null);
+			setEndRedirectUrl(null);
 		}
 
 		try {
@@ -263,12 +263,13 @@ export default function App() {
 			}
 
 			setPage(nextPage);
-			setEndRedirectUrl(nextPage.endRedirectUrl ?? null);
+			// The server sends a page's redirect only once the participant is on it
+			setEndRedirectUrl(r.page?.endRedirectUrl ?? null);
 			setEndedAt(r.endedAt ?? null);
 		} catch (error: unknown) {
 			if (optimistic && previousPage) {
 				setPage(previousPage);
-				setEndRedirectUrl(previousPage.endRedirectUrl ?? null);
+				setEndRedirectUrl(null);
 			}
 			setError(error instanceof Error ? error.message : "Failed to advance");
 		} finally {

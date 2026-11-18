@@ -8,7 +8,10 @@
 import { randomUUID } from "node:crypto";
 import { Elysia, t } from "elysia";
 import { MongoServerError } from "mongodb";
+import { checkAdvance } from "../lib/advance";
 import { getAuthUser } from "../lib/auth-middleware";
+import { toClientConfig } from "../lib/client-config";
+import { listRandomizations } from "../lib/config-lookup";
 import {
 	getConfigsCollection,
 	getIdempotencyCollection,
@@ -18,7 +21,11 @@ import {
 import { sessionStateChanged } from "../lib/group-view";
 import { buildProvenance, type Provenance } from "../lib/provenance";
 import { startLockKey, withStartLock } from "../lib/session-start-lock";
-import { hasOverlappingPaths } from "../lib/session-state";
+import {
+	filterProtectedUpdates,
+	hasOverlappingPaths,
+	PROTECTED_STATE_KEYS,
+} from "../lib/session-state";
 import { resolveSimulationFields } from "../lib/simulation";
 import type {
 	Config,
@@ -173,8 +180,13 @@ async function createSession(
 	await collection.insertOne(doc);
 }
 
+/**
+ * Moves the session from `fromPageId` to `target`. Returns null if the
+ * session moved or ended in the meantime.
+ */
 async function advanceSession(
 	sessionId: string,
+	fromPageId: string,
 	target: string,
 	isEnd: boolean,
 ): Promise<SessionDocument | null> {
@@ -187,7 +199,7 @@ async function advanceSession(
 	if (isEnd) setFields.endedAt = new Date().toISOString();
 
 	return await collection.findOneAndUpdate(
-		{ id: sessionId },
+		{ id: sessionId, currentPageId: fromPageId, endedAt: null },
 		{ $set: setFields },
 		{ returnDocument: "after" },
 	);
@@ -304,7 +316,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 							status: "resumed" as const,
 							sessionId: existingSession.id,
 							configId: body.configId,
-							config: sessionConfig,
+							config: toClientConfig(sessionConfig),
 							currentPageId: existingSession.currentPageId,
 							page,
 							session_state: existingSession.session_state,
@@ -317,11 +329,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 						set.status = 409;
 						return {
 							status: "blocked" as const,
-							sessionId: existingSession.id,
 							configId: body.configId,
-							config: sessionConfig,
-							currentPageId: existingSession.currentPageId,
-							page: sessionConfig.pages[existingSession.currentPageId],
 							endedAt: existingSession.endedAt,
 							error: "session_completed",
 							message: "You have already completed this experiment.",
@@ -359,7 +367,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 					status: "created" as const,
 					sessionId: id,
 					configId: body.configId,
-					config,
+					config: toClientConfig(config),
 					currentPageId: session.currentPageId,
 					page,
 					session_state: session.session_state,
@@ -422,21 +430,42 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 	.post(
 		"/:id/state",
 		async ({ params: { id }, body, set }) => {
+			const session = await loadSession(id);
+			if (!session) {
+				set.status = 404;
+				return { error: "not_found" };
+			}
+			if (session.endedAt) {
+				set.status = 409;
+				return { error: "session_ended" };
+			}
+
 			const { duplicate } = await checkIdempotency(body.idempotencyKey);
 			if (duplicate) {
 				return { success: true };
 			}
 
-			const found = await updateSessionState(id, body.updates);
-			if (!found) {
-				set.status = 404;
-				return { error: "not_found" };
+			// Server-owned keys are dropped, not rejected: old clients echo
+			// them after matchmaking and randomization.
+			const { allowed, ignored } = filterProtectedUpdates(body.updates, [
+				...PROTECTED_STATE_KEYS,
+				...listRandomizations(session.config).map((r) => r.stateKey),
+			]);
+			const paths = Object.keys(allowed);
+			if (paths.length > 0) {
+				const found = await updateSessionState(id, allowed);
+				if (!found) {
+					set.status = 404;
+					return { error: "not_found" };
+				}
+				sessionStateChanged(id, paths).catch((error) => {
+					console.error("[Group] Failed to share state:", error);
+				});
 			}
-			sessionStateChanged(id, Object.keys(body.updates)).catch((error) => {
-				console.error("[Group] Failed to share state:", error);
-			});
 
-			return { success: true };
+			return ignored.length > 0
+				? { success: true, ignored }
+				: { success: true };
 		},
 		{
 			params: t.Object({
@@ -483,17 +512,23 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 
 			// Session existence = authorization (Qualtrics model)
 
-			// In hybrid mode, we don't validate page existence since frontend manages its own config
-			const page = session.config.pages[body.target] || {
-				id: body.target,
-				components: [],
-			};
+			const check = checkAdvance<Page>(session, body.target);
+			if (!check.ok) {
+				set.status = check.status;
+				return { error: check.error };
+			}
+			const page = check.page;
 			const isEnd = !!page.end;
 
-			const updated = await advanceSession(id, body.target, isEnd);
+			const updated = await advanceSession(
+				id,
+				session.currentPageId,
+				body.target,
+				isEnd,
+			);
 			if (!updated) {
-				set.status = 500;
-				return { error: "update_failed" };
+				set.status = 409;
+				return { error: "advance_conflict" };
 			}
 
 			return {

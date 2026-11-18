@@ -3,6 +3,7 @@
  * Manages FIFO matchmaking pools for group experiments
  */
 
+import { clampTimeoutSeconds } from "./config-lookup";
 import { getGroupsCollection, getSessionsCollection } from "./db";
 import { scheduleGroupPush } from "./group-view";
 import { broadcastToSession, getConnectionCount } from "./sse";
@@ -73,7 +74,7 @@ export async function enqueueSession(
 	// Create timeout timer
 	const timeoutTimer = setTimeout(() => {
 		handleTimeout(sessionId, poolKey, poolConfig.timeoutTarget);
-	}, poolConfig.timeoutSeconds * 1000);
+	}, clampTimeoutSeconds(poolConfig.timeoutSeconds) * 1000);
 
 	// Create entry
 	const entry: WaitingEntry = {

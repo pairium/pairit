@@ -50,6 +50,8 @@ export type StreamAgentOptions = {
 	credentials?: ResolvedLlmCredentials;
 	signal?: AbortSignal;
 	tools?: ToolSet;
+	/** Defaults to MAX_OUTPUT_TOKENS */
+	maxOutputTokens?: number;
 };
 
 // Model calls per agent turn, counting each round of tool calls
@@ -113,7 +115,7 @@ export async function* streamAgentResponse(
 		messages: promptMessages(history),
 		tools: options.tools,
 		stopWhen: stepCountIs(MAX_STEPS),
-		maxOutputTokens: MAX_OUTPUT_TOKENS,
+		maxOutputTokens: options.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
 		abortSignal: options.signal,
 		...(agent.reasoningEffort && {
 			providerOptions: { openai: { reasoningEffort: agent.reasoningEffort } },
