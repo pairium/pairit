@@ -17,6 +17,22 @@ Merged, but not released yet.
 
 ### Platform
 
+- An agent's `assign_state` tool can no longer overwrite keys Pairit sets itself, such as `group_id`, `treatment` or `chat_ended`. To limit it further, list the allowed paths as an `enum` on its `path` parameter. See [Agent Guardrails](guides/agent-guardrails.md#limit-what-tools-can-change), which now also explains that guardrails are prompt instructions, not enforcement.
+- Participant-written values in agent prompts (`{{session_state.*}}`, `{{group.*}}`, workspace text) are now marked as participant data, which makes prompt injection harder. Values Pairit assigns, such as a randomized condition, are passed through unchanged.
+- Agents see the most recent 100 chat messages, not the whole chat.
+- Workspace edits are checked on the server: participants can only change the fields the workspace declares, with the declared types, and a workspace can hold up to 200,000 characters.
+- Fixed security issues that let a participant or agent put links, images or diagrams on other participants' pages. Values filled into text with `{{session_state.*}}` or `{{group.*}}` now show as plain text, so Markdown inside a value is no longer formatted. In chat, images from others show as text and links open in a new tab. An avatar filled from `session_state` must be an icon name or an image on the lab, or on the site the avatar template names (e.g. `https://cdn.example.com/{{session_state.role}}.png`).
+- The end page's Continue button opens only `http://` and `https://` links, and says "Continue to Prolific" only for prolific.com and prolific.co links. Uploading a config with any other `endRedirectUrl` fails.
+- Mermaid diagrams and HTML embeds are kept further apart from the lab page. Embeds work as before.
+
+### CLI
+
+- `pairit config lint`, `compile` and `upload` reject an `endRedirectUrl` that isn't an `http://` or `https://` URL.
+
+## Platform 2026.11.18
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/platform-v2026.11.18)
+
 - When an agent hits an error (for example, the OpenAI key runs out of quota), the chat no longer shows the agent typing forever. Participants see the error notice and can keep chatting.
 - Fixed a security issue in CLI sign-in. A crafted link could have taken over a signed-in researcher's account. `pairit login` works as before.
 - Fixed security issues that let participants change their group, treatment, or chat sender, or skip pages. The lab now takes randomization and matchmaking settings only from the uploaded config, and no longer sends agent prompts or the end page's redirect URL to the browser before the participant reaches it. Each participant can send up to 20 chat messages a minute and 300 in total.

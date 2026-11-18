@@ -202,7 +202,7 @@ export class LabClient {
 	}
 
 	async getSession(sessionId: string): Promise<GetResponse> {
-		const r = await this.request(`/sessions/${sessionId}`);
+		const r = await this.request(`/sessions/${encodeURIComponent(sessionId)}`);
 		if (!r.ok) throw new Error("Session not found");
 		return r.json();
 	}
@@ -212,10 +212,13 @@ export class LabClient {
 		target: string,
 		idempotencyKey?: string,
 	): Promise<GetResponse> {
-		const r = await this.jsonRequest(`/sessions/${sessionId}/advance`, {
-			target,
-			idempotencyKey: idempotencyKey ?? crypto.randomUUID(),
-		});
+		const r = await this.jsonRequest(
+			`/sessions/${encodeURIComponent(sessionId)}/advance`,
+			{
+				target,
+				idempotencyKey: idempotencyKey ?? crypto.randomUUID(),
+			},
+		);
 		if (!r.ok) throw new Error("Failed to advance");
 		return r.json();
 	}
@@ -224,10 +227,13 @@ export class LabClient {
 		sessionId: string,
 		event: EventPayload,
 	): Promise<SubmitEventResponse> {
-		const r = await this.jsonRequest(`/sessions/${sessionId}/events`, {
-			...event,
-			idempotencyKey: crypto.randomUUID(),
-		});
+		const r = await this.jsonRequest(
+			`/sessions/${encodeURIComponent(sessionId)}/events`,
+			{
+				...event,
+				idempotencyKey: crypto.randomUUID(),
+			},
+		);
 		if (!r.ok) throw new Error("Failed to submit event");
 		return r.json();
 	}
@@ -236,10 +242,13 @@ export class LabClient {
 		sessionId: string,
 		updates: Record<string, unknown>,
 	): Promise<void> {
-		const r = await this.jsonRequest(`/sessions/${sessionId}/state`, {
-			updates,
-			idempotencyKey: crypto.randomUUID(),
-		});
+		const r = await this.jsonRequest(
+			`/sessions/${encodeURIComponent(sessionId)}/state`,
+			{
+				updates,
+				idempotencyKey: crypto.randomUUID(),
+			},
+		);
 		if (!r.ok) throw new Error("Failed to update state");
 	}
 
@@ -248,11 +257,14 @@ export class LabClient {
 		sessionId: string,
 		content: string,
 	): Promise<SendChatMessageResponse> {
-		const r = await this.jsonRequest(`/chat/${groupId}/send`, {
-			sessionId,
-			content,
-			idempotencyKey: crypto.randomUUID(),
-		});
+		const r = await this.jsonRequest(
+			`/chat/${encodeURIComponent(groupId)}/send`,
+			{
+				sessionId,
+				content,
+				idempotencyKey: crypto.randomUUID(),
+			},
+		);
 		if (r.status === 403) throw new NotAMemberError();
 		if (!r.ok) throw new Error("Failed to send message");
 		return r.json();
@@ -263,7 +275,7 @@ export class LabClient {
 		sessionId: string,
 	): Promise<GetChatHistoryResponse> {
 		const r = await this.request(
-			`/chat/${groupId}/history?sessionId=${encodeURIComponent(sessionId)}`,
+			`/chat/${encodeURIComponent(groupId)}/history?sessionId=${encodeURIComponent(sessionId)}`,
 		);
 		if (r.status === 403) throw new NotAMemberError();
 		if (!r.ok) throw new Error("Failed to get chat history");
@@ -275,10 +287,13 @@ export class LabClient {
 		sessionId: string,
 		idempotencyKey?: string,
 	): Promise<void> {
-		const r = await this.jsonRequest(`/chat/${groupId}/start-agents`, {
-			sessionId,
-			...(idempotencyKey && { idempotencyKey }),
-		});
+		const r = await this.jsonRequest(
+			`/chat/${encodeURIComponent(groupId)}/start-agents`,
+			{
+				sessionId,
+				...(idempotencyKey && { idempotencyKey }),
+			},
+		);
 		if (r.status === 403) throw new NotAMemberError();
 		if (!r.ok) throw new Error("Failed to start chat agents");
 	}
@@ -288,7 +303,7 @@ export class LabClient {
 		params: MatchmakingParams,
 	): Promise<MatchmakingResponse> {
 		const r = await this.jsonRequest(
-			`/sessions/${sessionId}/matchmake`,
+			`/sessions/${encodeURIComponent(sessionId)}/matchmake`,
 			params,
 		);
 		if (!r.ok) throw new Error("Failed to join matchmaking");
@@ -300,7 +315,7 @@ export class LabClient {
 		poolId: string,
 	): Promise<CancelMatchmakingResponse> {
 		const r = await this.jsonRequest(
-			`/sessions/${sessionId}/matchmake/cancel`,
+			`/sessions/${encodeURIComponent(sessionId)}/matchmake/cancel`,
 			{
 				poolId,
 			},
@@ -315,11 +330,14 @@ export class LabClient {
 		pageId: string,
 		stateVector: string,
 	): Promise<SyncWorkspaceResponse> {
-		const r = await this.jsonRequest(`/workspace/${groupId}/sync`, {
-			sessionId,
-			pageId,
-			stateVector,
-		});
+		const r = await this.jsonRequest(
+			`/workspace/${encodeURIComponent(groupId)}/sync`,
+			{
+				sessionId,
+				pageId,
+				stateVector,
+			},
+		);
 		await throwIfWorkspaceRefused(r);
 		if (!r.ok) throw new Error("Failed to sync workspace");
 		return r.json();
@@ -334,7 +352,7 @@ export class LabClient {
 		options: { keepalive?: boolean } = {},
 	): Promise<void> {
 		const r = await this.jsonRequest(
-			`/workspace/${groupId}/update`,
+			`/workspace/${encodeURIComponent(groupId)}/update`,
 			{ sessionId, pageId, update },
 			{ keepalive: options.keepalive },
 		);
@@ -350,12 +368,15 @@ export class LabClient {
 		oldText: string,
 		newText: string,
 	): Promise<{ ok: true } | { ok: false; error: string }> {
-		const r = await this.jsonRequest(`/workspace/${groupId}/replace`, {
-			sessionId,
-			pageId,
-			old: oldText,
-			new: newText,
-		});
+		const r = await this.jsonRequest(
+			`/workspace/${encodeURIComponent(groupId)}/replace`,
+			{
+				sessionId,
+				pageId,
+				old: oldText,
+				new: newText,
+			},
+		);
 		if (r.status === 409) {
 			const body = (await r.json()) as { message?: string };
 			return { ok: false, error: body.message ?? "Refused" };
@@ -370,7 +391,7 @@ export class LabClient {
 		params: RandomizeParams = {},
 	): Promise<RandomizeResponse> {
 		const r = await this.jsonRequest(
-			`/sessions/${sessionId}/randomize`,
+			`/sessions/${encodeURIComponent(sessionId)}/randomize`,
 			params,
 		);
 		if (!r.ok) throw new Error("Failed to randomize");

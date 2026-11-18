@@ -76,6 +76,8 @@ export type Event = {
 };
 
 export type IdempotencyRecord = {
+	// `${sessionId}:${clientKey}` (lib/idempotency.ts)
 	key: string;
+	sessionId?: string;
 	createdAt: Date;
 };

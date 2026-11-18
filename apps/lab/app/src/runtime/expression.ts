@@ -2,6 +2,8 @@
  * Simple expression evaluator for branching conditions like "session_state.age < 18"
  */
 
+import { getOwnPath } from "@app/lib/state-path";
+
 /** What a session may read about its matched group (built by the server). */
 export type GroupView = {
 	ws: Record<string, unknown>;
@@ -39,10 +41,7 @@ function parseValue(raw: string): unknown {
 }
 
 export function getScopePath(scope: Scope, path: string): unknown {
-	return path.split(".").reduce<unknown>((current, key) => {
-		if (current == null || typeof current !== "object") return undefined;
-		return (current as Record<string, unknown>)[key];
-	}, scope);
+	return getOwnPath(scope, path);
 }
 
 function compare(left: unknown, op: ComparisonOp, right: unknown): boolean {

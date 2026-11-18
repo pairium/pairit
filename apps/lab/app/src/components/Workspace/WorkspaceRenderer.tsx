@@ -39,7 +39,12 @@ export function WorkspaceRenderer({
 		[html],
 	);
 
+	// True while the frame shows the researcher's page (not after it
+	// navigates itself elsewhere)
+	const readyRef = useRef(false);
+
 	const post = () => {
+		if (!readyRef.current) return;
 		iframeRef.current?.contentWindow?.postMessage(
 			{ type: "pairit:workspace", text: text.toString() },
 			"*",
@@ -71,11 +76,13 @@ export function WorkspaceRenderer({
 				iframeRef.current?.contentWindow,
 			);
 			if (!message) return;
-			const reply = (result: { ok: boolean; error?: string }) =>
+			const reply = (result: { ok: boolean; error?: string }) => {
+				if (!readyRef.current) return;
 				iframeRef.current?.contentWindow?.postMessage(
 					{ type: "pairit:workspace:result", id: message.id, ...result },
 					"*",
 				);
+			};
 			if (readOnly) {
 				reply({ ok: false, error: "This workspace is read-only." });
 				return;
@@ -106,7 +113,13 @@ export function WorkspaceRenderer({
 			height={height}
 			title="Workspace"
 			iframeRef={iframeRef}
-			onLoad={post}
+			onLoad={() => {
+				readyRef.current = true;
+				post();
+			}}
+			onNavigateAway={() => {
+				readyRef.current = false;
+			}}
 		/>
 	);
 }

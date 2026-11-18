@@ -19,6 +19,7 @@ import {
 	getConfigsCollection,
 	getSessionsCollection,
 } from "../lib/db";
+import { invalidEndRedirectPages } from "../lib/end-redirect";
 import {
 	llmCredentialConflict,
 	llmCredentialUpdateFields,
@@ -85,6 +86,15 @@ export const configsRoutes = new Elysia({ prefix: "/configs" })
 				return {
 					error: "name_required",
 					message: "Upload needs a config name (--name).",
+				};
+			}
+
+			const badRedirects = invalidEndRedirectPages(body.config);
+			if (badRedirects.length) {
+				set.status = 400;
+				return {
+					error: "invalid_end_redirect_url",
+					message: `endRedirectUrl must be an http:// or https:// URL (pages: ${badRedirects.join(", ")}).`,
 				};
 			}
 
