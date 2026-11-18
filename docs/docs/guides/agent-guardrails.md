@@ -25,7 +25,9 @@ Guardrails are text in the agent's system prompt. The model usually follows them
 
 ## Participant text in the prompt
 
-Values interpolated from `{{session_state.*}}` and `{{group.*}}`, and the workspace text shown to agents, are written by participants. Pairit wraps each one in `<participant_data>` tags and tells the agent to treat tagged text as information, not instructions. This makes prompt injection harder, not impossible.
+Values interpolated from `{{session_state.*}}` and `{{group.*}}`, and the workspace text shown to agents, can be written by participants. Pairit wraps each one in `<participant_data>` tags and tells the agent to treat tagged text as information, not instructions. This makes prompt injection harder, not impossible.
+
+Keys that only Pairit writes are not wrapped: a randomization's `stateKey`, `treatment`, and the other keys listed under [Limit what tools can change](#limit-what-tools-can-change). So a prompt can still take instructions from a randomized condition, e.g. `{{session_state.style}}` with conditions "Be warm." and "Be formal.". A `{{group.*}}` value is always wrapped.
 
 ## Opting Out
 
@@ -123,4 +125,4 @@ tools:
       required: [path, value]
 ```
 
-`assign_state` never writes keys that Pairit sets itself (`group_id`, `chat_group_id`, `treatment`, `chat`, `chat_ended`, `deal_reached`, `agreed_price`, or a randomization's `stateKey`). Without an `enum`, it may write any other key.
+`assign_state` never writes keys that Pairit sets itself (`group_id`, `chat_group_id`, `treatment`, `chat`, `chat_ended`, `deal_reached`, `agreed_price`, or a randomization's `stateKey`). Without an `enum`, it may write any key your config declares under `session_state`, or any other key if the config declares no `session_state`.

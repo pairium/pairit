@@ -34,17 +34,24 @@ function schemaKeys(config: unknown): string[] | null {
 	return Object.keys(config.session_state);
 }
 
+/** Keys only the server writes: protected keys and randomization stateKeys. */
+export function serverOwnedKeys(config: unknown): string[] {
+	return [
+		...PROTECTED_STATE_KEYS,
+		...listRandomizations(config).map((r) => r.stateKey),
+	];
+}
+
 /** Why the agent may not write `path`, or null if it may. */
 export function assignStateRefusal(
 	path: string,
 	config: unknown,
 	tool?: DeclaredTool,
 ): string | null {
-	const serverOwned = [
-		...PROTECTED_STATE_KEYS,
-		...listRandomizations(config).map((r) => r.stateKey),
-	];
-	if (filterProtectedUpdates({ [path]: true }, serverOwned).ignored.length) {
+	if (
+		filterProtectedUpdates({ [path]: true }, serverOwnedKeys(config)).ignored
+			.length
+	) {
 		return `"${path}" is set by Pairit and cannot be assigned.`;
 	}
 

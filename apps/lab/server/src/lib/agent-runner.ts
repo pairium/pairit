@@ -5,7 +5,7 @@
 
 import { jsonSchema, type ToolSet, tool } from "ai";
 import type { ChatMessageDocument } from "../types";
-import { assignStateRefusal } from "./agent-state";
+import { assignStateRefusal, serverOwnedKeys } from "./agent-state";
 import {
 	getAgentsFromConfig,
 	getPageAgentIdsFromConfig,
@@ -370,7 +370,7 @@ async function runAgent(
 			agent.prompts,
 			options.sessionState,
 			usesGroup ? await getGroupView(sessionId) : undefined,
-			{ delimitData: true },
+			{ delimitData: true, serverKeys: serverOwnedKeys(options.config) },
 		);
 
 		// Build system prompt: guardrail prefix + experimenter prompt + workspace

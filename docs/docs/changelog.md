@@ -23,7 +23,7 @@ Merged, but not released yet.
 - Fixed a security issue that let a participant act as someone else in their group. Participants no longer see each other's session IDs.
 - A participant who reopens a study in a different browser or device is asked to continue in the browser where they started. Reloading the page works as before, and participants signed in with Google can continue anywhere.
 - An agent's `assign_state` tool can no longer overwrite keys Pairit sets itself, such as `group_id`, `treatment` or `chat_ended`. To limit it further, list the allowed paths as an `enum` on its `path` parameter. See [Agent Guardrails](guides/agent-guardrails.md#limit-what-tools-can-change), which now also explains that guardrails are prompt instructions, not enforcement.
-- Participant-written values in agent prompts (`{{session_state.*}}`, `{{group.*}}`, workspace text) are now marked as participant data, which makes prompt injection harder.
+- Participant-written values in agent prompts (`{{session_state.*}}`, `{{group.*}}`, workspace text) are now marked as participant data, which makes prompt injection harder. Values Pairit assigns, such as a randomized condition, are passed through unchanged.
 - Agents see the most recent 100 chat messages, not the whole chat.
 - Workspace edits are checked on the server: participants can only change the fields the workspace declares, with the declared types, and a workspace can hold up to 200,000 characters.
 
