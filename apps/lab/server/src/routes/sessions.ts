@@ -7,18 +7,17 @@
 
 import { randomUUID } from "node:crypto";
 import { Elysia, t } from "elysia";
-import { MongoServerError } from "mongodb";
 import { checkAdvance } from "../lib/advance";
 import { getAuthUser } from "../lib/auth-middleware";
 import { toClientConfig } from "../lib/client-config";
 import { listRandomizations } from "../lib/config-lookup";
 import {
 	getConfigsCollection,
-	getIdempotencyCollection,
 	getSessionStartLocksCollection,
 	getSessionsCollection,
 } from "../lib/db";
 import { sessionStateChanged } from "../lib/group-view";
+import { claimIdempotencyKey } from "../lib/idempotency";
 import { buildProvenance, type Provenance } from "../lib/provenance";
 import {
 	decideResume,
@@ -307,19 +306,6 @@ export async function updateSessionState(
 	return result.matchedCount > 0;
 }
 
-async function checkIdempotency(key: string): Promise<{ duplicate: boolean }> {
-	const collection = await getIdempotencyCollection();
-	try {
-		await collection.insertOne({ key, createdAt: new Date() });
-		return { duplicate: false };
-	} catch (err) {
-		if (err instanceof MongoServerError && err.code === 11000) {
-			return { duplicate: true };
-		}
-		throw err;
-	}
-}
-
 export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 	.post(
 		"/start",
@@ -534,7 +520,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 				return { error: "session_ended" };
 			}
 
-			const { duplicate } = await checkIdempotency(body.idempotencyKey);
+			const { duplicate } = await claimIdempotencyKey(id, body.idempotencyKey);
 			if (duplicate) {
 				return { success: true };
 			}
@@ -577,7 +563,7 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 			const denied = await denySessionAccess(request, id, set);
 			if (denied) return denied;
 			// Check idempotency first
-			const { duplicate } = await checkIdempotency(body.idempotencyKey);
+			const { duplicate } = await claimIdempotencyKey(id, body.idempotencyKey);
 			if (duplicate) {
 				// Return current session state for idempotent response
 				const session = await loadSession(id);

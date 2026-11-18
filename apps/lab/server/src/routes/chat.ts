@@ -9,34 +9,14 @@ import { MongoServerError, type ObjectId } from "mongodb";
 import { triggerAgents, triggerJoinAgents } from "../lib/agent-runner";
 import { resolveParticipantAvatar } from "../lib/chat-avatar";
 import { takeChatSlot } from "../lib/chat-rate-limit";
-import {
-	getChatMessagesCollection,
-	getIdempotencyCollection,
-	getSessionsCollection,
-} from "../lib/db";
+import { getChatMessagesCollection, getSessionsCollection } from "../lib/db";
 import { sessionStateChanged } from "../lib/group-view";
 import { getGroupMembers, verifyMembership } from "../lib/groups";
+import { claimIdempotencyKey } from "../lib/idempotency";
 import { memberId, publicSenderId } from "../lib/member-id";
 import { denySessionAccess } from "../lib/session-access";
 import { broadcastToSession } from "../lib/sse";
 import type { ChatMessageDocument } from "../types";
-
-async function checkIdempotency(key: string): Promise<{ duplicate: boolean }> {
-	const collection = await getIdempotencyCollection();
-
-	try {
-		await collection.insertOne({
-			key,
-			createdAt: new Date(),
-		});
-		return { duplicate: false };
-	} catch (err) {
-		if (err instanceof MongoServerError && err.code === 11000) {
-			return { duplicate: true };
-		}
-		throw err;
-	}
-}
 
 const MAX_CONTENT_LENGTH = 4000;
 
@@ -288,7 +268,10 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 			}
 
 			if (idempotencyKey) {
-				const { duplicate } = await checkIdempotency(idempotencyKey);
+				const { duplicate } = await claimIdempotencyKey(
+					sessionId,
+					idempotencyKey,
+				);
 				if (duplicate) {
 					return { ok: true, deduplicated: true };
 				}

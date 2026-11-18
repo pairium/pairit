@@ -250,7 +250,7 @@ tools:
 
 **`end_chat`**: Ends the chat for all participants in the group. Sets `session_state.chat_ended = true` and broadcasts a `chat_ended` event. Optional `deal_reached` and `agreed_price` parameters are written to user state.
 
-**`assign_state`**: Writes a value to `session_state.{path}` for all participants and broadcasts a `state_updated` event.
+**`assign_state`**: Writes a value to `session_state.{path}` for all participants and broadcasts a `state_updated` event. If the tool's `path` parameter has an `enum`, only those paths can be written. Keys Pairit sets itself (such as `group_id`, `treatment`, `chat_ended`, or a randomization's `stateKey`) are always refused; the agent is told the call was refused. See [Agent Guardrails](../guides/agent-guardrails.md#limit-what-tools-can-change).
 
 ## Usage with Chat
 
