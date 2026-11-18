@@ -24,6 +24,7 @@ import {
 	signedUploadMaxBytes,
 	uploadKey,
 } from "../lib/media-keys";
+import { mediaObjectFromUrl } from "../lib/media-path";
 import { storage } from "../lib/storage";
 import type { MediaListItem } from "../types";
 
@@ -308,10 +309,17 @@ export const mediaRoutes = new Elysia({ prefix: "/media" })
 	)
 	.delete(
 		"/:object",
-		async ({ params: { object }, set, user, isAdmin }) => {
+		async ({ request, set, user, isAdmin }) => {
 			if (!user) {
 				set.status = 401;
 				return { error: "unauthorized", message: "Not authenticated" };
+			}
+
+			// Not `params.object`: see mediaObjectFromUrl
+			const object = mediaObjectFromUrl(request.url);
+			if (!object) {
+				set.status = 400;
+				return { error: "invalid_object", message: "Invalid object name" };
 			}
 
 			const nameError = objectNameError(object);
