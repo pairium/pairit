@@ -30,7 +30,6 @@ type ChatProps = {
 type SSEChatMessage = {
 	messageId: string;
 	groupId: string;
-	sessionId: string;
 	senderId: string;
 	senderType: "participant" | "agent" | "system";
 	content: string;
@@ -102,6 +101,9 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 		const [streamingMessage, setStreamingMessage] =
 			useState<StreamingMessage | null>(null);
 		const seenMessageIds = useRef<Set<string>>(new Set());
+		// This participant's member ID in the group. The server never sends
+		// sessionIds to peers, so own messages are recognized by this instead.
+		const selfSenderId = useRef<string | null>(null);
 		const hasTriggeredAgents = useRef(false);
 
 		const mergedAvatars = useMemo<ChatAvatarOverrides>(() => {
@@ -182,10 +184,10 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 				senderType: msg.senderType,
 				content: msg.content,
 				createdAt: msg.createdAt,
-				isOwn: msg.senderId === sessionId,
+				isOwn: msg.senderId === selfSenderId.current,
 				avatar: msg.avatar,
 			}),
-			[sessionId],
+			[],
 		);
 
 		useEffect(() => {
@@ -197,11 +199,12 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 
 			async function loadHistory() {
 				try {
-					const { messages: history } = await getChatHistory(
+					const { messages: history, self } = await getChatHistory(
 						currentGroupId,
 						currentSessionId,
 					);
 					if (canceled) return;
+					if (self) selfSenderId.current = self;
 
 					for (const msg of history) {
 						seenMessageIds.current.add(msg.messageId);
@@ -319,7 +322,8 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			const unsubscribe = sseClient.on("chat_message", (data) => {
 				const message = data as SSEChatMessage;
 				if (message.groupId !== groupId) return;
-				if (message.senderId === currentSessionId) return;
+				const isOwn = message.senderId === selfSenderId.current;
+				if (isOwn) return;
 				if (seenMessageIds.current.has(message.messageId)) return;
 				seenMessageIds.current.add(message.messageId);
 
@@ -329,10 +333,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 
 				setMessages((prev) => [...prev, toViewMessage(message)]);
 
-				if (
-					component.events?.onMessageReceive &&
-					message.senderId !== currentSessionId
-				) {
+				if (component.events?.onMessageReceive && !isOwn) {
 					void emitChatEvent(
 						component.id,
 						currentSessionId,
@@ -360,8 +361,9 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 
 			const unsubscribe = sseClient.on("connected", () => {
 				getChatHistory(currentGroupId, currentSessionId)
-					.then(({ messages: history }) => {
+					.then(({ messages: history, self }) => {
 						if (canceled) return;
+						if (self) selfSenderId.current = self;
 						const missed = history.filter(
 							(msg) => !seenMessageIds.current.has(msg.messageId),
 						);
@@ -394,6 +396,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 
 				try {
 					const result = await sendChatMessage(groupId, sessionId, content);
+					if (result.senderId) selfSenderId.current = result.senderId;
 
 					if (typeof result.messagesSent === "number") {
 						onSessionStateChange?.({
@@ -408,7 +411,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 							...prev,
 							{
 								messageId: result.messageId,
-								senderId: sessionId,
+								senderId: result.senderId ?? selfSenderId.current ?? "self",
 								senderType: "participant" as const,
 								content,
 								createdAt: result.createdAt,

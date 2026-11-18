@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { resolveChatAvatar } from "./chat-avatars";
 
 const participant = {
-	senderId: "sess_b",
+	senderId: "p_Qx3vK9mZ2bLa",
 	senderType: "participant" as const,
 	isOwn: false,
 };

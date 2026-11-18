@@ -8,6 +8,7 @@
 import { Elysia, t } from "elysia";
 import * as Y from "yjs";
 import { verifyMembership } from "../lib/groups";
+import { denySessionAccess } from "../lib/session-access";
 import {
 	applyClientUpdate,
 	diffForClient,
@@ -23,8 +24,10 @@ const fromBase64 = (text: string) =>
 export const workspaceRoutes = new Elysia({ prefix: "/workspace" })
 	.post(
 		"/:groupId/sync",
-		async ({ params: { groupId }, body, set }) => {
+		async ({ params: { groupId }, body, set, request }) => {
 			const { sessionId, pageId, stateVector } = body;
+			const denied = await denySessionAccess(request, sessionId, set);
+			if (denied) return denied;
 
 			if (!(await verifyMembership(sessionId, groupId))) {
 				set.status = 403;
@@ -62,8 +65,10 @@ export const workspaceRoutes = new Elysia({ prefix: "/workspace" })
 	)
 	.post(
 		"/:groupId/update",
-		async ({ params: { groupId }, body, set }) => {
+		async ({ params: { groupId }, body, set, request }) => {
 			const { sessionId, pageId, update } = body;
+			const denied = await denySessionAccess(request, sessionId, set);
+			if (denied) return denied;
 
 			if (!(await verifyMembership(sessionId, groupId))) {
 				set.status = 403;
@@ -114,8 +119,10 @@ export const workspaceRoutes = new Elysia({ prefix: "/workspace" })
 	)
 	.post(
 		"/:groupId/replace",
-		async ({ params: { groupId }, body, set }) => {
+		async ({ params: { groupId }, body, set, request }) => {
 			const { sessionId, pageId } = body;
+			const denied = await denySessionAccess(request, sessionId, set);
+			if (denied) return denied;
 
 			if (!(await verifyMembership(sessionId, groupId))) {
 				set.status = 403;

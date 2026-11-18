@@ -535,7 +535,6 @@ async function persistAndBroadcastMessage(
 	const eventData = {
 		messageId,
 		groupId,
-		sessionId: senderId,
 		senderId,
 		senderType,
 		content,

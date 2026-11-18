@@ -6,6 +6,7 @@
 import { Elysia, sse, t } from "elysia";
 import { sendGroupView } from "../lib/group-view";
 import { handleDisconnect } from "../lib/matchmaking-pool";
+import { denySessionAccess } from "../lib/session-access";
 import {
 	AsyncEventQueue,
 	addConnection,
@@ -31,6 +32,10 @@ export const streamRoutes = new Elysia({ prefix: "/sessions" })
 	.get(
 		"/:id/stream",
 		async function* ({ params: { id }, set, request }) {
+			// Only the participant may open their stream: it also evicts older
+			// connections and drives matchmaking disconnects.
+			if (await denySessionAccess(request, id, set)) return;
+
 			// Verify session exists
 			const session = await loadSession(id);
 			if (!session) {

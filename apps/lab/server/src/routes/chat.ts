@@ -16,6 +16,8 @@ import {
 } from "../lib/db";
 import { sessionStateChanged } from "../lib/group-view";
 import { getGroupMembers, verifyMembership } from "../lib/groups";
+import { memberId, publicSenderId } from "../lib/member-id";
+import { denySessionAccess } from "../lib/session-access";
 import { broadcastToSession } from "../lib/sse";
 import type { ChatMessageDocument } from "../types";
 
@@ -54,8 +56,10 @@ async function checkRateLimit(
 export const chatRoutes = new Elysia({ prefix: "/chat" })
 	.post(
 		"/:groupId/send",
-		async ({ params: { groupId }, body, set }) => {
+		async ({ params: { groupId }, body, set, request }) => {
 			const { sessionId, content, idempotencyKey } = body;
+			const denied = await denySessionAccess(request, sessionId, set);
+			if (denied) return denied;
 
 			// Verify membership
 			const isMember = await verifyMembership(sessionId, groupId);
@@ -85,10 +89,14 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 
 			// Check idempotency if key provided
 			if (idempotencyKey) {
-				const existing = await collection.findOne({ idempotencyKey });
+				const existing = await collection.findOne({
+					idempotencyKey,
+					sessionId,
+				});
 				if (existing) {
 					return {
 						messageId: existing._id?.toString(),
+						senderId: memberId(groupId, sessionId),
 						createdAt: existing.createdAt.toISOString(),
 						...(existing.avatar && { avatar: existing.avatar }),
 						deduplicated: true,
@@ -133,10 +141,14 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 			} catch (err) {
 				// Handle duplicate key error for idempotency
 				if (err instanceof MongoServerError && err.code === 11000) {
-					const existing = await collection.findOne({ idempotencyKey });
+					const existing = await collection.findOne({
+						idempotencyKey,
+						sessionId,
+					});
 					if (existing) {
 						return {
 							messageId: existing._id?.toString(),
+							senderId: memberId(groupId, sessionId),
 							createdAt: existing.createdAt.toISOString(),
 							...(existing.avatar && { avatar: existing.avatar }),
 							deduplicated: true,
@@ -182,11 +194,11 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 
 			// Broadcast to all group members
 			const memberIds = await getGroupMembers(groupId);
+			// Peers see a per-group member ID, never the sender's sessionId.
 			const eventData = {
 				messageId,
 				groupId,
-				sessionId,
-				senderId: sessionId,
+				senderId: publicSenderId(groupId, sessionId),
 				senderType: effectiveSenderType,
 				content,
 				createdAt: now.toISOString(),
@@ -204,6 +216,7 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 
 			return {
 				messageId,
+				senderId: memberId(groupId, sessionId),
 				createdAt: now.toISOString(),
 				...(avatar && { avatar }),
 				...(messagesSent !== undefined ? { messagesSent } : {}),
@@ -220,8 +233,10 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 	)
 	.get(
 		"/:groupId/history",
-		async ({ params: { groupId }, query, set }) => {
+		async ({ params: { groupId }, query, set, request }) => {
 			const { sessionId } = query;
+			const denied = await denySessionAccess(request, sessionId, set);
+			if (denied) return denied;
 
 			// Verify membership
 			const isMember = await verifyMembership(sessionId, groupId);
@@ -238,11 +253,12 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 				.toArray();
 
 			return {
+				// The caller's own member ID, so the client can tell its messages apart.
+				self: memberId(groupId, sessionId),
 				messages: messages.map((msg) => ({
 					messageId: msg._id?.toString(),
 					groupId: msg.groupId,
-					sessionId: msg.sessionId,
-					senderId: msg.senderId,
+					senderId: publicSenderId(groupId, msg.senderId),
 					senderType: msg.senderType,
 					content: msg.content,
 					createdAt: msg.createdAt.toISOString(),
@@ -259,8 +275,10 @@ export const chatRoutes = new Elysia({ prefix: "/chat" })
 	)
 	.post(
 		"/:groupId/start-agents",
-		async ({ params: { groupId }, body, set }) => {
+		async ({ params: { groupId }, body, set, request }) => {
 			const { sessionId, idempotencyKey } = body;
+			const denied = await denySessionAccess(request, sessionId, set);
+			if (denied) return denied;
 
 			// Verify membership
 			const isMember = await verifyMembership(sessionId, groupId);

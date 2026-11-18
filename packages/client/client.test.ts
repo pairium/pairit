@@ -92,4 +92,46 @@ describe("LabClient", () => {
 			client.sendChatMessage("g1", "s1", "hi"),
 		).rejects.toBeInstanceOf(NotAMemberError);
 	});
+
+	test("retries a start once when a parallel start races the cookie", async () => {
+		const responses = [
+			jsonResponse(
+				{ status: "blocked", error: "session_in_other_browser", message: "m" },
+				409,
+			),
+			jsonResponse({
+				status: "resumed",
+				sessionId: "s1",
+				currentPageId: "p",
+				page: { id: "p" },
+			}),
+		];
+		const fetchMock = mock(async () => responses.shift() as Response);
+		globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+		const client = new LabClient({ baseUrl: "http://lab.test" });
+		const r = await client.startSession("cfg", null);
+		expect(r.sessionId).toBe("s1");
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+	});
+
+	test("reports a session open in another browser", async () => {
+		const fetchMock = mock(async () =>
+			jsonResponse(
+				{
+					status: "blocked",
+					error: "session_in_other_browser",
+					message: "Continue in the browser where you started this study.",
+				},
+				409,
+			),
+		);
+		globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+		const client = new LabClient({ baseUrl: "http://lab.test" });
+		const err = await client.startSession("cfg", null).catch((e) => e);
+		expect(err).toBeInstanceOf(SessionBlockedError);
+		expect(err.reason).toBe("session_in_other_browser");
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+	});
 });

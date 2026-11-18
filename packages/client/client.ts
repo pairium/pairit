@@ -18,10 +18,15 @@ export class AuthRequiredError extends Error {
 	}
 }
 
+const START_RETRY_DELAY_MS = 500;
+
 export class SessionBlockedError extends Error {
-	constructor(message: string) {
+	/** "session_completed" or "session_in_other_browser" */
+	readonly reason: string;
+	constructor(message: string, reason = "session_completed") {
 		super(message);
 		this.name = "SessionBlockedError";
+		this.reason = reason;
 	}
 }
 
@@ -69,7 +74,7 @@ export type ChatAvatar = string;
 export type ChatMessage = {
 	messageId: string;
 	groupId: string;
-	sessionId: string;
+	/** The sender's per-group member ID (`p_…`), or `agent:<id>` / `system`. */
 	senderId: string;
 	senderType: "participant" | "agent" | "system";
 	content: string;
@@ -79,6 +84,8 @@ export type ChatMessage = {
 
 export type SendChatMessageResponse = {
 	messageId: string;
+	/** The caller's own member ID in this group. */
+	senderId?: string;
 	createdAt: string;
 	avatar?: ChatAvatar;
 	deduplicated?: boolean;
@@ -86,6 +93,8 @@ export type SendChatMessageResponse = {
 };
 
 export type GetChatHistoryResponse = {
+	/** The caller's own member ID in this group. */
+	self?: string;
 	messages: ChatMessage[];
 };
 
@@ -160,10 +169,24 @@ export class LabClient {
 		configId: string,
 		prolific?: ProlificParams | null,
 	): Promise<StartResponse> {
-		const r = await this.jsonRequest("/sessions/start", {
+		let r = await this.jsonRequest("/sessions/start", {
 			configId,
 			...(prolific && { prolific }),
 		});
+		if (r.status === 409) {
+			const data = await r.clone().json();
+			// Two overlapping starts (e.g. a double mount) race: the second is sent
+			// before the first response sets the session cookie. Retry once, with it.
+			if (data.error === "session_in_other_browser") {
+				await new Promise((resolve) =>
+					setTimeout(resolve, START_RETRY_DELAY_MS),
+				);
+				r = await this.jsonRequest("/sessions/start", {
+					configId,
+					...(prolific && { prolific }),
+				});
+			}
+		}
 		if (r.status === 401) {
 			throw new AuthRequiredError();
 		}
@@ -171,6 +194,7 @@ export class LabClient {
 			const data = await r.json();
 			throw new SessionBlockedError(
 				data.message || "You have already completed this experiment.",
+				data.error || "session_completed",
 			);
 		}
 		if (!r.ok) throw new Error("Failed to start session");

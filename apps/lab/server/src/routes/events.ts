@@ -10,11 +10,14 @@
 import { Elysia, t } from "elysia";
 import { MongoServerError } from "mongodb";
 import { getEventsCollection, getSessionsCollection } from "../lib/db";
+import { denySessionAccess } from "../lib/session-access";
 import type { EventDocument } from "../types";
 
 export const eventsRoutes = new Elysia().post(
 	"/sessions/:id/events",
-	async ({ params: { id: sessionId }, body, set }) => {
+	async ({ params: { id: sessionId }, body, set, request }) => {
+		const denied = await denySessionAccess(request, sessionId, set);
+		if (denied) return denied;
 		// Session existence = authorization (Qualtrics model)
 		// The cryptographic UUID prevents enumeration/guessing
 		const sessionsCollection = await getSessionsCollection();
