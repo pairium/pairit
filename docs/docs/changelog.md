@@ -15,6 +15,13 @@ Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/re
 
 Merged, but not released yet.
 
+### Platform
+
+- An agent's `assign_state` tool can no longer overwrite keys Pairit sets itself, such as `group_id`, `treatment` or `chat_ended`. To limit it further, list the allowed paths as an `enum` on its `path` parameter. See [Agent Guardrails](guides/agent-guardrails.md#limit-what-tools-can-change), which now also explains that guardrails are prompt instructions, not enforcement.
+- Participant-written values in agent prompts (`{{session_state.*}}`, `{{group.*}}`, workspace text) are now marked as participant data, which makes prompt injection harder. Values Pairit assigns, such as a randomized condition, are passed through unchanged.
+- Agents see the most recent 100 chat messages, not the whole chat.
+- Workspace edits are checked on the server: participants can only change the fields the workspace declares, with the declared types, and a workspace can hold up to 200,000 characters.
+
 ## Platform 2026.11.18
 
 [Release notes](https://github.com/pairium/pairit/releases/tag/platform-v2026.11.18)
@@ -24,10 +31,6 @@ Merged, but not released yet.
 - Fixed security issues that let participants change their group, treatment, or chat sender, or skip pages. The lab now takes randomization and matchmaking settings only from the uploaded config, and no longer sends agent prompts or the end page's redirect URL to the browser before the participant reaches it. Each participant can send up to 20 chat messages a minute and 300 in total.
 - Fixed a security issue that let a participant act as someone else in their group. Participants no longer see each other's session IDs.
 - A participant who reopens a study in a different browser or device is asked to continue in the browser where they started. Reloading the page works as before, and participants signed in with Google can continue anywhere.
-- An agent's `assign_state` tool can no longer overwrite keys Pairit sets itself, such as `group_id`, `treatment` or `chat_ended`. To limit it further, list the allowed paths as an `enum` on its `path` parameter. See [Agent Guardrails](guides/agent-guardrails.md#limit-what-tools-can-change), which now also explains that guardrails are prompt instructions, not enforcement.
-- Participant-written values in agent prompts (`{{session_state.*}}`, `{{group.*}}`, workspace text) are now marked as participant data, which makes prompt injection harder. Values Pairit assigns, such as a randomized condition, are passed through unchanged.
-- Agents see the most recent 100 chat messages, not the whole chat.
-- Workspace edits are checked on the server: participants can only change the fields the workspace declares, with the declared types, and a workspace can hold up to 200,000 characters.
 
 ## Platform 2026.10.31
 
