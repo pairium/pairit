@@ -227,6 +227,9 @@ function runtimeTargets(page: Record<string, unknown>): string[] {
 	return targets;
 }
 
+// A compile takes well under a second; this only catches a stuck process.
+const COMPILE_TIMEOUT_MS = 30_000;
+
 describe("allowedTargets covers every example config", () => {
 	const configsDir = path.resolve(import.meta.dir, "../../../../../configs");
 	const cli = path.resolve(
@@ -244,11 +247,24 @@ describe("allowedTargets covers every example config", () => {
 		test(file, () => {
 			const yamlPath = path.join(outDir, file);
 			copyFileSync(path.join(configsDir, file), yamlPath);
+			// spawnSync blocks the test runner, so its own per-test timeout can't
+			// fire: without a limit here, a stuck compile hangs CI until the job
+			// is cancelled.
 			const result = Bun.spawnSync(
 				["bun", "run", cli, "config", "compile", yamlPath],
-				{ stdout: "pipe", stderr: "pipe" },
+				{
+					stdin: "ignore",
+					stdout: "pipe",
+					stderr: "pipe",
+					timeout: COMPILE_TIMEOUT_MS,
+					killSignal: "SIGKILL",
+				},
 			);
-			expect(result.exitCode).toBe(0);
+			expect({
+				timedOut: result.exitedDueToTimeout === true,
+				exitCode: result.exitCode,
+				stderr: result.exitCode === 0 ? "" : result.stderr.toString(),
+			}).toEqual({ timedOut: false, exitCode: 0, stderr: "" });
 			const compiled = JSON.parse(
 				readFileSync(yamlPath.replace(/\.yaml$/, ".json"), "utf8"),
 			);
