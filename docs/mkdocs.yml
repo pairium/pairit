@@ -27,6 +27,7 @@ nav:
   - Guides:
       - Agent Guardrails: guides/agent-guardrails.md
       - Running Large Studies: guides/large-studies.md
+      - Test a Study Before Launch: guides/testing.md
   - Developer:
       - Getting Started: dev/getting-started.md
       - Architecture: dev/architecture.md

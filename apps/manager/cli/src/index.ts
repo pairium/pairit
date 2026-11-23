@@ -12,6 +12,7 @@ import {
 	formatActivity,
 	parseDuration,
 } from "./activity.js";
+import { auditData, filterSessions } from "./audit.js";
 import { getAuthHeaders, login } from "./auth.js";
 import { escapeCsvValue } from "./csv.js";
 import { getApiUrl, getLabUrl, parseEnvName, setEnv } from "./env.js";
@@ -55,7 +56,7 @@ const program = new Command();
 program
 	.name("pairit")
 	.description("CLI for Pairit experiment configs")
-	.version("0.3.8")
+	.version("0.3.9")
 	.option(
 		"--env <name>",
 		"Target environment: staging or production",
@@ -457,6 +458,33 @@ dataCommand
 		}
 	});
 
+dataCommand
+	.command("audit")
+	.argument("<configId>", "Config ID to audit")
+	.option(
+		"--pid-prefix <prefix>",
+		"Only sessions whose PROLIFIC_PID starts with this (e.g. bot_qa_)",
+	)
+	.option("--since <time>", "Only sessions created at or after this ISO time")
+	.option(
+		"--config <path>",
+		"Config YAML, to check that required survey answers were saved",
+	)
+	.option(
+		"--require-state <keys>",
+		"Comma-separated session_state keys every finished session must have",
+	)
+	.description(
+		"Check a test run: every session finished, required answers saved, groups complete",
+	)
+	.action(async (configId: string, options: DataAuditOptions) => {
+		try {
+			await auditCommand(configId, options);
+		} catch (error) {
+			reportCliError("Audit failed", error);
+		}
+	});
+
 const adminCommand = program
 	.command("admin")
 	.description("Manage the manager allowlist and see activity (admin only)");
@@ -669,6 +697,13 @@ type MediaListEntry = {
 type DataExportOptions = {
 	format: "csv" | "json" | "jsonl";
 	out: string;
+};
+
+type DataAuditOptions = {
+	pidPrefix?: string;
+	since?: string;
+	config?: string;
+	requireState?: string;
 };
 
 async function lintConfig(configPath: string): Promise<HtmlSourceInfo[]> {
@@ -1187,6 +1222,61 @@ async function exportData(
 	);
 
 	console.log(`\nFiles written to: ${outDir}`);
+}
+
+async function auditCommand(
+	configId: string,
+	options: DataAuditOptions,
+): Promise<void> {
+	if (options.since && Number.isNaN(Date.parse(options.since))) {
+		throw new Error(`--since is not a valid time: ${options.since}`);
+	}
+	const config = options.config ? await loadConfig(options.config) : undefined;
+	const cfg = encodeURIComponent(configId);
+
+	const allSessions = await fetchAllPages<SessionExport>(
+		`/data/${cfg}/sessions`,
+		(r) => (r as { sessions?: SessionExport[] }).sessions ?? [],
+	);
+	const sessions = filterSessions(allSessions, {
+		pidPrefix: options.pidPrefix,
+		since: options.since,
+	});
+	if (sessions.length === 0) {
+		throw new Error("no sessions match; check --pid-prefix and --since");
+	}
+	const groups = await fetchAllPages<GroupExport>(
+		`/data/${cfg}/groups`,
+		(r) => (r as { groups?: GroupExport[] }).groups ?? [],
+	);
+	const surveyResponses = await fetchAllPages<SurveyResponseExport>(
+		`/data/${cfg}/survey-responses`,
+		(r) =>
+			(r as { surveyResponses?: SurveyResponseExport[] }).surveyResponses ?? [],
+	);
+
+	const result = auditData({
+		sessions,
+		groups,
+		surveyResponses,
+		config,
+		requireState: options.requireState
+			?.split(",")
+			.map((key) => key.trim())
+			.filter(Boolean),
+	});
+
+	console.log(
+		`Audited ${result.sessions} sessions: ${result.completed} finished.`,
+	);
+	for (const warning of result.warnings) console.log(`⚠ ${warning}`);
+	for (const error of result.errors) console.log(`✗ ${error}`);
+	if (result.errors.length > 0) {
+		console.log(`\n${result.errors.length} problem(s) found.`);
+		process.exitCode = 1;
+	} else {
+		console.log("✓ No problems found.");
+	}
 }
 
 async function fetchAndWriteExport<T>(
