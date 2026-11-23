@@ -122,7 +122,7 @@ pairit data export <configId> --format jsonl     # Export as JSONL
 pairit data export <configId> --out ./exports    # Custom output directory
 ```
 
-Creates six files per export:
+Creates seven files per export:
 
 | File | Contents |
 |------|----------|
@@ -132,6 +132,7 @@ Creates six files per export:
 | `{configId}-groups.csv` | Group records: groupId, members, createdAt |
 | `{configId}-survey-responses.csv` | Survey response data: sessionId, itemId, answer, pageId, timestamp |
 | `{configId}-workspace-documents.csv` | Workspace documents: groupId, content, fields, updatedAt |
+| `{configId}-workspace-updates.csv` | Every edit to a workspace document, in order |
 
 **Formats**: CSV flattens nested objects with dot notation (`session_state.treatment`). JSON/JSONL preserve full nesting.
 
@@ -147,6 +148,24 @@ In CSV, a text value that starts with `=`, `+`, `-`, `@`, a tab, or a carriage r
 | `labRevision` | Cloud Run revision that served the session |
 
 Sessions created before provenance was recorded have empty values. Group or filter by these columns to separate participants across a mid-study config edit or lab deploy.
+
+### Audit a test run
+
+`pairit data audit` checks a test run before you launch a real study. See [Test a study before launch](guides/testing.md).
+
+```bash
+pairit data audit <configId> --pid-prefix bot_qa_ --since 2026-11-23T10:00:00Z
+pairit data audit <configId> --config study.yaml --require-state treatment,choice
+```
+
+| Option | Effect |
+|--------|--------|
+| `--pid-prefix <prefix>` | Only sessions whose `PROLIFIC_PID` starts with this |
+| `--since <time>` | Only sessions created at or after this ISO time |
+| `--config <path>` | Also check that required survey answers were saved |
+| `--require-state <keys>` | Comma-separated `session_state` keys (dotted paths allowed) every finished session must have |
+
+It reports an error for each session that did not reach an end page (with the page it stopped on), each required survey answer that was not saved, and each missing `--require-state` key. It warns about groups where only some members finished, and about sessions that span config revisions. It exits with status 1 if there are errors.
 
 ## Database layout (MongoDB)
 

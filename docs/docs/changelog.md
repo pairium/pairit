@@ -15,6 +15,12 @@ Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/re
 
 Merged, but not released yet.
 
+## CLI 0.3.9
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/cli-v0.3.9)
+
+- New `pairit data audit <configId>` checks a test run: every session finished, required survey answers were saved, and groups finished together. Filter to your test participants with `--pid-prefix` and `--since`. See [Test a study before launch](guides/testing.md).
+
 ## Platform 2026.11.18.3
 
 [Release notes](https://github.com/pairium/pairit/releases/tag/platform-v2026.11.18.3)
