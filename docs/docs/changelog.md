@@ -15,7 +15,9 @@ Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/re
 
 Merged, but not released yet.
 
-### Platform
+## Platform 2026.11.24
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/platform-v2026.11.24)
 
 - `html` embeds and custom `live-workspace` renderers now fill the full height of their column on `layout: split` pages instead of staying fixed to their standalone `height`.
 
