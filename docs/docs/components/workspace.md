@@ -17,7 +17,7 @@ Participants and agents edit the same document at the same time. Their edits mer
 | `file` | string | `"workspace.md"` | File name agents see, e.g. `board.json`. A `.json` file must stay valid JSON. Only `.md` files get the formatted markdown view; others get a code editor. |
 | `renderer` | string | | Your own HTML page that draws the workspace (see [Custom renderer](#custom-renderer)) |
 | `schema` | string | | JSON Schema file a `.json` workspace must match |
-| `height` | number | `480` | Height in pixels of a custom renderer |
+| `height` | number | `480` | Height in pixels of a custom renderer (ignored on `layout: split` pages, where the renderer fills its column) |
 
 ### FieldDefinition
 

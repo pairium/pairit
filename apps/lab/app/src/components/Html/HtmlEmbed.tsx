@@ -1,4 +1,4 @@
-import { type Ref, useLayoutEffect, useRef } from "react";
+import { type CSSProperties, type Ref, useLayoutEffect, useRef } from "react";
 
 export type HtmlEmbedProps = {
 	srcdoc: string;
@@ -35,8 +35,8 @@ export function HtmlEmbed({
 			title={title}
 			srcDoc={srcdoc}
 			sandbox="allow-scripts"
-			className="w-full rounded-lg border border-slate-200 bg-white"
-			style={{ height }}
+			className="h-(--embed-height) w-full rounded-lg border border-slate-200 bg-white"
+			style={{ "--embed-height": `${height}px` } as CSSProperties}
 			onLoad={() => {
 				loadsRef.current += 1;
 				if (loadsRef.current === 1) onLoad?.();

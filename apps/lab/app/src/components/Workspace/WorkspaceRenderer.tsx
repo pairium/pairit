@@ -108,18 +108,20 @@ export function WorkspaceRenderer({
 	});
 
 	return (
-		<HtmlEmbed
-			srcdoc={srcdoc}
-			height={height}
-			title="Workspace"
-			iframeRef={iframeRef}
-			onLoad={() => {
-				readyRef.current = true;
-				post();
-			}}
-			onNavigateAway={() => {
-				readyRef.current = false;
-			}}
-		/>
+		<div data-html className="flex flex-col">
+			<HtmlEmbed
+				srcdoc={srcdoc}
+				height={height}
+				title="Workspace"
+				iframeRef={iframeRef}
+				onLoad={() => {
+					readyRef.current = true;
+					post();
+				}}
+				onNavigateAway={() => {
+					readyRef.current = false;
+				}}
+			/>
+		</div>
 	);
 }

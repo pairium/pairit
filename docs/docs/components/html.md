@@ -11,7 +11,7 @@ The file is uploaded with the config. Pairit only exchanges the `session_state` 
 | `src` | string | — | Path to a local `.html` file, relative to the YAML (required) |
 | `read` | string[] | `[]` | `session_state` keys sent into the embed |
 | `write` | string[] | `[]` | `session_state` keys the embed is allowed to write |
-| `height` | number | `400` | Frame height in pixels |
+| `height` | number | `400` | Frame height in pixels (ignored on `layout: split` pages, where the embed fills its column) |
 | `required` | boolean | `false` | Block Next until the embed calls `pairit.done()` |
 | `action` | ButtonAction | — | Optional navigation when the embed calls `pairit.done()` |
 

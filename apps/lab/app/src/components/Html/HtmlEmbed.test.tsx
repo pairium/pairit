@@ -18,6 +18,8 @@ describe("HtmlEmbed", () => {
 		);
 		const iframe = container.querySelector("iframe") as HTMLIFrameElement;
 		expect(iframe.getAttribute("sandbox")).toBe("allow-scripts");
+		expect(iframe.style.getPropertyValue("--embed-height")).toBe("100px");
+		expect(iframe.className).toContain("h-(--embed-height)");
 
 		fireEvent.load(iframe);
 		expect(onLoad).toHaveBeenCalledTimes(1);
