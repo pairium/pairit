@@ -31,6 +31,8 @@ Merged, but not released yet.
 
 - Replaced the deprecated `keytar` keychain dependency with `@napi-rs/keyring`, eliminating the `prebuild-install` deprecation warning on `npm install -g pairit`. Existing logins may require a one-time `pairit login` after upgrading.
 
+<!-- last-announced: Platform 2026.11.25 -->
+
 ## Platform 2026.11.25
 
 [Release notes](https://github.com/pairium/pairit/releases/tag/platform-v2026.11.25)

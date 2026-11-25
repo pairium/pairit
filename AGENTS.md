@@ -118,7 +118,7 @@ For a production deploy:
    gh release create platform-vYYYY.MM.DD --target <deployed sha> --title "Pairit Platform YYYY.MM.DD" --notes-file notes.md
    ```
 
-Announce once per production deploy, covering that Platform release and any CLI releases since the last email. Draft a plain-text email (Gmail has no code blocks) that links the releases. Get recipients from `pairit admin list-users`. Leave out the admins and BCC everyone—explicitly remind the user to put recipients in **BCC** (not **To**) before sending. The user sends it.
+Announcements are tracked with an HTML comment marker (`<!-- last-announced: ... -->`) in `docs/docs/changelog.md` placed right above the last release emailed to researchers. When announcing (typically after a production deploy, or batched later), sweep every Platform and CLI release above that marker into a single plain-text email (Gmail has no code blocks) that links the releases. Get recipients from `pairit admin list-users`, leave out the admins, and BCC everyone—explicitly remind the user to put recipients in **BCC** (not **To**) before sending. The user sends it; once they confirm it's sent, move the `<!-- last-announced: ... -->` marker above the latest announced release.
 
 ## Global install
 
