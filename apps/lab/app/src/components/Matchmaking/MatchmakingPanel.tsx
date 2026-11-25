@@ -41,7 +41,7 @@ export function MatchmakingPanel({
 							Connecting...
 						</h2>
 						<p className="mt-1 text-sm text-slate-500">
-							Setting up matchmaking
+							Setting up your session
 						</p>
 					</div>
 				</>
@@ -138,7 +138,7 @@ export function MatchmakingPanel({
 					</div>
 					<div className="text-center">
 						<h2 className="text-lg font-semibold text-slate-900">
-							Matchmaking timed out
+							Unable to form a group
 						</h2>
 						<p className="mt-1 text-sm text-slate-500">
 							Not enough participants joined in time
@@ -170,7 +170,7 @@ export function MatchmakingPanel({
 							Something went wrong
 						</h2>
 						<p className="mt-1 text-sm text-slate-500">
-							Unable to join matchmaking
+							Unable to connect to a group
 						</p>
 					</div>
 				</>

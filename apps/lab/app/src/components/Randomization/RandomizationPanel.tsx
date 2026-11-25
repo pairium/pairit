@@ -25,11 +25,9 @@ export function RandomizationPanel({
 					</div>
 					<div className="text-center">
 						<h2 className="text-lg font-semibold text-slate-900">
-							Assigning condition...
+							Setting up your session...
 						</h2>
-						<p className="mt-1 text-sm text-slate-500">
-							Please wait while we set up your session
-						</p>
+						<p className="mt-1 text-sm text-slate-500">Please wait a moment</p>
 					</div>
 				</>
 			)}
@@ -118,7 +116,7 @@ export function RandomizationPanel({
 							Something went wrong
 						</h2>
 						<p className="mt-1 text-sm text-slate-500">
-							Unable to assign condition
+							Unable to set up your session
 						</p>
 					</div>
 				</>
