@@ -1,11 +1,16 @@
-import { Login, Logout, useAuth } from "@components/Auth";
+import { Logout, useAuth } from "@components/Auth";
 
 type HeaderProps = {
 	sessionId: string | null;
 	wide?: boolean;
+	showAuth?: boolean;
 };
 
-export default function Header({ sessionId, wide = false }: HeaderProps) {
+export default function Header({
+	sessionId,
+	wide = false,
+	showAuth = true,
+}: HeaderProps) {
 	const { user, isLoading, isAuthenticated } = useAuth();
 
 	const shortSessionId = sessionId?.slice(0, 8);
@@ -23,17 +28,14 @@ export default function Header({ sessionId, wide = false }: HeaderProps) {
 				<div className="text-lg font-semibold tracking-tight">Pairit Lab</div>
 				<div className="flex items-center gap-4">
 					<div className="text-sm text-slate-500">{status}</div>
-					{!isLoading &&
-						(isAuthenticated ? (
-							<div className="flex items-center gap-3">
-								<span className="text-sm text-slate-700">
-									{user?.name || user?.email}
-								</span>
-								<Logout />
-							</div>
-						) : (
-							<Login />
-						))}
+					{showAuth && !isLoading && isAuthenticated && (
+						<div className="flex items-center gap-3">
+							<span className="text-sm text-slate-700">
+								{user?.name || user?.email}
+							</span>
+							<Logout />
+						</div>
+					)}
 				</div>
 			</div>
 		</header>

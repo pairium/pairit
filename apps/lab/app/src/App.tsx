@@ -21,6 +21,16 @@ import { EMPTY_GROUP, type GroupView } from "./runtime/expression";
 import { getVisibleComponents, PageRenderer } from "./runtime/renderer";
 import type { ButtonAction, OnEnterAction, Page } from "./runtime/types";
 
+function parseProlificParams(search: string): ProlificParams | null {
+	const searchParams = new URLSearchParams(search);
+	const prolificPid = searchParams.get("PROLIFIC_PID");
+	const studyId = searchParams.get("STUDY_ID");
+	const sessionId = searchParams.get("SESSION_ID");
+	return prolificPid && studyId && sessionId
+		? { prolificPid, studyId, sessionId }
+		: null;
+}
+
 function canSwapOptimistically(nextPage: Page): boolean {
 	return !nextPage.onEnter?.length && !nextPage.end;
 }
@@ -98,21 +108,12 @@ export default function App() {
 	const [sessionBlocked, setSessionBlocked] =
 		useState<SessionBlockedError | null>(null);
 
+	const isProlific = parseProlificParams(window.location.search) !== null;
+
 	useEffect(() => {
 		let canceled = false;
 		async function bootstrap() {
-			const searchParams = new URLSearchParams(window.location.search);
-			const prolificPid = searchParams.get("PROLIFIC_PID");
-			const studyId = searchParams.get("STUDY_ID");
-			const prolificSessionId = searchParams.get("SESSION_ID");
-			const prolific: ProlificParams | null =
-				prolificPid && studyId && prolificSessionId
-					? {
-							prolificPid,
-							studyId,
-							sessionId: prolificSessionId,
-						}
-					: null;
+			const prolific = parseProlificParams(window.location.search);
 
 			if (!experimentId) {
 				setError("Missing experiment ID");
@@ -288,7 +289,7 @@ export default function App() {
 
 	return (
 		<div className="min-h-screen bg-slate-50 text-slate-900">
-			<Header sessionId={sessionId} wide={isSplitPage} />
+			<Header sessionId={sessionId} wide={isSplitPage} showAuth={!isProlific} />
 
 			<main
 				className={

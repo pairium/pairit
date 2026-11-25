@@ -11,7 +11,7 @@ import {
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import App from "./App.tsx";
-import { advance, randomize, startSession } from "./lib/api";
+import { AuthRequiredError, advance, randomize, startSession } from "./lib/api";
 import type { CompiledConfig } from "./runtime/config";
 import type { Page } from "./runtime/types";
 
@@ -446,5 +446,22 @@ describe("App", () => {
 		const { container } = renderApp();
 		expect(await screen.findByText("Session: sess-123…")).toBeDefined();
 		expect(container.innerHTML).not.toContain("sess-1234567890");
+	});
+
+	test("does not show Sign in with Google in the header during a session", async () => {
+		startOnIntro();
+		renderApp();
+		expect(await screen.findByText("Welcome to the study.")).toBeDefined();
+		expect(
+			screen.queryByRole("button", { name: "Sign in with Google" }),
+		).toBeNull();
+	});
+
+	test("shows Sign in with Google only when the experiment requires auth", async () => {
+		startSessionMock.mockRejectedValue(new AuthRequiredError());
+		renderApp();
+		expect(
+			await screen.findByRole("button", { name: "Sign in with Google" }),
+		).toBeDefined();
 	});
 });
