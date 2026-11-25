@@ -33,6 +33,7 @@ export type Page = {
 	end?: boolean;
 	layout?: "split";
 	width?: "default" | "wide";
+	height?: number;
 	components?: ComponentInstance[];
 };
 

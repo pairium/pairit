@@ -1,7 +1,7 @@
 import { mergeNestedUpdates } from "@app/lib/state-path";
 import { Card, CardContent } from "@components/ui/Card";
 
-import { useCallback, useMemo, useRef } from "react";
+import { type CSSProperties, useCallback, useMemo, useRef } from "react";
 import { evaluateExpression, type GroupView, type Scope } from "./expression";
 import {
 	getComponentRenderer,
@@ -177,10 +177,30 @@ export function PageRenderer({
 			(c) => placementOf(c) === "bottom",
 		);
 
+		const customHeight =
+			typeof page.height === "number" &&
+			Number.isFinite(page.height) &&
+			page.height > 0
+				? page.height
+				: null;
+		const splitHeightClass =
+			customHeight !== null
+				? "h-(--split-height)"
+				: bottomComponents.length > 0
+					? "h-[calc(100vh-10rem)] min-h-[28rem]"
+					: "h-[calc(100vh-6.5rem)] min-h-[28rem]";
+
 		return (
 			<div key={page.id} className="page-enter flex justify-center">
-				<div className="w-full max-w-6xl space-y-4">
-					<div className="grid h-[calc(100vh-14rem)] grid-cols-2 gap-4">
+				<div className="w-full max-w-7xl space-y-4">
+					<div
+						className={`grid ${splitHeightClass} grid-cols-2 gap-4`}
+						style={
+							customHeight !== null
+								? ({ "--split-height": `${customHeight}px` } as CSSProperties)
+								: undefined
+						}
+					>
 						<Card className="overflow-hidden">
 							<div className={SPLIT_COLUMN_CLASS}>
 								{leftComponents.length ? (
