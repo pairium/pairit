@@ -61,6 +61,7 @@ Common page fields:
 - `onEnter?`: array of actions to run invisibly when entering the page (e.g., randomization). See [Randomization](components/randomization.md).
 - `components?`: array of component instances shown on the page (canonical)
 - `layout?`: set to `split` for a two-column page (see [Split layout](#split-layout))
+- `width?`: set to `wide` for a wider single-column page card (`max-w-5xl` instead of `max-w-3xl`); default is `"default"`
 
 Component instance shapes:
 
@@ -69,7 +70,7 @@ Component instance shapes:
 - Built-in survey: `{ type: "survey", props: { items: [{ id, text, answer, choices? }] } }`
 - Built-in matchmaking: `{ type: "matchmaking", props: { poolId: string } }`
 - Built-in chat: `{ type: "chat", props: { agents?: string[] } }`
-- Built-in html: `{ type: "html", props: { src: string, read?: string[], write?: string[], height?: number, required?: bool } }`
+- Built-in html: `{ type: "html", props: { src: string, read?: string[], write?: string[], height?: number | "auto", borderless?: bool, required?: bool, action?: Action } }`
 
 All component instances also accept an optional `when` field to conditionally render based on `session_state` (see [Expressions](#expressions)).
 

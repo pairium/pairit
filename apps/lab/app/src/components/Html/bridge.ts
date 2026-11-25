@@ -8,6 +8,45 @@ export const PAIRIT_HELPER_SCRIPT = `(function(){
   var ready = false;
   var readyFns = [];
   var stateFns = [];
+  var lastHeight = 0;
+  var resizeQueued = false;
+  function measureHeight() {
+    var docEl = document.documentElement;
+    var body = document.body;
+    if (!docEl || !body) return 0;
+    var htmlHeight = docEl.getBoundingClientRect().height;
+    var bodyScroll = body.scrollHeight;
+    return Math.ceil(Math.max(htmlHeight, bodyScroll));
+  }
+  function postHeight() {
+    resizeQueued = false;
+    var next = measureHeight();
+    if (next > 0 && next !== lastHeight) {
+      lastHeight = next;
+      parent.postMessage({ type: "pairit:resize", height: next }, "*");
+    }
+  }
+  function scheduleResize() {
+    if (resizeQueued) return;
+    resizeQueued = true;
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(postHeight);
+    } else {
+      postHeight();
+    }
+  }
+  function startResizeObserver() {
+    postHeight();
+    if (typeof ResizeObserver === "function") {
+      var ro = new ResizeObserver(scheduleResize);
+      if (document.documentElement) ro.observe(document.documentElement);
+      if (document.body) ro.observe(document.body);
+    }
+    if (typeof MutationObserver === "function" && document.body) {
+      var mo = new MutationObserver(scheduleResize);
+      mo.observe(document.body, { childList: true, subtree: true });
+    }
+  }
   function runCallback(fn) {
     try { fn(state); } catch (err) { console.error(err); }
   }
@@ -21,6 +60,7 @@ export const PAIRIT_HELPER_SCRIPT = `(function(){
       for (var i = 0; i < fns.length; i++) runCallback(fns[i]);
     }
     for (var j = 0; j < stateFns.length; j++) runCallback(stateFns[j]);
+    scheduleResize();
   }
   window.pairit = {
     get state() { return state; },
@@ -59,6 +99,12 @@ export const PAIRIT_HELPER_SCRIPT = `(function(){
       applyState(event.data.state, false);
     }
   });
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", startResizeObserver, { once: true });
+  } else {
+    startResizeObserver();
+  }
+  window.addEventListener("load", scheduleResize);
 })();`;
 
 export type PairitSetStateMessage = {
@@ -76,10 +122,16 @@ export type PairitDoneMessage = {
 	type: "pairit:done";
 };
 
+export type PairitResizeMessage = {
+	type: "pairit:resize";
+	height: number;
+};
+
 export type PairitFromEmbed =
 	| PairitSetStateMessage
 	| PairitEventMessage
-	| PairitDoneMessage;
+	| PairitDoneMessage
+	| PairitResizeMessage;
 
 export function pickKeys(
 	source: Record<string, unknown> | undefined,
@@ -97,7 +149,10 @@ export function pickKeys(
 
 export function isPairitFromEmbed(data: unknown): data is PairitFromEmbed {
 	if (!data || typeof data !== "object") return false;
-	const type = (data as { type?: unknown }).type;
+	const { type, height } = data as { type?: unknown; height?: unknown };
+	if (type === "pairit:resize") {
+		return typeof height === "number" && Number.isFinite(height) && height > 0;
+	}
 	return (
 		type === "pairit:setState" ||
 		type === "pairit:event" ||

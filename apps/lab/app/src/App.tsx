@@ -261,9 +261,9 @@ export default function App() {
 		<div className="min-h-screen bg-slate-50 text-slate-900">
 			<Header sessionId={sessionId} />
 
-			<main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-6 py-12">
+			<main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-12">
 				{error && (
-					<div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+					<div className="mx-auto w-full max-w-3xl rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
 						{error}
 					</div>
 				)}
@@ -271,7 +271,7 @@ export default function App() {
 				{bootstrapping && !page && <PageSkeleton />}
 
 				{!bootstrapping && authRequired && !isAuthenticated && (
-					<div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-8 text-center">
+					<div className="mx-auto w-full max-w-3xl space-y-4 rounded-3xl border border-slate-200 bg-white p-8 text-center">
 						<div className="text-lg font-medium">Sign in to continue</div>
 						<div className="text-sm text-slate-500">
 							This experiment requires authentication.
@@ -283,7 +283,7 @@ export default function App() {
 				)}
 
 				{!bootstrapping && sessionBlocked && (
-					<div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-8 text-center">
+					<div className="mx-auto w-full max-w-3xl space-y-4 rounded-3xl border border-slate-200 bg-white p-8 text-center">
 						<div className="text-lg font-medium">
 							{sessionBlocked.reason === "session_in_other_browser"
 								? "Continue in your original browser"
@@ -318,7 +318,7 @@ export default function App() {
 				)}
 
 				{!bootstrapping && endedAt && (
-					<div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-8 text-center">
+					<div className="mx-auto w-full max-w-3xl space-y-4 rounded-3xl border border-slate-200 bg-white p-8 text-center">
 						{endRedirectUrl ? (
 							<>
 								<div className="text-lg font-medium">Thanks, that's it.</div>

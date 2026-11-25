@@ -159,6 +159,26 @@ describe("allowedTargets", () => {
 		expect(allowedTargets(config.pages.chat)).toEqual(
 			new Set(["x_end", "y_end"]),
 		);
+		expect(
+			allowedTargets({
+				id: "practice",
+				components: [
+					{
+						type: "html",
+						props: {
+							src: "task.html",
+							action: {
+								type: "go_to",
+								branches: [
+									{ when: "session_state.ok == true", target: "rules" },
+									{ target: "retry" },
+								],
+							},
+						},
+					},
+				],
+			}),
+		).toEqual(new Set(["rules", "retry"]));
 	});
 });
 

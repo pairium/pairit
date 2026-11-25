@@ -15,6 +15,15 @@ Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/re
 
 Merged, but not released yet.
 
+### Platform
+
+- `html` embeds now auto-size to their content height by default (`height: auto`), accept `borderless: true` to sit flat on the page card without a frame border, and flush pending `pairit.setState()` writes and `onDone` before running `props.action` on `pairit.done()`.
+- Pages now accept `width: wide` for a wider container (`max-w-5xl`), and the lab main container no longer caps `wide` or `split` pages at `max-w-4xl`.
+
+### CLI
+
+- `pairit config lint` now checks page `width` (`"default"` or `"wide"`) and `html` `height` (`"auto"` or positive number) and `borderless` (boolean) props.
+
 ## Platform 2026.11.24
 
 [Release notes](https://github.com/pairium/pairit/releases/tag/platform-v2026.11.24)

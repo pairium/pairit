@@ -3,6 +3,7 @@ import { type CSSProperties, type Ref, useLayoutEffect, useRef } from "react";
 export type HtmlEmbedProps = {
 	srcdoc: string;
 	height: number;
+	borderless?: boolean;
 	title?: string;
 	iframeRef?: Ref<HTMLIFrameElement>;
 	/** Runs once per srcdoc, when the researcher's document has loaded. */
@@ -17,6 +18,7 @@ export type HtmlEmbedProps = {
 export function HtmlEmbed({
 	srcdoc,
 	height,
+	borderless = false,
 	title = "Custom experiment UI",
 	iframeRef,
 	onLoad,
@@ -35,7 +37,11 @@ export function HtmlEmbed({
 			title={title}
 			srcDoc={srcdoc}
 			sandbox="allow-scripts"
-			className="h-(--embed-height) w-full rounded-lg border border-slate-200 bg-white"
+			className={
+				borderless
+					? "h-(--embed-height) w-full border-0 bg-white"
+					: "h-(--embed-height) w-full rounded-lg border border-slate-200 bg-white"
+			}
 			style={{ "--embed-height": `${height}px` } as CSSProperties}
 			onLoad={() => {
 				loadsRef.current += 1;

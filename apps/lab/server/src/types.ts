@@ -32,6 +32,7 @@ export type Page = {
 	id: string;
 	end?: boolean;
 	layout?: "split";
+	width?: "default" | "wide";
 	components?: ComponentInstance[];
 };
 

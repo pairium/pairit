@@ -12,7 +12,7 @@ export default function Header({ sessionId }: HeaderProps) {
 
 	return (
 		<header className="border-b border-slate-200 bg-white/80 backdrop-blur">
-			<div className="mx-auto flex w-full max-w-4xl items-center justify-between px-6 py-4">
+			<div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
 				<div className="text-lg font-semibold tracking-tight">Pairit Lab</div>
 				<div className="flex items-center gap-4">
 					<div className="text-sm text-slate-500">{status}</div>

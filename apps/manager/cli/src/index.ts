@@ -730,12 +730,40 @@ async function lintConfig(configPath: string): Promise<HtmlSourceInfo[]> {
 			if (!page.id) {
 				errors.push(`pages[${index}] is missing id`);
 			}
+			const width = (page as { width?: unknown } | null)?.width;
+			if (width !== undefined && width !== "default" && width !== "wide") {
+				errors.push(`pages[${index}].width must be "default" or "wide"`);
+			}
 			page.components?.forEach((component, componentIndex) => {
-				const column = (component as { column?: unknown } | null)?.column;
+				const comp = component as {
+					type?: unknown;
+					column?: unknown;
+					props?: Record<string, unknown>;
+				} | null;
+				const column = comp?.column;
 				if (column !== undefined && column !== "left" && column !== "right") {
 					errors.push(
 						`pages[${index}].components[${componentIndex}].column must be "left" or "right"`,
 					);
+				}
+				if (comp?.type === "html" && comp.props) {
+					const { height, borderless } = comp.props;
+					if (
+						height !== undefined &&
+						height !== "auto" &&
+						(typeof height !== "number" ||
+							!Number.isFinite(height) ||
+							height <= 0)
+					) {
+						errors.push(
+							`pages[${index}].components[${componentIndex}].props.height must be "auto" or a positive number`,
+						);
+					}
+					if (borderless !== undefined && typeof borderless !== "boolean") {
+						errors.push(
+							`pages[${index}].components[${componentIndex}].props.borderless must be a boolean`,
+						);
+					}
 				}
 			});
 		});

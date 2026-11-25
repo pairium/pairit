@@ -124,6 +124,30 @@ describe("parseEmbedMessage", () => {
 				source,
 			),
 		).toEqual({ type: "pairit:done" });
+		expect(
+			parseEmbedMessage(
+				{ source, origin, data: { type: "pairit:resize", height: 520 } },
+				source,
+			),
+		).toEqual({ type: "pairit:resize", height: 520 });
+	});
+
+	test("rejects invalid resize heights", () => {
+		for (const height of [
+			0,
+			-10,
+			Number.NaN,
+			Number.POSITIVE_INFINITY,
+			"500",
+			undefined,
+		]) {
+			expect(
+				parseEmbedMessage(
+					{ source, origin, data: { type: "pairit:resize", height } },
+					source,
+				),
+			).toBeNull();
+		}
 	});
 
 	test("ignores messages from other sources", () => {
@@ -295,6 +319,49 @@ describe("helper scripts", () => {
 		expect(seen).toEqual([]);
 		sendInit(win, { treatment: "A" });
 		expect(seen).toEqual([{ treatment: "A" }]);
+	});
+
+	test("pairit helper posts pairit:resize when content height changes", () => {
+		const posted: unknown[] = [];
+		const iframe = document.createElement("iframe");
+		document.body.appendChild(iframe);
+		helperFrames.push(iframe);
+		const win = iframe.contentWindow;
+		const doc = iframe.contentDocument;
+		if (!win || !doc) throw new Error("missing iframe window");
+
+		Object.defineProperty(win, "parent", {
+			value: { postMessage: (msg: unknown) => posted.push(msg) },
+			configurable: true,
+		});
+		Object.defineProperty(win, "requestAnimationFrame", {
+			value: (cb: FrameRequestCallback) => {
+				cb(0);
+				return 1;
+			},
+			configurable: true,
+		});
+		let currentHeight = 320;
+		doc.documentElement.getBoundingClientRect = () =>
+			({ height: currentHeight }) as DOMRect;
+
+		const script = doc.createElement("script");
+		script.textContent = PAIRIT_HELPER_SCRIPT;
+		doc.documentElement.appendChild(script);
+
+		expect(posted).toEqual([{ type: "pairit:resize", height: 320 }]);
+
+		// Unchanged height does not re-post
+		win.dispatchEvent(new Event("load"));
+		expect(posted).toEqual([{ type: "pairit:resize", height: 320 }]);
+
+		// Height change posts the new height
+		currentHeight = 540.2;
+		win.dispatchEvent(new Event("load"));
+		expect(posted).toEqual([
+			{ type: "pairit:resize", height: 320 },
+			{ type: "pairit:resize", height: 541 },
+		]);
 	});
 
 	test("pairit.workspace ignores messages that aren't from the parent", () => {
