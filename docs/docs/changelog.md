@@ -15,6 +15,13 @@ Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/re
 
 Merged, but not released yet.
 
+### Platform
+
+- Removed the hardcoded **Back to examples** button from `end: true` completion screens.
+- `end: true` pages now render their configured components (such as debriefing, disqualification, or timeout copy) alongside the `endRedirectUrl` button when present, falling back to the default completion card only when the page has no visible components.
+- Removed the **Sign in with Google** button from the lab header so unauthenticated and Prolific participants aren't prompted to sign in mid-study (studies requiring Google sign-in still show it on the sign-in screen).
+- Cleaned up participant-facing copy on the lab landing page and in the matchmaking and randomization waiting states.
+
 ## CLI 0.3.11
 
 [Release notes](https://github.com/pairium/pairit/releases/tag/cli-v0.3.11)
