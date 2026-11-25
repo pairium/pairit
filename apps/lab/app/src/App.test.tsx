@@ -340,7 +340,7 @@ describe("App", () => {
 			expect(advanceMock).toHaveBeenCalledWith("sess-1", "end");
 		});
 		expect(screen.getByText("Welcome to the study.")).toBeDefined();
-		expect(screen.queryByText("Thanks, that's it.")).toBeNull();
+		expect(screen.queryByText("All done.")).toBeNull();
 
 		pendingAdvance.resolve({
 			sessionId: "sess-1",
@@ -349,8 +349,9 @@ describe("App", () => {
 			endedAt: "2026-09-25T00:00:00.000Z",
 		});
 
-		expect(await screen.findByText("Thanks, that's it.")).toBeDefined();
+		expect(await screen.findByText("All done.")).toBeDefined();
 		expect(screen.queryByText("Welcome to the study.")).toBeNull();
+		expect(screen.queryByText("Thanks, that's it.")).toBeNull();
 		expect(screen.queryByRole("button", { name: /examples/i })).toBeNull();
 	});
 
@@ -379,19 +380,45 @@ describe("App", () => {
 		expect(await screen.findByText("All done.")).toBeDefined();
 	});
 
-	function startOnEnd(endRedirectUrl: string) {
+	function startOnEnd(
+		endRedirectUrl?: string,
+		pageOverride: Partial<Page> = {},
+	) {
+		const page: Page = { ...endPage, ...pageOverride, endRedirectUrl };
 		startSessionMock.mockResolvedValue({
 			sessionId: "sess-1234567890",
 			configId: "test-experiment",
 			config: compiledConfig,
 			currentPageId: "end",
-			page: { ...endPage, endRedirectUrl },
+			page,
 			endedAt: "2026-09-25T00:00:00.000Z",
 		});
 	}
 
+	test("falls back to the default completion card when an end page has no components", async () => {
+		startOnEnd(undefined, { components: [] });
+		renderApp();
+		expect(await screen.findByText("Thanks, that's it.")).toBeDefined();
+		expect(screen.getByText("You can close this window.")).toBeDefined();
+		expect(screen.queryByRole("button", { name: /examples/i })).toBeNull();
+	});
+
+	test("renders end page components alongside the redirect CTA", async () => {
+		startOnEnd("https://app.prolific.com/submissions/complete?cc=AB12", {
+			components: [
+				{ type: "text", props: { text: "Debriefing details here." } },
+			],
+		});
+		renderApp();
+		expect(await screen.findByText("Debriefing details here.")).toBeDefined();
+		expect(
+			screen.getByRole("button", { name: "Continue to Prolific" }),
+		).toBeDefined();
+		expect(screen.queryByText("Thanks, that's it.")).toBeNull();
+	});
+
 	test("does not follow a javascript: end redirect", async () => {
-		startOnEnd("javascript:alert(document.cookie)");
+		startOnEnd("javascript:alert(document.cookie)", { components: [] });
 		renderApp();
 		expect(await screen.findByText("You can close this window.")).toBeDefined();
 		expect(screen.queryByRole("button", { name: /Continue/ })).toBeNull();

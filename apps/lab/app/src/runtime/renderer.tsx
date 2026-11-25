@@ -1,7 +1,13 @@
 import { mergeNestedUpdates } from "@app/lib/state-path";
 import { Card, CardContent } from "@components/ui/Card";
 
-import { type CSSProperties, useCallback, useMemo, useRef } from "react";
+import {
+	type CSSProperties,
+	type ReactNode,
+	useCallback,
+	useMemo,
+	useRef,
+} from "react";
 import { evaluateExpression, type GroupView, type Scope } from "./expression";
 import {
 	getComponentRenderer,
@@ -33,6 +39,13 @@ function isComponentVisible(
 	return evaluateExpression(component.when, scope);
 }
 
+export function getVisibleComponents(
+	page: Page,
+	scope: Scope,
+): ComponentInstance[] {
+	return page.components?.filter((c) => isComponentVisible(c, scope)) ?? [];
+}
+
 function resolveTarget(action: ButtonAction, scope: Scope): string {
 	if (action.target) return action.target;
 	if (!action.branches) throw new Error("No target or branches");
@@ -55,6 +68,7 @@ interface PageRendererProps {
 	onSessionStateChange?: (updates: Record<string, unknown>) => void;
 	compiledConfig?: import("./config").CompiledConfig | null;
 	isNavigating?: boolean;
+	footer?: ReactNode;
 }
 
 export function PageRenderer({
@@ -66,6 +80,7 @@ export function PageRenderer({
 	onSessionStateChange,
 	compiledConfig,
 	isNavigating,
+	footer,
 }: PageRendererProps) {
 	const guardsRef = useRef<Set<NavigationGuard>>(new Set());
 	const sessionStateRef = useRef<Record<string, unknown>>(sessionState ?? {});
@@ -237,13 +252,13 @@ export function PageRenderer({
 							</div>
 						</div>
 					)}
+					{footer}
 				</div>
 			</div>
 		);
 	}
 
-	const visibleComponents =
-		page.components?.filter((c) => isComponentVisible(c, scope)) ?? [];
+	const visibleComponents = getVisibleComponents(page, scope);
 	const cardWidthClass = page.width === "wide" ? "max-w-5xl" : "max-w-3xl";
 
 	return (
@@ -259,6 +274,7 @@ export function PageRenderer({
 							No components provided for this page.
 						</div>
 					)}
+					{footer}
 				</CardContent>
 			</Card>
 		</div>

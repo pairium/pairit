@@ -18,7 +18,7 @@ import { mergeNestedUpdates } from "./lib/state-path";
 import "./runtime"; // Register component renderers
 import type { CompiledConfig } from "./runtime/config";
 import { EMPTY_GROUP, type GroupView } from "./runtime/expression";
-import { PageRenderer } from "./runtime/renderer";
+import { getVisibleComponents, PageRenderer } from "./runtime/renderer";
 import type { ButtonAction, OnEnterAction, Page } from "./runtime/types";
 
 function canSwapOptimistically(nextPage: Page): boolean {
@@ -257,7 +257,34 @@ export default function App() {
 		}
 	}
 
-	const isSplitPage = Boolean(page && !endedAt && page.layout === "split");
+	const hasEndPageContent = Boolean(
+		endedAt &&
+			page &&
+			getVisibleComponents(page, { session_state: sessionState, group })
+				.length > 0,
+	);
+	const isSplitPage = Boolean(
+		page && (!endedAt || hasEndPageContent) && page.layout === "split",
+	);
+	const endRedirectCta = endRedirectUrl ? (
+		<>
+			<div className="text-sm text-slate-500">
+				{isProlificUrl(endRedirectUrl)
+					? "Click below to complete on Prolific."
+					: "Continue to the next step below."}
+			</div>
+			<div className="flex justify-center">
+				<Button
+					onClick={() => {
+						const url = safeRedirectUrl(endRedirectUrl);
+						if (url) window.location.assign(url);
+					}}
+				>
+					{isProlificUrl(endRedirectUrl) ? "Continue to Prolific" : "Continue"}
+				</Button>
+			</div>
+		</>
+	) : null;
 
 	return (
 		<div className="min-h-screen bg-slate-50 text-slate-900">
@@ -305,7 +332,7 @@ export default function App() {
 					</div>
 				)}
 
-				{page && !endedAt && (
+				{page && (!endedAt || hasEndPageContent) && (
 					<div
 						aria-busy={transitioning}
 						className={transitioning ? "pointer-events-none" : undefined}
@@ -321,40 +348,24 @@ export default function App() {
 							onSessionStateChange={(updates) =>
 								setSessionState((prev) => mergeNestedUpdates(prev, updates))
 							}
+							footer={
+								endedAt && endRedirectCta ? (
+									<div className="space-y-4 border-t border-slate-200 pt-6 text-center">
+										{endRedirectCta}
+									</div>
+								) : undefined
+							}
 						/>
 					</div>
 				)}
 
-				{!bootstrapping && endedAt && (
+				{!bootstrapping && endedAt && !hasEndPageContent && (
 					<div className="mx-auto w-full max-w-3xl space-y-4 rounded-3xl border border-slate-200 bg-white p-8 text-center">
-						{endRedirectUrl ? (
-							<>
-								<div className="text-lg font-medium">Thanks, that's it.</div>
-								<div className="text-sm text-slate-500">
-									{isProlificUrl(endRedirectUrl)
-										? "Click below to complete on Prolific."
-										: "Continue to the next step below."}
-								</div>
-								<div className="flex justify-center">
-									<Button
-										onClick={() => {
-											const url = safeRedirectUrl(endRedirectUrl);
-											if (url) window.location.assign(url);
-										}}
-									>
-										{isProlificUrl(endRedirectUrl)
-											? "Continue to Prolific"
-											: "Continue"}
-									</Button>
-								</div>
-							</>
-						) : (
-							<>
-								<div className="text-lg font-medium">Thanks, that's it.</div>
-								<div className="text-sm text-slate-500">
-									You can close this window.
-								</div>
-							</>
+						<div className="text-lg font-medium">Thanks, that's it.</div>
+						{endRedirectCta ?? (
+							<div className="text-sm text-slate-500">
+								You can close this window.
+							</div>
 						)}
 					</div>
 				)}
