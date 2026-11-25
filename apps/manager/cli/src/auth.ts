@@ -23,7 +23,7 @@ function getCredentialsFile(): string {
 const CREDENTIALS_BACKEND =
 	process.env.PAIRIT_CREDENTIALS_BACKEND || "keychain";
 const KEYCHAIN_SERVICE = "pairit-cli";
-const KEYTAR_MODULE_SPECIFIER = "keytar";
+const KEYRING_MODULE_SPECIFIER = "@napi-rs/keyring";
 
 /**
  * Whether the manager checks state and PKCE. Servers from before the check
@@ -210,14 +210,14 @@ export async function getAuthHeaders(): Promise<HeadersInit> {
 
 async function saveCredentials(creds: { token?: string; cookie?: string }) {
 	if (CREDENTIALS_BACKEND !== "file") {
-		const keytar = await loadKeytar();
-		if (keytar) {
-			await keytar.setPassword(
-				KEYCHAIN_SERVICE,
-				getCredentialKey(),
-				JSON.stringify(creds),
-			);
-			return;
+		const entry = await loadKeyringEntry();
+		if (entry) {
+			try {
+				await entry.setPassword(JSON.stringify(creds));
+				return;
+			} catch {
+				// Fall back to the 0600 file if the OS keychain is locked or unavailable.
+			}
 		}
 	}
 
@@ -249,18 +249,19 @@ async function getCredentials(): Promise<{
 	cookie?: string;
 } | null> {
 	if (CREDENTIALS_BACKEND !== "file") {
-		const keytar = await loadKeytar();
-		if (keytar) {
-			const stored = await keytar.getPassword(
-				KEYCHAIN_SERVICE,
-				getCredentialKey(),
-			);
-			if (stored) {
-				try {
-					return JSON.parse(stored) as { token?: string; cookie?: string };
-				} catch {
-					return null;
+		const entry = await loadKeyringEntry();
+		if (entry) {
+			try {
+				const stored = await entry.getPassword();
+				if (stored) {
+					try {
+						return JSON.parse(stored) as { token?: string; cookie?: string };
+					} catch {
+						return null;
+					}
 				}
+			} catch {
+				// Fall back to the credentials file if the OS keychain cannot be read.
 			}
 		}
 	}
@@ -311,41 +312,35 @@ function canAttemptBrowserLogin(): boolean {
 	);
 }
 
-async function loadKeytar(): Promise<{
-	setPassword: (
+type KeyringEntry = {
+	setPassword: (password: string) => Promise<void>;
+	getPassword: () => Promise<string | null>;
+};
+
+type KeyringModule = {
+	AsyncEntry?: new (
 		service: string,
-		account: string,
-		password: string,
-	) => Promise<void>;
-	getPassword: (service: string, account: string) => Promise<string | null>;
-} | null> {
+		username: string,
+		options?: { linux?: { store?: "secret-service" | "keyutils" } },
+	) => KeyringEntry;
+};
+
+async function loadKeyringEntry(): Promise<KeyringEntry | null> {
 	try {
 		// Avoid static resolution/bundling of optional native dependency.
 		const runtimeImport = new Function("s", "return import(s)") as (
 			s: string,
 		) => Promise<unknown>;
-		const mod = await runtimeImport(KEYTAR_MODULE_SPECIFIER);
-		if (mod && typeof mod === "object" && "default" in mod) {
-			return (mod as { default: unknown }).default as {
-				setPassword: (
-					service: string,
-					account: string,
-					password: string,
-				) => Promise<void>;
-				getPassword: (
-					service: string,
-					account: string,
-				) => Promise<string | null>;
-			};
-		}
-		return mod as {
-			setPassword: (
-				service: string,
-				account: string,
-				password: string,
-			) => Promise<void>;
-			getPassword: (service: string, account: string) => Promise<string | null>;
-		};
+		const mod = (await runtimeImport(KEYRING_MODULE_SPECIFIER)) as
+			| (KeyringModule & { default?: KeyringModule })
+			| null;
+		const AsyncEntry = mod?.AsyncEntry ?? mod?.default?.AsyncEntry;
+		if (!AsyncEntry) return null;
+		// Require Secret Service on Linux so headless hosts fall back to the 0600
+		// file instead of the ephemeral kernel keyutils store.
+		return new AsyncEntry(KEYCHAIN_SERVICE, getCredentialKey(), {
+			linux: { store: "secret-service" },
+		});
 	} catch {
 		return null;
 	}

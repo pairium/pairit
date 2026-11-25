@@ -1,6 +1,6 @@
 {
 	"name": "pairit",
-	"version": "0.3.10",
+	"version": "0.3.11",
 	"description": "CLI for the Pairit behavioral science experiment platform",
 	"type": "module",
 	"bin": {
@@ -28,7 +28,7 @@
 	"homepage": "https://docs.pairium.ai/pairit/",
 	"license": "MIT",
 	"optionalDependencies": {
-		"keytar": "^7.9.0"
+		"@napi-rs/keyring": "^2.1.2"
 	},
 	"devDependencies": {
 		"@types/bun": "^1.1.13",

@@ -15,6 +15,12 @@ Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/re
 
 Merged, but not released yet.
 
+## CLI 0.3.11
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/cli-v0.3.11)
+
+- Replaced the deprecated `keytar` keychain dependency with `@napi-rs/keyring`, eliminating the `prebuild-install` deprecation warning on `npm install -g pairit`. Existing logins may require a one-time `pairit login` after upgrading.
+
 ## Platform 2026.11.25
 
 [Release notes](https://github.com/pairium/pairit/releases/tag/platform-v2026.11.25)
