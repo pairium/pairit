@@ -42,4 +42,18 @@ describe("HtmlEmbed", () => {
 		fireEvent.load(iframe);
 		expect(onLoad).toHaveBeenCalledTimes(2);
 	});
+
+	test("drops the border and rounding when borderless is true", () => {
+		const { container, rerender } = render(
+			<HtmlEmbed srcdoc="<p>a</p>" height={200} />,
+		);
+		const iframe = container.querySelector("iframe") as HTMLIFrameElement;
+		expect(iframe.className).toContain("border-slate-200");
+		expect(iframe.className).toContain("rounded-lg");
+
+		rerender(<HtmlEmbed srcdoc="<p>a</p>" height={200} borderless />);
+		expect(iframe.className).toContain("border-0");
+		expect(iframe.className).not.toContain("border-slate-200");
+		expect(iframe.className).not.toContain("rounded-lg");
+	});
 });

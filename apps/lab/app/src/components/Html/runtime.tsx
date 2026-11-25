@@ -17,10 +17,15 @@ export type HtmlProps = {
 	html?: string;
 	read?: string[];
 	write?: string[];
-	height?: number;
+	height?: number | "auto";
+	borderless?: boolean;
 	required?: boolean;
 	action?: ButtonAction;
 };
+
+const DEFAULT_EMBED_HEIGHT = 400;
+const MIN_AUTO_HEIGHT = 1;
+const MAX_AUTO_HEIGHT = 10_000;
 
 type HtmlComponent = ComponentInstance<"html", HtmlProps>;
 
@@ -34,10 +39,14 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 			[component.props.read],
 		);
 		const writeKeys = stringList(component.props.write);
-		const height =
-			typeof component.props.height === "number" && component.props.height > 0
+		const fixedHeight =
+			typeof component.props.height === "number" &&
+			Number.isFinite(component.props.height) &&
+			component.props.height > 0
 				? component.props.height
-				: 400;
+				: null;
+		const autoHeight = fixedHeight === null;
+		const borderless = component.props.borderless === true;
 		const required = component.props.required === true;
 		const action = component.props.action;
 
@@ -45,8 +54,12 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 		const iframeLoadedRef = useRef(false);
 		const lastPostedStateRef = useRef<string | null>(null);
 		const doneRef = useRef(false);
+		const doneActionInFlightRef = useRef(false);
+		const pendingStateWritesRef = useRef<Set<Promise<unknown>>>(new Set());
+		const unmountedRef = useRef(false);
 		const [done, setDone] = useState(false);
 		const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
+		const [measuredHeight, setMeasuredHeight] = useState<number | null>(null);
 
 		const componentRef = useRef(component);
 		componentRef.current = component;
@@ -56,9 +69,17 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 		writeKeysRef.current = writeKeys;
 		const actionRef = useRef(action);
 		actionRef.current = action;
+		const autoHeightRef = useRef(autoHeight);
+		autoHeightRef.current = autoHeight;
 
 		const srcdoc = useMemo(() => wrapHtmlSrcdoc(html), [html]);
 		const registerNavigationGuard = context.registerNavigationGuard;
+		const height = fixedHeight ?? measuredHeight ?? DEFAULT_EMBED_HEIGHT;
+
+		// biome-ignore lint/correctness/useExhaustiveDependencies: reset auto-measured height when the document changes
+		useEffect(() => {
+			setMeasuredHeight(null);
+		}, [srcdoc]);
 
 		useEffect(() => {
 			if (!required) return;
@@ -82,6 +103,7 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 		}, [context.sessionState, context.group, readKeys]);
 
 		useEffect(() => {
+			unmountedRef.current = false;
 			const onMessage = (event: MessageEvent) => {
 				const parsed = parseEmbedMessage(
 					event,
@@ -89,19 +111,39 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 				);
 				if (!parsed) return;
 
+				if (parsed.type === "pairit:resize") {
+					if (!autoHeightRef.current) return;
+					const clamped = Math.min(
+						MAX_AUTO_HEIGHT,
+						Math.max(MIN_AUTO_HEIGHT, Math.ceil(parsed.height)),
+					);
+					setMeasuredHeight(clamped);
+					return;
+				}
+
 				if (parsed.type === "pairit:setState") {
 					const updates = filterWritePayload(parsed.data, writeKeysRef.current);
 					if (Object.keys(updates).length === 0) return;
 					const sessionId = contextRef.current.sessionId;
 					if (sessionId) {
-						updateState(sessionId, updates).catch((error) => {
-							console.error("[Html] Failed to update state", error);
-						});
+						const write = updateState(sessionId, updates)
+							.catch((error) => {
+								console.error("[Html] Failed to update state", error);
+							})
+							.finally(() => {
+								pendingStateWritesRef.current.delete(write);
+							});
+						pendingStateWritesRef.current.add(write);
 					}
 					contextRef.current.onSessionStateChange?.(updates);
-					emitHtmlEvent("onState", componentRef.current, contextRef.current, {
-						updates,
-					});
+					void emitHtmlEvent(
+						"onState",
+						componentRef.current,
+						contextRef.current,
+						{
+							updates,
+						},
+					);
 					return;
 				}
 
@@ -116,7 +158,12 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 						!Array.isArray(parsed.data)
 							? (parsed.data as Record<string, unknown>)
 							: {};
-					emitHtmlEvent(name, componentRef.current, contextRef.current, data);
+					void emitHtmlEvent(
+						name,
+						componentRef.current,
+						contextRef.current,
+						data,
+					);
 					return;
 				}
 
@@ -124,17 +171,41 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 					doneRef.current = true;
 					setDone(true);
 					setBlockedMessage(null);
-					emitHtmlEvent("onDone", componentRef.current, contextRef.current);
+					const onDonePromise = emitHtmlEvent(
+						"onDone",
+						componentRef.current,
+						contextRef.current,
+					);
 					const nextAction = actionRef.current;
-					if (nextAction) {
-						applySetState(nextAction, contextRef.current);
-						void contextRef.current.onAction(nextAction);
+					if (nextAction && !doneActionInFlightRef.current) {
+						doneActionInFlightRef.current = true;
+						const actionStatePromise = applySetState(
+							nextAction,
+							contextRef.current,
+						);
+						const pending = [
+							...pendingStateWritesRef.current,
+							actionStatePromise,
+							onDonePromise,
+						];
+						void Promise.all(pending)
+							.then(() => {
+								if (unmountedRef.current) return;
+								return contextRef.current.onAction(nextAction);
+							})
+							.catch((error) => {
+								console.error("[Html] Failed to run done action", error);
+							})
+							.finally(() => {
+								doneActionInFlightRef.current = false;
+							});
 					}
 				}
 			};
 
 			window.addEventListener("message", onMessage);
 			return () => {
+				unmountedRef.current = true;
 				window.removeEventListener("message", onMessage);
 			};
 		}, []);
@@ -158,8 +229,9 @@ export const HtmlRuntime = defineRuntimeComponent<"html", HtmlProps>({
 					iframeRef={iframeRef}
 					srcdoc={srcdoc}
 					height={height}
+					borderless={borderless}
 					onLoad={() => {
-						emitHtmlEvent("onLoad", component, context);
+						void emitHtmlEvent("onLoad", component, context);
 						const state = readState(
 							context.sessionState,
 							context.group,
@@ -200,12 +272,18 @@ function stringList(value: unknown): string[] {
 	return value.filter((item): item is string => typeof item === "string");
 }
 
-function applySetState(action: ButtonAction, context: RuntimeComponentContext) {
-	if (!action.setState || !context.sessionId) return;
-	updateState(context.sessionId, action.setState).catch((error) => {
-		console.error("[Html] Failed to apply setState", error);
-	});
+function applySetState(
+	action: ButtonAction,
+	context: RuntimeComponentContext,
+): Promise<void> {
+	if (!action.setState) return Promise.resolve();
 	context.onSessionStateChange?.(action.setState);
+	if (!context.sessionId) return Promise.resolve();
+	return updateState(context.sessionId, action.setState)
+		.then(() => undefined)
+		.catch((error) => {
+			console.error("[Html] Failed to apply setState", error);
+		});
 }
 
 function emitHtmlEvent(
@@ -213,11 +291,11 @@ function emitHtmlEvent(
 	component: HtmlComponent,
 	context: RuntimeComponentContext,
 	extra?: Record<string, unknown>,
-) {
-	if (!context.sessionId) return;
+): Promise<void> {
+	if (!context.sessionId) return Promise.resolve();
 	const eventConfig =
 		component.events?.[eventName as keyof NonNullable<HtmlComponent["events"]>];
-	submitEvent(context.sessionId, {
+	return submitEvent(context.sessionId, {
 		type: eventConfig?.type ?? eventName,
 		timestamp: new Date().toISOString(),
 		componentType: "html",
@@ -227,7 +305,9 @@ function emitHtmlEvent(
 			...extra,
 			...eventConfig?.data,
 		},
-	}).catch((error) => {
-		console.error(`[Html] Failed to submit ${eventName} event`, error);
-	});
+	})
+		.then(() => undefined)
+		.catch((error) => {
+			console.error(`[Html] Failed to submit ${eventName} event`, error);
+		});
 }

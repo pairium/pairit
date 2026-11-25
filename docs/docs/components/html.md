@@ -11,7 +11,8 @@ The file is uploaded with the config. Pairit only exchanges the `session_state` 
 | `src` | string | — | Path to a local `.html` file, relative to the YAML (required) |
 | `read` | string[] | `[]` | `session_state` keys sent into the embed |
 | `write` | string[] | `[]` | `session_state` keys the embed is allowed to write |
-| `height` | number | `400` | Frame height in pixels (ignored on `layout: split` pages, where the embed fills its column) |
+| `height` | number \| `"auto"` | `"auto"` | Frame height in pixels, or `"auto"` to track content height automatically (ignored on `layout: split` pages, where the embed fills its column) |
+| `borderless` | boolean | `false` | Remove the frame's border and rounded corners so the embed sits flush on the page card |
 | `required` | boolean | `false` | Block Next until the embed calls `pairit.done()` |
 | `action` | ButtonAction | — | Optional navigation when the embed calls `pairit.done()` |
 
@@ -139,7 +140,19 @@ props:
   required: true
 ```
 
-Use `action` to navigate when the embed calls `done`, instead of waiting for a button.
+Use `action` to navigate directly when the embed calls `pairit.done()`, so you do not need a separate Next button underneath the frame. Pairit flushes pending `pairit.setState()` writes before advancing:
+
+```yaml
+- type: html
+  id: slider_task
+  props:
+    src: slider.html
+    write: [rating, rt_ms]
+    borderless: true
+    action:
+      type: go_to
+      target: thanks
+```
 
 ### Log extra events
 
@@ -172,7 +185,7 @@ pages:
 
 Pairit does not style the HTML inside the frame. Put CSS in a `<style>` tag or on the elements. The iframe cannot see Pairit’s page styles, and it cannot load CSS from the internet.
 
-The frame around your file has a light border and rounded corners. That is the only Pairit styling.
+By default, the frame around your file has a light border and rounded corners, and automatically grows or shrinks to fit your content (`height: auto`). Set `borderless: true` to remove the frame border so your UI sits flat on the white page card, and set `width: wide` on the page for a wider container (`max-w-5xl` instead of `max-w-3xl`). Set a numeric `height` (e.g. `height: 400`) if you want a fixed-height scrollable box.
 
 ## Safety
 

@@ -19,6 +19,7 @@ export type {
 	ComponentInstance,
 	OnEnterAction,
 	Page,
+	PageWidth,
 } from "@pairit/client/types";
 
 export type Button = {
@@ -51,7 +52,8 @@ export type HtmlComponent = ComponentInstance<
 		html?: string;
 		read?: string[];
 		write?: string[];
-		height?: number;
+		height?: number | "auto";
+		borderless?: boolean;
 		required?: boolean;
 		action?: ButtonAction;
 	}

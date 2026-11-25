@@ -224,10 +224,11 @@ export function PageRenderer({
 
 	const visibleComponents =
 		page.components?.filter((c) => isComponentVisible(c, scope)) ?? [];
+	const cardWidthClass = page.width === "wide" ? "max-w-5xl" : "max-w-3xl";
 
 	return (
 		<div key={page.id} className="page-enter flex justify-center">
-			<Card className="w-full max-w-3xl">
+			<Card className={`w-full ${cardWidthClass}`}>
 				<CardContent className="space-y-8">
 					{visibleComponents.length ? (
 						visibleComponents.map((component, index) =>

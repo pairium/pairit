@@ -42,3 +42,27 @@ describe("PageRenderer split layout", () => {
 		expect(iframe?.style.getPropertyValue("--embed-height")).toBe("320px");
 	});
 });
+
+describe("PageRenderer page width", () => {
+	test("defaults to max-w-3xl and expands to max-w-5xl when width is wide", () => {
+		const basePage: Page = {
+			id: "intro",
+			components: [{ type: "text", props: { text: "Hello" } }],
+		};
+
+		const { container, rerender } = render(
+			<PageRenderer page={basePage} onAction={vi.fn()} />,
+		);
+		const defaultCard = container.querySelector(".max-w-3xl");
+		expect(defaultCard).toBeTruthy();
+
+		rerender(
+			<PageRenderer
+				page={{ ...basePage, id: "wide-page", width: "wide" }}
+				onAction={vi.fn()}
+			/>,
+		);
+		expect(container.querySelector(".max-w-5xl")).toBeTruthy();
+		expect(container.querySelector(".max-w-3xl")).toBeNull();
+	});
+});

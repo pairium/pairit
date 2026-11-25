@@ -45,11 +45,14 @@ export type OnEnterAction = {
 	stateKey?: string;
 };
 
+export type PageWidth = "default" | "wide";
+
 export type Page = {
 	id: string;
 	end?: boolean;
 	endRedirectUrl?: string;
 	layout?: "split";
+	width?: PageWidth;
 	onEnter?: OnEnterAction[];
 	components?: ComponentInstance[];
 };
