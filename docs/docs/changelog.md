@@ -23,6 +23,7 @@ Merged, but not released yet.
 - `end: true` pages now render their configured components (such as debriefing, disqualification, or timeout copy) alongside the `endRedirectUrl` button when present, falling back to the default completion card only when the page has no visible components.
 - Removed the **Sign in with Google** button from the lab header so unauthenticated and Prolific participants aren't prompted to sign in mid-study (studies requiring Google sign-in still show it on the sign-in screen).
 - Cleaned up participant-facing copy on the lab landing page and in the matchmaking and randomization waiting states.
+- Disabled `@tailwindcss/typography`'s decorative backticks around inline `code` pills in markdown text and chat messages.
 
 ## CLI 0.3.11
 

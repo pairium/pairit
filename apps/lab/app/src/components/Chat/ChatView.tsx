@@ -186,7 +186,7 @@ function MessageBubble({
 			)}
 			<div className={bubbleClasses}>
 				<div
-					className={`prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-headings:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 ${isOwn ? "prose-invert" : ""}`}
+					className={`prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-headings:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-code:before:content-none prose-code:after:content-none [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 ${isOwn ? "prose-invert" : ""}`}
 				>
 					{isOwn ? (
 						<Markdown
@@ -246,7 +246,7 @@ function StreamingBubble({
 				avatars={avatars}
 			/>
 			<div className="max-w-[80%] rounded-2xl bg-slate-100 px-4 py-2 text-sm text-slate-900">
-				<div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-headings:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
+				<div className="prose prose-sm max-w-none prose-p:my-0 prose-p:leading-relaxed prose-headings:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-code:before:content-none prose-code:after:content-none [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
 					{message.content ? (
 						<Markdown components={OTHERS_MARKDOWN}>{message.content}</Markdown>
 					) : (

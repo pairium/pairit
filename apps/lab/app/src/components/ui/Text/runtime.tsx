@@ -65,7 +65,7 @@ export const TextRuntime = defineRuntimeComponent<
 		});
 
 		return (
-			<div className="prose prose-slate max-w-none">
+			<div className="prose prose-slate max-w-none prose-code:before:content-none prose-code:after:content-none">
 				<Markdown
 					components={{
 						code: MarkdownCode,
