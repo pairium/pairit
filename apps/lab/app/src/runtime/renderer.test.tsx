@@ -41,6 +41,63 @@ describe("PageRenderer split layout", () => {
 		expect(iframe?.style.height).toBe("");
 		expect(iframe?.style.getPropertyValue("--embed-height")).toBe("320px");
 	});
+
+	test("uses full viewport height by default and respects custom page.height", () => {
+		const baseSplit: Page = {
+			id: "split-no-bottom",
+			layout: "split",
+			components: [
+				{ type: "html", column: "left", props: { html: "<p>left</p>" } },
+				{ type: "html", column: "right", props: { html: "<p>right</p>" } },
+			],
+		};
+
+		const { container, rerender } = render(
+			<PageRenderer page={baseSplit} onAction={vi.fn()} />,
+		);
+		expect(container.querySelector(".max-w-7xl")).toBeTruthy();
+		const grid = container.querySelector(".grid") as HTMLElement;
+		expect(grid.className).toContain("h-[calc(100vh-6.5rem)]");
+
+		// With bottom buttons, leaves room for the button row
+		rerender(
+			<PageRenderer
+				page={{
+					...baseSplit,
+					id: "split-with-bottom",
+					components: [
+						...(baseSplit.components ?? []),
+						{
+							type: "buttons",
+							props: {
+								buttons: [
+									{
+										id: "next",
+										text: "Next",
+										action: { type: "go_to", target: "done" },
+									},
+								],
+							},
+						},
+					],
+				}}
+				onAction={vi.fn()}
+			/>,
+		);
+		const gridWithBottom = container.querySelector(".grid") as HTMLElement;
+		expect(gridWithBottom.className).toContain("h-[calc(100vh-10rem)]");
+
+		// Explicit page.height overrides the viewport cap
+		rerender(
+			<PageRenderer
+				page={{ ...baseSplit, id: "split-custom-height", height: 960 }}
+				onAction={vi.fn()}
+			/>,
+		);
+		const customGrid = container.querySelector(".grid") as HTMLElement;
+		expect(customGrid.className).toContain("h-(--split-height)");
+		expect(customGrid.style.getPropertyValue("--split-height")).toBe("960px");
+	});
 });
 
 describe("PageRenderer page width", () => {

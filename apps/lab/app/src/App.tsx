@@ -257,11 +257,19 @@ export default function App() {
 		}
 	}
 
+	const isSplitPage = Boolean(page && !endedAt && page.layout === "split");
+
 	return (
 		<div className="min-h-screen bg-slate-50 text-slate-900">
-			<Header sessionId={sessionId} />
+			<Header sessionId={sessionId} wide={isSplitPage} />
 
-			<main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-12">
+			<main
+				className={
+					isSplitPage
+						? "mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-4 py-4"
+						: "mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-12"
+				}
+			>
 				{error && (
 					<div className="mx-auto w-full max-w-3xl rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
 						{error}

@@ -2,9 +2,10 @@ import { Login, Logout, useAuth } from "@components/Auth";
 
 type HeaderProps = {
 	sessionId: string | null;
+	wide?: boolean;
 };
 
-export default function Header({ sessionId }: HeaderProps) {
+export default function Header({ sessionId, wide = false }: HeaderProps) {
 	const { user, isLoading, isAuthenticated } = useAuth();
 
 	const shortSessionId = sessionId?.slice(0, 8);
@@ -12,7 +13,13 @@ export default function Header({ sessionId }: HeaderProps) {
 
 	return (
 		<header className="border-b border-slate-200 bg-white/80 backdrop-blur">
-			<div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
+			<div
+				className={
+					wide
+						? "mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4"
+						: "mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4"
+				}
+			>
 				<div className="text-lg font-semibold tracking-tight">Pairit Lab</div>
 				<div className="flex items-center gap-4">
 					<div className="text-sm text-slate-500">{status}</div>

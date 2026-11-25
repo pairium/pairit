@@ -62,6 +62,7 @@ Common page fields:
 - `components?`: array of component instances shown on the page (canonical)
 - `layout?`: set to `split` for a two-column page (see [Split layout](#split-layout))
 - `width?`: set to `wide` for a wider single-column page card (`max-w-5xl` instead of `max-w-3xl`); default is `"default"`
+- `height?`: optional height in pixels for `layout: split` pages when you want the columns taller than the viewport (by default, split pages fill the viewport height)
 
 Component instance shapes:
 

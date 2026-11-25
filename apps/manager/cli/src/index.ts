@@ -734,6 +734,15 @@ async function lintConfig(configPath: string): Promise<HtmlSourceInfo[]> {
 			if (width !== undefined && width !== "default" && width !== "wide") {
 				errors.push(`pages[${index}].width must be "default" or "wide"`);
 			}
+			const pageHeight = (page as { height?: unknown } | null)?.height;
+			if (
+				pageHeight !== undefined &&
+				(typeof pageHeight !== "number" ||
+					!Number.isFinite(pageHeight) ||
+					pageHeight <= 0)
+			) {
+				errors.push(`pages[${index}].height must be a positive number`);
+			}
 			page.components?.forEach((component, componentIndex) => {
 				const comp = component as {
 					type?: unknown;

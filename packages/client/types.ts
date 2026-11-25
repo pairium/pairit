@@ -53,6 +53,7 @@ export type Page = {
 	endRedirectUrl?: string;
 	layout?: "split";
 	width?: PageWidth;
+	height?: number;
 	onEnter?: OnEnterAction[];
 	components?: ComponentInstance[];
 };

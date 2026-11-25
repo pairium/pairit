@@ -19,10 +19,11 @@ Merged, but not released yet.
 
 - `html` embeds now auto-size to their content height by default (`height: auto`), accept `borderless: true` to sit flat on the page card without a frame border, and flush pending `pairit.setState()` writes and `onDone` before running `props.action` on `pairit.done()`.
 - Pages now accept `width: wide` for a wider container (`max-w-5xl`), and the lab main container no longer caps `wide` or `split` pages at `max-w-4xl`.
+- `layout: split` pages now use a wider container (`max-w-7xl`), tighter outer padding (`px-4 py-4`), taller viewport-filling columns (`calc(100vh - 6.5rem)`, or `calc(100vh - 10rem)` with bottom buttons), and an optional page-level `height` in pixels to exceed viewport height.
 
 ### CLI
 
-- `pairit config lint` now checks page `width` (`"default"` or `"wide"`) and `html` `height` (`"auto"` or positive number) and `borderless` (boolean) props.
+- `pairit config lint` now checks page `width` (`"default"` or `"wide"`), page `height` (positive number), and `html` `height` (`"auto"` or positive number) and `borderless` (boolean) props.
 
 ## Platform 2026.11.24
 
