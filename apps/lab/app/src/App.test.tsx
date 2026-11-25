@@ -351,6 +351,7 @@ describe("App", () => {
 
 		expect(await screen.findByText("Thanks, that's it.")).toBeDefined();
 		expect(screen.queryByText("Welcome to the study.")).toBeNull();
+		expect(screen.queryByRole("button", { name: /examples/i })).toBeNull();
 	});
 
 	test("ignores a second click while advance is in flight", async () => {
@@ -410,6 +411,7 @@ describe("App", () => {
 		expect(
 			await screen.findByRole("button", { name: "Continue to Prolific" }),
 		).toBeDefined();
+		expect(screen.queryByRole("button", { name: /examples/i })).toBeNull();
 	});
 
 	test("does not put the full session id in the header", async () => {

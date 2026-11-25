@@ -335,16 +335,7 @@ export default function App() {
 										? "Click below to complete on Prolific."
 										: "Continue to the next step below."}
 								</div>
-								<div className="flex justify-center gap-3">
-									<Button
-										variant="ghost"
-										onClick={() => {
-											window.location.href =
-												"https://docs.pairium.ai/pairit/examples/";
-										}}
-									>
-										Back to examples
-									</Button>
+								<div className="flex justify-center">
 									<Button
 										onClick={() => {
 											const url = safeRedirectUrl(endRedirectUrl);
@@ -362,17 +353,6 @@ export default function App() {
 								<div className="text-lg font-medium">Thanks, that's it.</div>
 								<div className="text-sm text-slate-500">
 									You can close this window.
-								</div>
-								<div className="flex justify-center">
-									<Button
-										variant="ghost"
-										onClick={() => {
-											window.location.href =
-												"https://docs.pairium.ai/pairit/examples/";
-										}}
-									>
-										Back to examples
-									</Button>
 								</div>
 							</>
 						)}
