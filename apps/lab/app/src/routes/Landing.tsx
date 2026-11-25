@@ -69,18 +69,12 @@ export function Landing() {
 								Having trouble? Reach out for help.
 							</CardDescription>
 						</CardHeader>
-						<CardContent className="space-y-4">
+						<CardContent>
 							<p className="text-sm text-slate-600">
-								If you can't find your experiment link, contact the researcher
-								who invited you.
+								If you can't find your study link, message the researcher who
+								invited you through your recruitment platform or study
+								invitation.
 							</p>
-							<Button
-								onClick={() => {
-									window.location.href = "mailto:pairit@pairium.ai";
-								}}
-							>
-								<Mail className="h-4 w-4" /> Email support
-							</Button>
 						</CardContent>
 					</Card>
 				</div>
@@ -88,8 +82,8 @@ export function Landing() {
 
 			<footer className="border-t border-slate-200 bg-white/60 py-6">
 				<div className="mx-auto flex w-full max-w-5xl flex-col items-start gap-2 px-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-					<span>Pairit Lab · experimental tooling in progress</span>
-					<span>Need something else? Reply to your experiment invitation.</span>
+					<span>Pairit Lab</span>
+					<span>Need something else? Reply to your study invitation.</span>
 				</div>
 			</footer>
 		</div>
