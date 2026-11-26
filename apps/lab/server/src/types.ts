@@ -14,6 +14,7 @@ export type {
 	EventDocument,
 	GroupDocument,
 	ProlificParams,
+	TimerDocument,
 	WorkspaceDocument as WorkspaceDocumentDocument,
 	WorkspaceUpdateDocument,
 } from "@pairit/db/types";

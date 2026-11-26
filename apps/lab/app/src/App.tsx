@@ -32,7 +32,11 @@ function parseProlificParams(search: string): ProlificParams | null {
 }
 
 function canSwapOptimistically(nextPage: Page): boolean {
-	return !nextPage.onEnter?.length && !nextPage.end;
+	// Wait for /advance before mounting pages with timers so an already-expired
+	// server/group timer isn't dropped by the in-flight transition guard.
+	const hasTimer =
+		nextPage.components?.some((c) => c.type === "timer") ?? false;
+	return !nextPage.onEnter?.length && !nextPage.end && !hasTimer;
 }
 
 async function confirmAdvance(sessionId: string, target: string) {

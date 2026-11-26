@@ -9,6 +9,8 @@ Countdown timer that auto-navigates when time expires. Use it for timed reading 
 | `duration` | number | — | Total seconds for the countdown (required) |
 | `warning` | number | — | Remaining-seconds threshold to enter warning state |
 | `visible` | boolean | `true` | Show the countdown UI; set `false` for invisible deadlines |
+| `scope` | `"session"` \| `"group"` | `"session"` | `"session"` gives each participant their own server-backed deadline (persisted across reloads); `"group"` shares one deadline across a matched group so everyone finishes the phase together |
+| `key` | string | — | Optional identifier (`[A-Za-z0-9_-]+`) to share a single timer across different pages (e.g., role-specific pages in a group phase, or a multi-page timed section) |
 | `action` | ButtonAction | — | Navigation action to execute on expiry. Supports `setState` to write key-value pairs to `session_state` before navigating. |
 | `runningLabel` | string | — | Text shown while the timer is running |
 | `warningLabel` | string | — | Text shown during the warning phase |
@@ -118,6 +120,40 @@ components:
 ```
 
 On the target page, reference the value with `{{session_state.reading_timed_out}}`.
+
+### Group-synchronized phases (`scope: group`)
+
+Timers are anchored to server time, survive page refreshes, and receive a server-pushed expiry event over SSE—so even if a participant minimizes their browser window, their tab won't drift behind across phases.
+
+For matched teams that need to switch phases together, set `scope: group`:
+
+```yaml
+components:
+  - type: timer
+    props:
+      duration: 900
+      warning: 60
+      scope: group
+      action:
+        type: go_to
+        target: team_synthesis
+```
+
+The first group member to reach the page sets the group's deadline on the server. Teammates who arrive later see the remaining time and advance at the same moment. If a participant isn't in a group (e.g., a solo fallback or local preview), the timer falls back to `scope: session`. Unkeyed `scope: session` timers reset if a participant advances off the page and revisits it later, whereas `scope: group` and keyed timers keep their original deadline.
+
+To synchronize a single deadline across **different** pages—for example, when team members branch onto role-specific drafting pages (`draft_role_a`, `draft_role_b`, `draft_role_c`)—give each page's timer the same `key`:
+
+```yaml
+components:
+  - type: timer
+    props:
+      duration: 900
+      scope: group
+      key: drafting_phase
+      action:
+        type: go_to
+        target: team_synthesis
+```
 
 ## Visual states
 

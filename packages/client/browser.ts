@@ -38,6 +38,8 @@ export type {
 	ProlificParams,
 	RandomizeParams,
 	RandomizeResponse,
+	StartTimerParams,
+	StartTimerResponse,
 	SyncWorkspaceResponse,
 } from "./client";
 
@@ -55,3 +57,4 @@ export const syncWorkspace = client.syncWorkspace.bind(client);
 export const pushWorkspaceUpdate = client.pushWorkspaceUpdate.bind(client);
 export const replaceInWorkspace = client.replaceInWorkspace.bind(client);
 export const randomize = client.randomize.bind(client);
+export const startTimer = client.startTimer.bind(client);

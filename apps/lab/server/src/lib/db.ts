@@ -12,6 +12,7 @@ import type {
 	GroupDocument,
 	IdempotencyRecord,
 	SessionDocument,
+	TimerDocument,
 	WorkspaceDocumentDocument,
 	WorkspaceUpdateDocument,
 } from "../types";
@@ -78,6 +79,13 @@ export async function getWorkspaceUpdatesCollection(): Promise<
 > {
 	const database = await connectDB();
 	return database.collection<WorkspaceUpdateDocument>("workspace_updates");
+}
+
+export async function getTimersCollection(): Promise<
+	Collection<TimerDocument>
+> {
+	const database = await connectDB();
+	return database.collection<TimerDocument>("timers");
 }
 
 const LEGACY_IDEMPOTENCY_INDEX = "idempotencyKey_1";
@@ -201,6 +209,10 @@ export async function ensureIndexes(): Promise<void> {
 	await database
 		.collection("workspace_updates")
 		.createIndex({ configId: 1, createdAt: 1, _id: 1 });
+
+	await database
+		.collection("timers")
+		.createIndex({ scopeKey: 1, timerKey: 1 }, { unique: true });
 
 	console.log("[DB] All indexes ensured");
 }

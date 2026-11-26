@@ -10,7 +10,7 @@ import { Elysia, t } from "elysia";
 import { checkAdvance } from "../lib/advance";
 import { getAuthUser } from "../lib/auth-middleware";
 import { toClientConfig } from "../lib/client-config";
-import { listRandomizations } from "../lib/config-lookup";
+import { findTimer, listRandomizations } from "../lib/config-lookup";
 import {
 	getConfigsCollection,
 	getSessionStartLocksCollection,
@@ -37,6 +37,7 @@ import {
 	PROTECTED_STATE_KEYS,
 } from "../lib/session-state";
 import { resolveSimulationFields } from "../lib/simulation";
+import { clearSessionPageTimers } from "../lib/timers";
 import type {
 	Config,
 	Page,
@@ -611,6 +612,17 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 			if (!updated) {
 				set.status = 409;
 				return { error: "advance_conflict" };
+			}
+
+			if (
+				body.target !== session.currentPageId &&
+				findTimer(session.config, session.currentPageId)
+			) {
+				await clearSessionPageTimers(id, session.currentPageId).catch(
+					(error) => {
+						console.error("[Timer] Failed to clear page timers:", error);
+					},
+				);
 			}
 
 			return {
