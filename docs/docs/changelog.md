@@ -17,10 +17,12 @@ Merged, but not released yet.
 
 ### Platform
 
+- `chat` now supports `scope: participant` so matched teammates can each have a private chat (e.g., with an AI agent) instead of sharing the group's `chat_group_id`. Combine with `groupId` to continue the same private chat across pages, or place a private chat side-by-side with a group chat on the same page.
 - For admins: `GET /admin/activity` now returns `liveStudies` (any study with active participants, including solo and AI-agent studies) and accepts a read-only `ADMIN_ACTIVITY_TOKEN` bearer token for automated deploy checks. Lab SSE connections, events, timers, and session resumes now refresh `sessions.updatedAt` so active participants aren't missed between page turns.
 
 ### CLI
 
+- `pairit config lint` and `config upload` now validate `chat` `scope` (`"participant"` or `"group"`).
 - `pairit admin activity` and `--fail-if-live` now warn and exit 2 when *any* study has active participants (not only matchmaking group studies).
 
 ## Platform 2026.11.25.3

@@ -14,6 +14,7 @@ import {
 } from "./activity.js";
 import { auditData, filterSessions } from "./audit.js";
 import { getAuthHeaders, login } from "./auth.js";
+import { lintChats } from "./chat-lint.js";
 import { escapeCsvValue } from "./csv.js";
 import { getApiUrl, getLabUrl, parseEnvName, setEnv } from "./env.js";
 import { lintGroupView } from "./group-lint.js";
@@ -785,6 +786,7 @@ async function lintConfig(configPath: string): Promise<HtmlSourceInfo[]> {
 	errors.push(...lintGroupView(config));
 	errors.push(...lintEndRedirectUrls(config));
 	errors.push(...lintTimers(config));
+	errors.push(...lintChats(config));
 
 	if (errors.length) {
 		throw new Error(errors.join(", "));
@@ -915,6 +917,7 @@ async function buildUploadPayload(
 	const validationErrors = [
 		...lintRandomization(sourceConfig),
 		...lintTimers(sourceConfig),
+		...lintChats(sourceConfig),
 	];
 	if (validationErrors.length) {
 		throw new Error(validationErrors.join(", "));

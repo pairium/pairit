@@ -7,7 +7,8 @@ Open a chat view for real-time messaging. Supports human-human chat (via matchma
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `agents` | string[] | `[]` | List of agent ids to join the chat (see [Agents](agents.md)) |
-| `groupId` | string | - | Explicit chat group identifier for shared contexts |
+| `scope` | `"group"` \| `"participant"` | `"group"` | Chat room scoping. Use `"participant"` to give each participant a private chat even after matchmaking. |
+| `groupId` | string | - | Explicit chat group identifier for sharing a participant-scoped conversation across pages |
 | `placeholder` | string | `"Type a message..."` | Placeholder text in the message input |
 | `avatars` | object | - | Avatar overrides for `self`, `participant`, `agent`, or specific `agents.{id}`. See [Avatars](#avatars). |
 
@@ -27,11 +28,13 @@ A typical 20–30 minute chat study stays well under these limits. If your study
 
 ## Group Resolution
 
-Chat rooms are identified by `groupId`. The resolution order is:
+Chat rooms are identified by `groupId`. The resolution order depends on `scope`:
 
-1. **Matchmaking**: If participant was matched, uses `session_state.chat_group_id` (shared with matched participants)
-2. **Explicit prop**: If `groupId` prop is set, uses `{sessionId}:{groupId}` (session-scoped)
-3. **Default**: Uses `{sessionId}:{pageId}` (isolated to this session and page)
+- **`scope: "participant"`**: Always private to the current participant, even after matchmaking. Uses `{sessionId}:{groupId}` if `groupId` is set, otherwise `{sessionId}:{pageId}`.
+- **`scope: "group"`** (default):
+  1. **Matchmaking**: If the participant was matched, uses `session_state.chat_group_id` (shared with matched teammates)
+  2. **Explicit prop**: If `groupId` prop is set, uses `{sessionId}:{groupId}` (session-scoped)
+  3. **Default**: Uses `{sessionId}:{pageId}` (isolated to this session and page)
 
 ### Shared Chat (via Matchmaking)
 
@@ -49,6 +52,22 @@ pages:
     components:
       - type: chat  # Uses session_state.chat_group_id from matchmaking
 ```
+
+### Private Chat After Matchmaking
+
+Set `scope: participant` when matched teammates should each have their own private conversation with an AI agent:
+
+```yaml
+pages:
+  - id: ai_coach
+    components:
+      - type: chat
+        props:
+          scope: participant
+          agents: [assistant]
+```
+
+Add `groupId` alongside `scope: participant` to continue that same private conversation on a later page without sharing it with teammates.
 
 ### Isolated Chat (AI Only)
 

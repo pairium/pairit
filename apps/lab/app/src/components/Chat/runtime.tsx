@@ -30,11 +30,46 @@ const CHAT_LIMIT_NOTICES: Record<ChatLimitError["reason"], string> = {
 		"You've reached the message limit for this study, so your message wasn't sent.",
 };
 
+export type ChatScope = "participant" | "group";
+
 type ChatProps = {
 	placeholder?: string;
 	groupId?: string;
+	scope?: ChatScope;
 	avatars?: ChatAvatarOverrides;
 };
+
+/**
+ * Resolve which chat room a chat component attaches to.
+ * - `scope: "participant"` always isolates the chat to this session
+ *   (`${sessionId}:${groupId ?? pageId}`), even after matchmaking.
+ * - Default (`scope: "group"` or omitted) uses `session_state.chat_group_id`
+ *   when matched, otherwise `${sessionId}:${groupId}` if set, or null to let
+ *   the async fallback check the server before falling back to `${sessionId}:${pageId}`.
+ */
+export function resolveChatGroupId(options: {
+	scope?: ChatScope;
+	groupId?: string;
+	pageId?: string;
+	sessionId?: string | null;
+	sessionState?: Record<string, unknown>;
+}): string | null {
+	const { scope, groupId, pageId, sessionId, sessionState } = options;
+	if (scope === "participant") {
+		if (!sessionId) return null;
+		return `${sessionId}:${groupId ?? pageId}`;
+	}
+	if (
+		typeof sessionState?.chat_group_id === "string" &&
+		sessionState.chat_group_id
+	) {
+		return sessionState.chat_group_id;
+	}
+	if (groupId && sessionId) {
+		return `${sessionId}:${groupId}`;
+	}
+	return null;
+}
 
 type SSEChatMessage = {
 	messageId: string;
@@ -142,18 +177,26 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			};
 		}, [compiledConfig?.agents, component.props.avatars]);
 
-		const [resolvedGroupId, setResolvedGroupId] = useState<string | null>(
-			() => {
-				if (sessionState?.chat_group_id)
-					return sessionState.chat_group_id as string;
-				if (component.props.groupId)
-					return `${sessionId}:${component.props.groupId}`;
-				return null;
-			},
+		const chatScope = component.props.scope;
+		const chatGroupIdProp = component.props.groupId;
+
+		const [resolvedGroupId, setResolvedGroupId] = useState<string | null>(() =>
+			resolveChatGroupId({
+				scope: chatScope,
+				groupId: chatGroupIdProp,
+				pageId,
+				sessionId,
+				sessionState,
+			}),
 		);
 
 		useEffect(() => {
 			if (resolvedGroupId || !sessionId) return;
+
+			if (chatScope === "participant") {
+				setResolvedGroupId(`${sessionId}:${chatGroupIdProp ?? pageId}`);
+				return;
+			}
 
 			let canceled = false;
 			const currentSessionId = sessionId;
@@ -183,7 +226,14 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			return () => {
 				canceled = true;
 			};
-		}, [resolvedGroupId, sessionId, pageId, onSessionStateChange]);
+		}, [
+			resolvedGroupId,
+			sessionId,
+			pageId,
+			chatScope,
+			chatGroupIdProp,
+			onSessionStateChange,
+		]);
 
 		const groupId = resolvedGroupId ?? "";
 
@@ -224,7 +274,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 				} catch (error) {
 					if (canceled) return;
 
-					if (error instanceof NotAMemberError) {
+					if (error instanceof NotAMemberError && chatScope !== "participant") {
 						try {
 							const session = await getSession(currentSessionId);
 							if (canceled) return;
@@ -258,7 +308,7 @@ export const ChatRuntime = defineRuntimeComponent<"chat", ChatProps>({
 			return () => {
 				canceled = true;
 			};
-		}, [sessionId, groupId, toViewMessage, onSessionStateChange]);
+		}, [sessionId, groupId, chatScope, toViewMessage, onSessionStateChange]);
 
 		useEffect(() => {
 			if (!sessionId || !groupId || loading) return;
