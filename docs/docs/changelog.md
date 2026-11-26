@@ -15,12 +15,16 @@ Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/re
 
 Merged, but not released yet.
 
-### Platform
+## Platform 2026.11.25.3
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/platform-v2026.11.25.3)
 
 - Timers are now anchored to server time: deadlines survive page refreshes, ignore local clock skew, and push expiry over SSE so minimized browser windows don't drift behind.
 - `timer` now supports `scope: group` to synchronize a phase deadline across a matched group (first member to arrive sets the deadline; later members catch up and advance together), plus an optional `key` prop to share a timer across different pages (such as role-specific pages or a multi-page timed section).
 
-### CLI
+## CLI 0.3.12
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/cli-v0.3.12)
 
 - `pairit config lint` and `config upload` now validate `timer` `scope` (`"session"` or `"group"`) and `key` props, and flag conflicting `scope` or `duration` across timers sharing a `key`.
 
