@@ -174,7 +174,11 @@ export async function triggerAgents(
 
 		const { configId, currentPageId, sessionState, config } = sessionConfig;
 
-		const agentIds = getPageAgentIdsFromConfig(config, currentPageId);
+		const agentIds = getPageAgentIdsFromConfig(config, currentPageId, {
+			groupId,
+			sessionId,
+			sessionState,
+		});
 		if (agentIds.length === 0) {
 			return;
 		}
@@ -243,7 +247,11 @@ export async function triggerJoinAgents(
 
 		const { configId, currentPageId, sessionState, config } = sessionConfig;
 
-		const agentIds = getPageAgentIdsFromConfig(config, currentPageId);
+		const agentIds = getPageAgentIdsFromConfig(config, currentPageId, {
+			groupId,
+			sessionId,
+			sessionState,
+		});
 		if (agentIds.length === 0) {
 			return;
 		}

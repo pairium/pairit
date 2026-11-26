@@ -29,6 +29,7 @@ import {
 	sessionCookieOptions,
 	sessionIdsFromCookies,
 } from "../lib/session-access";
+import { touchSessionActivity } from "../lib/session-activity";
 import { startLockKey, withStartLock } from "../lib/session-start-lock";
 import {
 	filterProtectedUpdates,
@@ -268,18 +269,7 @@ function assertValidStatePath(path: string): void {
 	}
 }
 
-/**
- * Bump `updatedAt` on an unfinished session so admin activity reports reflect
- * live participants who are reading, firing events, syncing timers, or holding
- * an open SSE stream.
- */
-export async function touchSessionActivity(sessionId: string): Promise<void> {
-	const collection = await getSessionsCollection();
-	await collection.updateOne(
-		{ id: sessionId, endedAt: null },
-		{ $set: { updatedAt: new Date() } },
-	);
-}
+export { touchSessionActivity };
 
 /**
  * Write session_state fields. Returns false if the session does not exist.

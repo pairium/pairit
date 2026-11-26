@@ -85,25 +85,83 @@ export function findPageInConfig(
 	);
 }
 
+type PageAgentContext = {
+	groupId: string;
+	sessionId: string;
+	sessionState?: Record<string, unknown>;
+};
+
+function chatComponentGroupId(
+	props: Record<string, unknown> | undefined,
+	pageId: string,
+	context: PageAgentContext,
+): string {
+	const explicitGroupId =
+		typeof props?.groupId === "string" && props.groupId
+			? props.groupId
+			: undefined;
+	if (props?.scope === "participant") {
+		return `${context.sessionId}:${explicitGroupId ?? pageId}`;
+	}
+	const chatGroupId = context.sessionState?.chat_group_id;
+	if (typeof chatGroupId === "string" && chatGroupId) {
+		return chatGroupId;
+	}
+	return `${context.sessionId}:${explicitGroupId ?? pageId}`;
+}
+
+function workspaceComponentGroupId(
+	props: Record<string, unknown> | undefined,
+	pageId: string,
+	context: PageAgentContext,
+): string {
+	const chatGroupId = context.sessionState?.chat_group_id;
+	if (
+		props?.scope === "group" &&
+		typeof chatGroupId === "string" &&
+		chatGroupId
+	) {
+		return chatGroupId;
+	}
+	return `${context.sessionId}:${pageId}`;
+}
+
 /**
  * Agent ids referenced by chat and live-workspace components on a page, each
  * once: an agent listed on both the chat and the workspace replies once.
+ *
+ * When a page has multiple chat components (e.g. a shared group chat alongside
+ * a `scope: "participant"` private AI chat) and `context` is provided, only
+ * components whose resolved group matches `context.groupId` are included.
  */
 export function getPageAgentIdsFromConfig(
 	config: unknown,
 	pageId: string,
+	context?: PageAgentContext,
 ): string[] {
 	const page = findPageInConfig(config, pageId);
 	if (!page) return [];
 
+	const components = page.components ?? [];
+	const chatCount = components.filter((c) => c.type === "chat").length;
+	const filterByGroup = Boolean(context && chatCount > 1);
+
 	const agentIds = new Set<string>();
-	for (const c of page.components ?? []) {
+	for (const c of components) {
 		if (
-			(c.type === "chat" || c.type === "live-workspace") &&
-			Array.isArray(c.props?.agents)
+			(c.type !== "chat" && c.type !== "live-workspace") ||
+			!Array.isArray(c.props?.agents)
 		) {
-			for (const id of c.props.agents) agentIds.add(id);
+			continue;
 		}
+		if (filterByGroup && context) {
+			const resolved =
+				c.type === "chat"
+					? chatComponentGroupId(c.props, pageId, context)
+					: workspaceComponentGroupId(c.props, pageId, context);
+			if (resolved !== context.groupId) continue;
+		}
+		for (const id of c.props.agents) agentIds.add(id);
 	}
 	return [...agentIds];
 }

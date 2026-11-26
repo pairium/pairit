@@ -84,4 +84,79 @@ describe("getPageAgentIdsFromConfig", () => {
 		};
 		expect(getPageAgentIdsFromConfig(legacy, "chat")).toEqual(["a"]);
 	});
+
+	test("filters agents by chat scope when a page has both a team chat and a private AI chat", () => {
+		const multiChat = {
+			pages: {
+				collab: {
+					id: "collab",
+					components: [
+						{ type: "chat", props: { scope: "group" } },
+						{
+							type: "chat",
+							props: { scope: "participant", agents: ["claude"] },
+						},
+					],
+				},
+			},
+		};
+		// Message in the team chat should NOT trigger the private chat's agent
+		expect(
+			getPageAgentIdsFromConfig(multiChat, "collab", {
+				groupId: "team-123",
+				sessionId: "sess-1",
+				sessionState: { chat_group_id: "team-123" },
+			}),
+		).toEqual([]);
+		// Message in the participant's private chat SHOULD trigger Claude
+		expect(
+			getPageAgentIdsFromConfig(multiChat, "collab", {
+				groupId: "sess-1:collab",
+				sessionId: "sess-1",
+				sessionState: { chat_group_id: "team-123" },
+			}),
+		).toEqual(["claude"]);
+	});
+
+	test("filters agents by explicit groupId when two private chats share a page", () => {
+		const twoPrivate = {
+			pages: {
+				split: {
+					id: "split",
+					components: [
+						{
+							type: "chat",
+							props: {
+								scope: "participant",
+								groupId: "coach",
+								agents: ["coach_ai"],
+							},
+						},
+						{
+							type: "chat",
+							props: {
+								scope: "participant",
+								groupId: "critic",
+								agents: ["critic_ai"],
+							},
+						},
+					],
+				},
+			},
+		};
+		expect(
+			getPageAgentIdsFromConfig(twoPrivate, "split", {
+				groupId: "sess-1:coach",
+				sessionId: "sess-1",
+				sessionState: { chat_group_id: "team-123" },
+			}),
+		).toEqual(["coach_ai"]);
+		expect(
+			getPageAgentIdsFromConfig(twoPrivate, "split", {
+				groupId: "sess-1:critic",
+				sessionId: "sess-1",
+				sessionState: { chat_group_id: "team-123" },
+			}),
+		).toEqual(["critic_ai"]);
+	});
 });
