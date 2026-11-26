@@ -7,7 +7,7 @@ import { Elysia, t } from "elysia";
 import { allowedTargets, findTimer, getConfigPage } from "../lib/config-lookup";
 import { denySessionAccess } from "../lib/session-access";
 import { startOrGetTimer } from "../lib/timers";
-import { loadSession } from "./sessions";
+import { loadSession, touchSessionActivity } from "./sessions";
 
 export const timersRoutes = new Elysia({ prefix: "/sessions" }).post(
 	"/:id/timer",
@@ -43,7 +43,11 @@ export const timersRoutes = new Elysia({ prefix: "/sessions" }).post(
 			return { error: "unknown_timer" };
 		}
 
-		return await startOrGetTimer(session, pageId, settings);
+		const timer = await startOrGetTimer(session, pageId, settings);
+		touchSessionActivity(id).catch((error) => {
+			console.error("[Timer] Failed to touch updatedAt:", error);
+		});
+		return timer;
 	},
 	{
 		params: t.Object({ id: t.String() }),

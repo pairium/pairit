@@ -15,6 +15,14 @@ Full release notes are on [GitHub Releases](https://github.com/pairium/pairit/re
 
 Merged, but not released yet.
 
+### Platform
+
+- For admins: `GET /admin/activity` now returns `liveStudies` (any study with active participants, including solo and AI-agent studies) and accepts a read-only `ADMIN_ACTIVITY_TOKEN` bearer token for automated deploy checks. Lab SSE connections, events, timers, and session resumes now refresh `sessions.updatedAt` so active participants aren't missed between page turns.
+
+### CLI
+
+- `pairit admin activity` and `--fail-if-live` now warn and exit 2 when *any* study has active participants (not only matchmaking group studies).
+
 ## Platform 2026.11.25.3
 
 [Release notes](https://github.com/pairium/pairit/releases/tag/platform-v2026.11.25.3)

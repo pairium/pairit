@@ -190,24 +190,25 @@ if [ -f "$OTHER_FILE" ]; then
     fi
 fi
 
-# Don't deploy production while a multi-participant study is live: Cloud Run
-# can briefly run two lab instances, and matchmaking and chat live in memory.
-# Uses your production CLI login, which must be an admin. FORCE_DEPLOY=1 skips.
+# Don't deploy production while any study is live: Cloud Run can briefly run
+# two lab instances, and matchmaking, SSE streams, in-flight agent runs, and
+# timer broadcasts live in memory. Uses your production CLI login (admin).
+# FORCE_DEPLOY=1 skips.
 if [ "$TARGET" = "production" ]; then
     if [ "${FORCE_DEPLOY:-}" = "1" ]; then
         echo "⚠️  FORCE_DEPLOY=1: skipping the live-study check."
     else
-        echo "🔎 Checking production for live group studies..."
+        echo "🔎 Checking production for live studies..."
         set +e
         ACTIVITY=$(bun run apps/manager/cli/src/index.ts --env production admin activity --since 1h --fail-if-live 2>&1)
         ACTIVITY_STATUS=$?
         set -e
         case $ACTIVITY_STATUS in
             0)
-                echo "✅ No group study is live."
+                echo "✅ No study is live."
                 ;;
             2)
-                echo "❌ Production deploy stopped. A deploy can split or drop live groups."
+                echo "❌ Production deploy stopped. A deploy can disrupt live participants."
                 echo ""
                 echo "$ACTIVITY"
                 echo ""
@@ -215,7 +216,7 @@ if [ "$TARGET" = "production" ]; then
                 exit 1
                 ;;
             *)
-                echo "❌ Could not check production for live group studies:"
+                echo "❌ Could not check production for live studies:"
                 echo "$ACTIVITY"
                 if echo "$ACTIVITY" | grep -q "HTTP 401"; then
                     echo "Log in first: bun run apps/manager/cli/src/index.ts --env production login"
@@ -394,6 +395,9 @@ for optional in OPENAI_API_KEY ANTHROPIC_API_KEY MEMBER_ID_SECRET SIMULATION_KEY
         add_secret "$optional" "$optional" "${!optional}" lab -
     fi
 done
+if [ -n "${ADMIN_ACTIVITY_TOKEN:-}" ]; then
+    add_secret ADMIN_ACTIVITY_TOKEN ADMIN_ACTIVITY_TOKEN "$ADMIN_ACTIVITY_TOKEN" - manager
+fi
 # Each server signs its own sign-in cookies, on its own host, so the lab and
 # manager need not share AUTH_SECRET. Set MANAGER_AUTH_SECRET to give the
 # manager its own (manager and CLI users sign in again once). Without it the

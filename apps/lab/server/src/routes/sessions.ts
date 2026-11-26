@@ -269,6 +269,19 @@ function assertValidStatePath(path: string): void {
 }
 
 /**
+ * Bump `updatedAt` on an unfinished session so admin activity reports reflect
+ * live participants who are reading, firing events, syncing timers, or holding
+ * an open SSE stream.
+ */
+export async function touchSessionActivity(sessionId: string): Promise<void> {
+	const collection = await getSessionsCollection();
+	await collection.updateOne(
+		{ id: sessionId, endedAt: null },
+		{ $set: { updatedAt: new Date() } },
+	);
+}
+
+/**
  * Write session_state fields. Returns false if the session does not exist.
  */
 export async function updateSessionState(
@@ -375,9 +388,13 @@ export const sessionsRoutes = new Elysia({ prefix: "/sessions" })
 							const sessions = await getSessionsCollection();
 							await sessions.updateOne(
 								{ id: existingSession.id, secretHash: { $in: [null] } },
-								{ $set: { secretHash: hash } },
+								{ $set: { secretHash: hash, updatedAt: new Date() } },
 							);
 							setSessionCookie(jar, existingSession.id, secret);
+						} else {
+							touchSessionActivity(existingSession.id).catch((error) => {
+								console.error("[Session] Failed to touch updatedAt:", error);
+							});
 						}
 						const page = sessionConfig.pages[existingSession.currentPageId];
 						return {

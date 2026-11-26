@@ -73,6 +73,7 @@ export type ActivityReport = {
 	activeWindowMinutes: number;
 	staleAfterHours: number;
 	configs: ConfigActivity[];
+	liveStudies: ConfigActivity[];
 	liveGroupStudies: ConfigActivity[];
 };
 
@@ -164,6 +165,10 @@ function isStale(session: ActiveSession, now: Date): boolean {
 	);
 }
 
+export function isLiveStudy(entry: ConfigActivity): boolean {
+	return entry.activeNow.total > 0;
+}
+
 export function isLiveGroupStudy(entry: ConfigActivity): boolean {
 	return entry.isGroupStudy && entry.activeNow.total > 0;
 }
@@ -222,6 +227,7 @@ export function summarizeActivity(input: ActivityInput): ActivityReport {
 		activeWindowMinutes: ACTIVE_WINDOW_MS / 60_000,
 		staleAfterHours: STALE_SESSION_MS / 3_600_000,
 		configs: entries,
+		liveStudies: entries.filter(isLiveStudy),
 		liveGroupStudies: entries.filter(isLiveGroupStudy),
 	};
 }

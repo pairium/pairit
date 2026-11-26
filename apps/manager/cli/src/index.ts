@@ -564,7 +564,7 @@ adminCommand
 adminCommand
 	.command("activity")
 	.description(
-		"Show studies with recent sessions, live group studies first (check before deploying production)",
+		"Show studies with recent sessions, live studies first (check before deploying production)",
 	)
 	.option(
 		"--since <duration>",
@@ -580,7 +580,7 @@ adminCommand
 	.option("--json", "Print the raw report as JSON")
 	.option(
 		"--fail-if-live",
-		"Exit with code 2 if any group study has active participants",
+		"Exit with code 2 if any study has active participants",
 	)
 	.action(async (options: AdminActivityOptions) => {
 		try {
@@ -599,7 +599,10 @@ adminCommand
 					}),
 				);
 			}
-			if (options.failIfLive && report.liveGroupStudies.length > 0) {
+			const liveStudies =
+				report.liveStudies ??
+				report.configs.filter((entry) => entry.activeNow.total > 0);
+			if (options.failIfLive && liveStudies.length > 0) {
 				process.exitCode = 2;
 			}
 		} catch (error) {

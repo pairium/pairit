@@ -9,6 +9,7 @@
  * All routes require an authenticated user with isAdmin: true.
  */
 
+import { createHash, timingSafeEqual } from "node:crypto";
 import { Elysia, t } from "elysia";
 import { DEFAULT_SINCE_MS, summarizeActivity } from "../lib/activity";
 import { loadActivityInput } from "../lib/activity-db";
@@ -20,6 +21,26 @@ import {
 } from "../lib/allowlist";
 import { auth } from "../lib/auth";
 import { authMiddleware } from "../lib/auth-middleware";
+
+function sha256(value: string): Buffer {
+	return createHash("sha256").update(value, "utf8").digest();
+}
+
+/**
+ * Checks the read-only service token (ADMIN_ACTIVITY_TOKEN) used by CI/deploy
+ * workflows to poll GET /admin/activity without an interactive admin login.
+ */
+function hasValidActivityToken(request: Request): boolean {
+	const expected = process.env.ADMIN_ACTIVITY_TOKEN?.trim();
+	if (!expected) return false;
+	const header = request.headers.get("authorization");
+	if (!header) return false;
+	const match = /^Bearer\s+(.+)$/i.exec(header.trim());
+	if (!match) return false;
+	const provided = match[1].trim();
+	if (!provided) return false;
+	return timingSafeEqual(sha256(provided), sha256(expected));
+}
 
 async function revokeSessionsForEmail(email: string): Promise<void> {
 	const ctx = await auth.$context;
@@ -94,14 +115,16 @@ export const adminRoutes = new Elysia({ prefix: "/admin" })
 	})
 	.get(
 		"/activity",
-		async ({ user, isAdmin, query, set }) => {
-			if (!user) {
-				set.status = 401;
-				return { error: "unauthorized", message: "Not authenticated" };
-			}
-			if (!isAdmin) {
-				set.status = 403;
-				return { error: "forbidden", message: "Admin role required" };
+		async ({ user, isAdmin, query, request, set }) => {
+			if (!hasValidActivityToken(request)) {
+				if (!user) {
+					set.status = 401;
+					return { error: "unauthorized", message: "Not authenticated" };
+				}
+				if (!isAdmin) {
+					set.status = 403;
+					return { error: "forbidden", message: "Admin role required" };
+				}
 			}
 			const now = new Date();
 			const since = query.since
