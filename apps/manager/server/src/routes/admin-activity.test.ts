@@ -72,16 +72,30 @@ mock.module("../lib/activity-db", () => ({
 
 const { adminRoutes } = await import("./admin");
 
-function get(path: string, role?: string) {
-	const headers: Record<string, string> = role ? { "x-test-role": role } : {};
+function get(
+	path: string,
+	role?: string,
+	extraHeaders: Record<string, string> = {},
+) {
+	const headers: Record<string, string> = {
+		...(role ? { "x-test-role": role } : {}),
+		...extraHeaders,
+	};
 	return adminRoutes.handle(
 		new Request(`http://localhost/admin${path}`, { headers }),
 	);
 }
 
 describe("GET /admin/activity", () => {
+	const originalToken = process.env.ADMIN_ACTIVITY_TOKEN;
+
 	beforeEach(() => {
 		loadCalls = [];
+		if (originalToken === undefined) {
+			delete process.env.ADMIN_ACTIVITY_TOKEN;
+		} else {
+			process.env.ADMIN_ACTIVITY_TOKEN = originalToken;
+		}
 	});
 
 	test("anonymous gets 401", async () => {
@@ -100,6 +114,7 @@ describe("GET /admin/activity", () => {
 		const res = await get("/activity", "admin");
 		expect(res.status).toBe(200);
 		const body = await res.json();
+		expect(body.liveStudies).toHaveLength(1);
 		expect(body.liveGroupStudies).toHaveLength(1);
 		expect(body.liveGroupStudies[0]).toMatchObject({
 			configId: "omh-test",
@@ -124,5 +139,26 @@ describe("GET /admin/activity", () => {
 	test("a bad since is a 400", async () => {
 		expect((await get("/activity?since=yesterday", "admin")).status).toBe(400);
 		expect((await get("/activity?since=2999-01-01", "admin")).status).toBe(400);
+	});
+
+	test("accepts ADMIN_ACTIVITY_TOKEN as a bearer token for /activity only", async () => {
+		process.env.ADMIN_ACTIVITY_TOKEN = "secret-activity-token";
+
+		const ok = await get("/activity", undefined, {
+			Authorization: "Bearer secret-activity-token",
+		});
+		expect(ok.status).toBe(200);
+		expect(loadCalls).toHaveLength(1);
+
+		const wrong = await get("/activity", undefined, {
+			Authorization: "Bearer wrong-token",
+		});
+		expect(wrong.status).toBe(401);
+
+		// Service token must not grant access to other admin routes
+		const usersRes = await get("/users", undefined, {
+			Authorization: "Bearer secret-activity-token",
+		});
+		expect(usersRes.status).toBe(401);
 	});
 });

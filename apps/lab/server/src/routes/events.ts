@@ -12,6 +12,7 @@ import { MongoServerError } from "mongodb";
 import { getEventsCollection, getSessionsCollection } from "../lib/db";
 import { denySessionAccess } from "../lib/session-access";
 import type { EventDocument } from "../types";
+import { touchSessionActivity } from "./sessions";
 
 export const eventsRoutes = new Elysia().post(
 	"/sessions/:id/events",
@@ -43,6 +44,11 @@ export const eventsRoutes = new Elysia().post(
 		const eventsCollection = await getEventsCollection();
 		try {
 			const result = await eventsCollection.insertOne(event);
+			if (!session.endedAt) {
+				touchSessionActivity(sessionId).catch((error) => {
+					console.error("[Events] Failed to touch updatedAt:", error);
+				});
+			}
 			return { eventId: result.insertedId.toString() };
 		} catch (err) {
 			if (err instanceof MongoServerError && err.code === 11000) {

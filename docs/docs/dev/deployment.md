@@ -109,6 +109,7 @@ Cloud Run reads these from Secret Manager, pinned to the version the deploy stor
 | `MANAGER_AUTH_SECRET` | `pairit-manager-auth-secret` | | as `AUTH_SECRET` |
 | `CREDENTIALS_ENCRYPTION_KEY` | `pairit-credentials-encryption-key` | yes | yes |
 | `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `MEMBER_ID_SECRET`, `SIMULATION_KEY` (when set) | `pairit-openai-api-key`, ... | yes | |
+| `ADMIN_ACTIVITY_TOKEN` (when set) | `pairit-admin-activity-token` | | yes |
 
 To change a secret, change it in the env file (and the `ENV_FILE` GitHub secret) and deploy. Rolling back to an older Cloud Run revision also rolls back to the secret versions it used.
 
@@ -116,23 +117,28 @@ The account that runs `deploy.sh` needs `roles/secretmanager.admin` in the proje
 
 ### Live-study check
 
-Do not deploy production while a multi-participant study is live (see [Lab runs on one instance](#lab-runs-on-one-instance)). Check first:
+Do not deploy production while any study has active participants (see [Lab runs on one instance](#lab-runs-on-one-instance) — rollouts also drop active SSE streams, in-flight AI agent runs, and timer broadcasts for solo studies). Check first:
 
 ```bash
 pairit admin activity
 ```
 
-It lists every study with sessions in the last 24 hours, live group studies first, with the owner, active participants (in a group or solo), and how many are waiting in matchmaking. A group study is live when it has a session that has not finished, changed in the last 15 minutes, and started in the last 12 hours. The 12-hour limit leaves out browser tabs left open for days on a page whose `html` component saves every few seconds or minutes. Almost every real session finishes within an hour of starting. Only admins can run it. See the [CLI README](https://github.com/pairium/pairit/tree/main/apps/manager/cli#activity-admin) for the columns.
+It lists every study with sessions in the last 24 hours, live studies first (group studies before solo), with the owner, active participants (in a group or solo), and how many are waiting in matchmaking. A study is live when it has a session that has not finished, changed in the last 15 minutes, and started in the last 12 hours. The 12-hour limit leaves out browser tabs left open for days. Only admins can run it. See the [CLI README](https://github.com/pairium/pairit/tree/main/apps/manager/cli#activity-admin) for the columns.
 
 `./scripts/deploy.sh production` runs the same check with your production CLI login before it builds anything:
 
-- No group study live: the deploy goes ahead.
-- A group study live: it stops and lists them. Wait, or deploy anyway with `FORCE_DEPLOY=1 ./scripts/deploy.sh production`.
+- No study live: the deploy goes ahead.
+- Any study live: it stops and lists them. Wait, or deploy anyway with `FORCE_DEPLOY=1 ./scripts/deploy.sh production`.
 - The check fails (not logged in, not an admin, manager down): it stops and says how to fix it. Log in with `bun run apps/manager/cli/src/index.ts --env production login`. `FORCE_DEPLOY=1` skips the check.
 
 Staging deploys skip the check.
 
-**GitHub Actions does not run the check yet.** The endpoint needs an admin login, and the workflow has no credential for the manager API. A CLI login is a Better Auth session that expires, so it cannot be stored as a secret. A production run of `deploy.yml` therefore stops unless you pass `force=true`, which says you ran `pairit admin activity` yourself and no group study is live. To have the workflow check for itself, the manager needs a service credential that can call `GET /admin/activity`, for example an admin API key stored as a `production` environment secret. Then replace the `Live-study check` step in `deploy.yml` with a call that fails when `liveGroupStudies` is not empty.
+**GitHub Actions** runs the live-study check automatically when `ADMIN_ACTIVITY_TOKEN` is configured:
+
+1. Generate a token (`openssl rand -hex 32`) and add `ADMIN_ACTIVITY_TOKEN=<token>` to `.env.production` (and the `production` environment's `ENV_FILE` GitHub secret) so `deploy.sh` stores it in Secret Manager for the manager service.
+2. Add the same value as a `production` environment secret named `ADMIN_ACTIVITY_TOKEN` in GitHub (Settings → Environments → `production`).
+
+This token only grants read-only access to `GET /admin/activity` (not `/admin/users` or any other route). With it configured, `gh workflow run deploy.yml -f target=production` checks production automatically and fails if any study is live; `force=true` is only needed as an override.
 
 ### Deploying from GitHub Actions
 

@@ -33,6 +33,8 @@ export type ActivityReport = {
 	activeWindowMinutes: number;
 	staleAfterHours?: number;
 	configs: ConfigActivity[];
+	// Any study with active participants (newer servers)
+	liveStudies?: ConfigActivity[];
 	liveGroupStudies: ConfigActivity[];
 };
 
@@ -55,6 +57,10 @@ export function parseDuration(value: string): number {
 }
 
 function isLive(entry: ConfigActivity): boolean {
+	return entry.activeNow.total > 0;
+}
+
+function isLiveGroup(entry: ConfigActivity): boolean {
 	return entry.isGroupStudy && entry.activeNow.total > 0;
 }
 
@@ -72,10 +78,13 @@ function flags(entry: ConfigActivity): string {
 	return list.join(",") || "-";
 }
 
-/** One line per live group study, for the summary and the deploy check. */
+/** One line per live study, for the summary and the deploy check. */
 export function describeLiveStudy(entry: ConfigActivity): string {
 	const { total, inGroup, solo } = entry.activeNow;
-	return `${entry.configId} (${owner(entry)}): ${total} active (${inGroup} in a group, ${solo} solo), ${entry.waitingInMatchmaking} waiting in matchmaking`;
+	if (entry.isGroupStudy) {
+		return `${entry.configId} (${owner(entry)}): ${total} active (${inGroup} in a group, ${solo} solo), ${entry.waitingInMatchmaking} waiting in matchmaking`;
+	}
+	return `${entry.configId} (${owner(entry)}): ${total} active (solo)`;
 }
 
 export function formatActivity(
@@ -86,17 +95,20 @@ export function formatActivity(
 		options.color ? `\x1b[${code}m${text}\x1b[0m` : text;
 	const lines: string[] = [];
 
-	const live = report.configs.filter(isLive);
+	const live = [
+		...report.configs.filter(isLiveGroup),
+		...report.configs.filter((entry) => isLive(entry) && !isLiveGroup(entry)),
+	];
 	if (live.length > 0) {
 		lines.push(
 			paint(
 				"1;31",
-				`${live.length} group ${live.length === 1 ? "study is" : "studies are"} live. Don't deploy production.`,
+				`${live.length} ${live.length === 1 ? "study is" : "studies are"} live. Don't deploy production.`,
 			),
 		);
 		for (const entry of live) lines.push(`  ${describeLiveStudy(entry)}`);
 	} else {
-		lines.push("No group study is live.");
+		lines.push("No study is live.");
 	}
 	lines.push("");
 
@@ -105,7 +117,7 @@ export function formatActivity(
 		return lines.join("\n");
 	}
 
-	// Live group studies first, whatever order the server sent
+	// Live studies first (group studies before solo), whatever order the server sent
 	const rows = [
 		...live,
 		...report.configs.filter((entry) => !isLive(entry)),

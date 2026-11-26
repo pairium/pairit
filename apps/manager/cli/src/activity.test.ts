@@ -47,6 +47,7 @@ function report(configs: ConfigActivity[]): ActivityReport {
 		since: "2026-10-26T12:00:00.000Z",
 		activeWindowMinutes: 15,
 		configs,
+		liveStudies: configs.filter((c) => c.activeNow.total > 0),
 		liveGroupStudies: configs.filter(
 			(c) => c.isGroupStudy && c.activeNow.total > 0,
 		),
@@ -54,7 +55,7 @@ function report(configs: ConfigActivity[]): ActivityReport {
 }
 
 describe("formatActivity", () => {
-	test("puts live group studies first and marks them", () => {
+	test("puts live group studies before live solo studies and marks both", () => {
 		const text = formatActivity(
 			report([
 				entry({
@@ -84,22 +85,46 @@ describe("formatActivity", () => {
 			]),
 		);
 		const lines = text.split("\n");
-		expect(lines[0]).toBe("1 group study is live. Don't deploy production.");
+		expect(lines[0]).toBe("2 studies are live. Don't deploy production.");
 		expect(lines[1]).toBe(
 			"  omh-test (owner@example.com): 3 active (2 in a group, 1 solo), 1 waiting in matchmaking",
 		);
+		expect(lines[2]).toBe("  survey (r@example.com): 5 active (solo)");
 		const header = lines.findIndex((line) => line.startsWith("  STUDY"));
 		const rows = lines.slice(header + 1, header + 3);
 		expect(rows[0]).toStartWith("● omh-test");
 		expect(rows[0]).toContain("3 (2/1)");
 		expect(rows[0]).toContain("group,chat,live-workspace,agents");
-		expect(rows[1]).toStartWith("  survey");
+		expect(rows[1]).toStartWith("● survey");
 		expect(rows[1]).toEndWith("html");
+	});
+
+	test("marks a single live solo study", () => {
+		const text = formatActivity(
+			report([
+				entry({
+					configId: "cyberkrise",
+					ownerEmail: "jane@example.com",
+					activeNow: { total: 2, inGroup: 0, solo: 2 },
+					features: {
+						chat: true,
+						liveWorkspace: false,
+						html: false,
+						agents: true,
+					},
+				}),
+			]),
+		);
+		const lines = text.split("\n");
+		expect(lines[0]).toBe("1 study is live. Don't deploy production.");
+		expect(lines[1]).toBe("  cyberkrise (jane@example.com): 2 active (solo)");
+		const header = lines.findIndex((line) => line.startsWith("  STUDY"));
+		expect(lines[header + 1]).toStartWith("● cyberkrise");
 	});
 
 	test("says so when nothing is live", () => {
 		const text = formatActivity(report([]));
-		expect(text).toContain("No group study is live.");
+		expect(text).toContain("No study is live.");
 		expect(text).toContain("No sessions since 2026-10-26T12:00:00.000Z.");
 	});
 
@@ -120,7 +145,7 @@ describe("formatActivity", () => {
 		const text = formatActivity(
 			report([entry({ configId: "idle", isGroupStudy: true })]),
 		);
-		expect(text).toContain("No group study is live.");
+		expect(text).toContain("No study is live.");
 		expect(text).not.toContain("●");
 	});
 });

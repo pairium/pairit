@@ -203,6 +203,10 @@ describe("summarizeActivity", () => {
 			totalSessions: 0,
 			isGroupStudy: false,
 		});
+		expect(report.liveStudies.map((c) => c.configId)).toEqual([
+			"group",
+			"solo",
+		]);
 		expect(report.liveGroupStudies.map((c) => c.configId)).toEqual(["group"]);
 	});
 
@@ -214,6 +218,7 @@ describe("summarizeActivity", () => {
 		);
 		expect(report.configs).toHaveLength(1);
 		expect(report.configs[0].activeNow.total).toBe(0);
+		expect(report.liveStudies).toEqual([]);
 		expect(report.liveGroupStudies).toEqual([]);
 	});
 
@@ -252,6 +257,7 @@ describe("summarizeActivity", () => {
 			activeNow: { total: 1, inGroup: 0, solo: 1 },
 			staleOpen: 1,
 		});
+		expect(report.liveStudies.map((c) => c.configId)).toEqual(["solo"]);
 		expect(report.liveGroupStudies).toEqual([]);
 		expect(report.staleAfterHours).toBe(12);
 	});

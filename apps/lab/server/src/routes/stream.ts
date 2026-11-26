@@ -14,7 +14,7 @@ import {
 	removeConnection,
 	type SSEController,
 } from "../lib/sse";
-import { loadSession } from "./sessions";
+import { loadSession, touchSessionActivity } from "./sessions";
 
 const HEARTBEAT_INTERVAL = 15000; // 15 seconds — keeps idle proxies from closing the stream
 
@@ -45,6 +45,11 @@ export const streamRoutes = new Elysia({ prefix: "/sessions" })
 			if (!session) {
 				set.status = 404;
 				return;
+			}
+			if (!session.endedAt) {
+				touchSessionActivity(id).catch((error) => {
+					console.error(`[SSE] Failed to touch updatedAt for ${id}:`, error);
+				});
 			}
 
 			// Create event queue for this connection
