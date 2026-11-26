@@ -11,7 +11,13 @@ import {
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import App from "./App.tsx";
-import { AuthRequiredError, advance, randomize, startSession } from "./lib/api";
+import {
+	AuthRequiredError,
+	advance,
+	randomize,
+	startSession,
+	startTimer,
+} from "./lib/api";
 import type { CompiledConfig } from "./runtime/config";
 import type { Page } from "./runtime/types";
 
@@ -22,7 +28,8 @@ vi.mock("./lib/api", async (importOriginal) => {
 		startSession: vi.fn(),
 		advance: vi.fn(),
 		randomize: vi.fn(),
-		submitEvent: vi.fn(),
+		startTimer: vi.fn(),
+		submitEvent: vi.fn().mockResolvedValue({ eventId: "e1" }),
 	};
 });
 
@@ -43,6 +50,7 @@ vi.mock("./lib/auth-client", () => ({
 const startSessionMock = vi.mocked(startSession);
 const advanceMock = vi.mocked(advance);
 const randomizeMock = vi.mocked(randomize);
+const startTimerMock = vi.mocked(startTimer);
 
 function deferred<T>() {
 	let resolve!: (value: T) => void;
@@ -164,6 +172,7 @@ describe("App", () => {
 		startSessionMock.mockReset();
 		advanceMock.mockReset();
 		randomizeMock.mockReset();
+		startTimerMock.mockReset();
 	});
 
 	test("shows a skeleton while the session starts", async () => {
@@ -463,5 +472,111 @@ describe("App", () => {
 		expect(
 			await screen.findByRole("button", { name: "Sign in with Google" }),
 		).toBeDefined();
+	});
+
+	test("waits for advance before mounting a timed page so an already-expired timer chains through", async () => {
+		const timedPage: Page = {
+			id: "timed",
+			components: [
+				{ type: "text", props: { text: "Timed drafting phase." } },
+				{
+					type: "timer",
+					id: "timer-1",
+					props: {
+						duration: 60,
+						scope: "group",
+						action: { type: "go_to", target: "thanks" },
+					},
+				},
+			],
+		};
+		const introToTimed: Page = {
+			...introPage,
+			components: [
+				{ type: "text", props: { text: "Welcome to the study." } },
+				{
+					type: "buttons",
+					props: {
+						buttons: [
+							{
+								id: "next",
+								text: "Continue",
+								action: { type: "go_to", target: "timed" },
+							},
+						],
+					},
+				},
+			],
+		};
+		startSessionMock.mockResolvedValue({
+			sessionId: "sess-1",
+			configId: "test-experiment",
+			config: {
+				...compiledConfig,
+				pages: {
+					...compiledConfig.pages,
+					intro: introToTimed,
+					timed: timedPage,
+				},
+			},
+			currentPageId: "intro",
+			page: introToTimed,
+		});
+
+		const firstAdvance = deferred<Awaited<ReturnType<typeof advance>>>();
+		advanceMock
+			.mockReturnValueOnce(firstAdvance.promise)
+			.mockResolvedValueOnce({
+				sessionId: "sess-1",
+				currentPageId: "thanks",
+				page: thanksPage,
+				endedAt: null,
+			});
+		const now = Date.now();
+		startTimerMock.mockResolvedValue({
+			timerKey: "page:timed:timer-1",
+			startedAt: now - 120_000,
+			expiresAt: now - 5_000,
+			serverNow: now,
+			duration: 60,
+			scope: "group",
+		});
+
+		Object.defineProperty(document, "hidden", {
+			configurable: true,
+			get: () => true,
+		});
+		try {
+			renderApp();
+			expect(await screen.findByText("Welcome to the study.")).toBeDefined();
+
+			fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+			await waitFor(() => {
+				expect(advanceMock).toHaveBeenCalledWith("sess-1", "timed");
+			});
+			expect(startTimerMock).not.toHaveBeenCalled();
+
+			firstAdvance.resolve({
+				sessionId: "sess-1",
+				currentPageId: "timed",
+				page: timedPage,
+				endedAt: null,
+			});
+
+			expect(await screen.findByText("All done.")).toBeDefined();
+			expect(advanceMock).toHaveBeenCalledTimes(2);
+			expect(advanceMock).toHaveBeenNthCalledWith(
+				2,
+				"sess-1",
+				"thanks",
+				expect.any(String),
+			);
+		} finally {
+			Object.defineProperty(document, "hidden", {
+				configurable: true,
+				get: () => false,
+			});
+		}
 	});
 });

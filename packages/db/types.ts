@@ -145,3 +145,17 @@ export type WorkspaceUpdateDocument = {
 	update: Binary;
 	createdAt: Date;
 };
+
+export type TimerDocument = {
+	/** "session:<sessionId>" or "group:<groupId>" */
+	scopeKey: string;
+	/** "page:<pageId>:<componentId>" or "key:<key>" */
+	timerKey: string;
+	configId: string;
+	scope: "session" | "group";
+	/** Set for unkeyed session timers so advancing off the page can clear them. */
+	pageId?: string;
+	duration: number;
+	startedAt: Date;
+	expiresAt: Date;
+};

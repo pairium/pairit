@@ -16,6 +16,7 @@ import { matchmakingRoutes } from "./routes/matchmaking";
 import { randomizeRoutes } from "./routes/randomize";
 import { sessionsRoutes } from "./routes/sessions";
 import { streamRoutes } from "./routes/stream";
+import { timersRoutes } from "./routes/timers";
 import { workspaceRoutes } from "./routes/workspace";
 
 const IS_DEV = process.env.NODE_ENV === "development";
@@ -109,6 +110,7 @@ app
 	.use(chatRoutes)
 	.use(matchmakingRoutes)
 	.use(randomizeRoutes)
+	.use(timersRoutes)
 	.use(workspaceRoutes);
 
 function serveIndexHtml(): Response {

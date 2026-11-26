@@ -169,4 +169,34 @@ describe("LabClient", () => {
 		expect(err.reason).toBe("session_in_other_browser");
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 	});
+
+	test("startTimer posts pageId and componentId to /sessions/:id/timer", async () => {
+		const fetchMock = mock(
+			async (input: RequestInfo | URL, init?: RequestInit) => {
+				expect(String(input)).toBe("http://lab.test/sessions/s1/timer");
+				expect(init?.method).toBe("POST");
+				expect(JSON.parse(String(init?.body))).toEqual({
+					pageId: "draft",
+					componentId: "timer-0",
+				});
+				return jsonResponse({
+					timerKey: "page:draft:timer-0",
+					startedAt: 1000,
+					expiresAt: 61000,
+					serverNow: 1000,
+					duration: 60,
+					scope: "group",
+				});
+			},
+		);
+		globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+		const client = new LabClient({ baseUrl: "http://lab.test" });
+		const res = await client.startTimer("s1", {
+			pageId: "draft",
+			componentId: "timer-0",
+		});
+		expect(res.timerKey).toBe("page:draft:timer-0");
+		expect(res.scope).toBe("group");
+	});
 });

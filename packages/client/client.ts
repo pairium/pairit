@@ -148,6 +148,20 @@ export type RandomizeResponse = {
 	existing: boolean;
 };
 
+export type StartTimerParams = {
+	pageId: string;
+	componentId?: string;
+};
+
+export type StartTimerResponse = {
+	timerKey: string;
+	startedAt: number;
+	expiresAt: number;
+	serverNow: number;
+	duration: number;
+	scope: "session" | "group";
+};
+
 export class LabClient {
 	readonly baseUrl: string;
 	readonly credentials: RequestCredentials;
@@ -417,6 +431,18 @@ export class LabClient {
 			params,
 		);
 		if (!r.ok) throw new Error("Failed to randomize");
+		return r.json();
+	}
+
+	async startTimer(
+		sessionId: string,
+		params: StartTimerParams,
+	): Promise<StartTimerResponse> {
+		const r = await this.jsonRequest(
+			`/sessions/${encodeURIComponent(sessionId)}/timer`,
+			params,
+		);
+		if (!r.ok) throw new Error("Failed to start timer");
 		return r.json();
 	}
 }

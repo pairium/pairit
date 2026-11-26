@@ -25,6 +25,15 @@ export type MatchmakingSettings = {
 	conditions?: string[];
 };
 
+export type TimerScope = "session" | "group";
+
+export type TimerSettings = {
+	componentId: string;
+	duration: number;
+	scope: TimerScope;
+	key?: string;
+};
+
 export const DEFAULT_STATE_KEY = "treatment";
 export const DEFAULT_POOL_ID = "default";
 // Same defaults as the lab app's matchmaking component
@@ -32,6 +41,7 @@ const DEFAULT_NUM_USERS = 2;
 const DEFAULT_TIMEOUT_SECONDS = 120;
 export const MIN_TIMEOUT_SECONDS = 1;
 export const MAX_TIMEOUT_SECONDS = 3600;
+export const MAX_TIMER_DURATION_SECONDS = 86_400;
 
 type Obj = Record<string, unknown>;
 
@@ -181,6 +191,64 @@ export function findMatchmaking(
 		}
 	}
 	return null;
+}
+
+/**
+ * Find a timer component on `pageId` from the session's compiled config.
+ * The server reads `duration`, `scope`, and `key` here instead of trusting the client.
+ */
+export function findTimer(
+	config: unknown,
+	pageId: string,
+	componentId?: string,
+): TimerSettings | null {
+	const page = getConfigPage(config, pageId);
+	if (!page || !Array.isArray(page.components)) return null;
+
+	const timers: Array<{ id: string; props: Obj }> = [];
+	page.components.forEach((raw, index) => {
+		if (!isObj(raw) || raw.type !== "timer") return;
+		const id =
+			typeof raw.id === "string" && raw.id.length > 0
+				? raw.id
+				: `timer-${index}`;
+		timers.push({ id, props: isObj(raw.props) ? raw.props : {} });
+	});
+	if (timers.length === 0) return null;
+
+	const matched = componentId
+		? (timers.find((t) => t.id === componentId) ??
+			(componentId === "unknown" && timers.length === 1 ? timers[0] : null))
+		: timers[0];
+	if (!matched) return null;
+
+	const rawDuration = matched.props.duration;
+	if (
+		typeof rawDuration !== "number" ||
+		!Number.isFinite(rawDuration) ||
+		rawDuration < 0
+	) {
+		return null;
+	}
+
+	const duration = Math.min(
+		MAX_TIMER_DURATION_SECONDS,
+		Math.max(0, Math.floor(rawDuration)),
+	);
+	const scope: TimerScope =
+		matched.props.scope === "group" ? "group" : "session";
+	const rawKey = matched.props.key;
+	const key =
+		typeof rawKey === "string" && rawKey.trim().length > 0
+			? rawKey.trim()
+			: undefined;
+
+	return {
+		componentId: matched.id,
+		duration,
+		scope,
+		...(key && { key }),
+	};
 }
 
 const TARGET_KEYS = ["target", "onMatchTarget", "timeoutTarget"];

@@ -8,6 +8,7 @@ import {
 	configPages,
 	findMatchmaking,
 	findRandomization,
+	findTimer,
 	getPath,
 	sessionGroupSuffixes,
 } from "./config-lookup";
@@ -197,6 +198,50 @@ describe("getPath", () => {
 		expect(getPath({ a: { b: "x" } }, "a.b")).toBe("x");
 		expect(getPath({ "a.b": "flat" }, "a.b")).toBeUndefined();
 		expect(getPath(undefined, "a")).toBeUndefined();
+	});
+});
+
+describe("findTimer", () => {
+	const timerConfig = {
+		pages: {
+			p1: {
+				id: "p1",
+				components: [
+					{ type: "text", props: { text: "hi" } },
+					{
+						type: "timer",
+						id: "phase_timer",
+						props: { duration: 900, scope: "group", key: "drafting" },
+					},
+				],
+			},
+			p2: {
+				id: "p2",
+				components: [{ type: "timer", props: { duration: 120.9 } }],
+			},
+		},
+	};
+
+	test("reads duration, scope, and key from config", () => {
+		expect(findTimer(timerConfig, "p1", "phase_timer")).toEqual({
+			componentId: "phase_timer",
+			duration: 900,
+			scope: "group",
+			key: "drafting",
+		});
+	});
+
+	test("defaults scope to session and resolves un-id'd timer by index", () => {
+		expect(findTimer(timerConfig, "p2", "timer-0")).toEqual({
+			componentId: "timer-0",
+			duration: 120,
+			scope: "session",
+		});
+	});
+
+	test("returns null for unknown page or component id", () => {
+		expect(findTimer(timerConfig, "missing")).toBeNull();
+		expect(findTimer(timerConfig, "p1", "other")).toBeNull();
 	});
 });
 

@@ -33,6 +33,7 @@ import {
 } from "./llm-keys.js";
 import { lintRandomization } from "./randomize-lint.js";
 import { lintEndRedirectUrls } from "./redirect-lint.js";
+import { lintTimers } from "./timer-lint.js";
 
 type ExperimentPage = {
 	id: string;
@@ -780,6 +781,7 @@ async function lintConfig(configPath: string): Promise<HtmlSourceInfo[]> {
 	errors.push(...lintRandomization(config));
 	errors.push(...lintGroupView(config));
 	errors.push(...lintEndRedirectUrls(config));
+	errors.push(...lintTimers(config));
 
 	if (errors.length) {
 		throw new Error(errors.join(", "));
@@ -907,9 +909,12 @@ async function buildUploadPayload(
 }> {
 	// Load source YAML to read top-level flags (not preserved in compiled output)
 	const sourceConfig = await loadConfig(configPath);
-	const randomizationErrors = lintRandomization(sourceConfig);
-	if (randomizationErrors.length) {
-		throw new Error(randomizationErrors.join(", "));
+	const validationErrors = [
+		...lintRandomization(sourceConfig),
+		...lintTimers(sourceConfig),
+	];
+	if (validationErrors.length) {
+		throw new Error(validationErrors.join(", "));
 	}
 	const allowRetake = sourceConfig.allowRetake === true;
 	const requireAuth = sourceConfig.requireAuth;
