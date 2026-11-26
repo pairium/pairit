@@ -21,6 +21,12 @@ Merged, but not released yet.
 
 ### CLI
 
+- Nothing yet.
+
+## CLI 0.3.13
+
+[Release notes](https://github.com/pairium/pairit/releases/tag/cli-v0.3.13)
+
 - `pairit config lint` and `config upload` now validate `chat` `scope` (`"participant"` or `"group"`) and flag duplicate chat rooms on the same page.
 - `pairit admin activity` and `--fail-if-live` now warn and exit 2 when *any* study has active participants (not only matchmaking group studies).
 
