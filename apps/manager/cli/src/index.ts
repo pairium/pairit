@@ -58,7 +58,7 @@ const program = new Command();
 program
 	.name("pairit")
 	.description("CLI for Pairit experiment configs")
-	.version("0.3.12")
+	.version("0.3.13")
 	.option(
 		"--env <name>",
 		"Target environment: staging or production",
